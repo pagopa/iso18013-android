@@ -1,62 +1,72 @@
 package it.pagopa.iso_android.navigation
 
-import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.toRoute
 import it.pagopa.iso_android.MainActivity
-import it.pagopa.iso_android.ui.BigText
-import it.pagopa.iso_android.ui.CenteredComposable
-import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.view.HomeView
+import it.pagopa.iso_android.ui.view.MasterView
+import it.pagopa.iso_android.ui.view.SlaveView
 
 @Composable
 fun MainActivity.IsoAndroidPocNavHost(
-    navController: NavHostController,
-    innerPadding: PaddingValues
+    navController: NavHostController, innerPadding: PaddingValues
 ) {
     NavHost(
         navController = navController,
         modifier = Modifier.padding(innerPadding),
         startDestination = Home,
     ) {
-        composable<Home> {
+        composable<Home>(exitTransition = {
+            return@composable slideOutOfContainer(
+                AnimatedContentTransitionScope.SlideDirection.Start, tween(700)
+            )
+        }, popEnterTransition = {
+            return@composable slideIntoContainer(
+                towards = AnimatedContentTransitionScope.SlideDirection.End,
+                animationSpec = tween(700)
+            )
+        }) {
             HomeView(onBack = {
                 this@IsoAndroidPocNavHost.finishAndRemoveTask()
-            }, onNavigate = {
-                navController.navigate(SecondScreen(1))
+            }, onNavigate = { asMaster ->
+                if (!asMaster) {
+                    navController.navigate(Slave)
+                } else navController.navigate(Master)
             })
         }
-        composable<SecondScreen> {
-            val argument = it.toRoute<SecondScreen>()
-            CenteredComposable(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-            ) {
-                BigText(
-                    modifier = Modifier.wrapContentSize(),
-                    text = "Second Screen with id",
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(Modifier.height(24.dp))
-                MediumText(
-                    modifier = Modifier.wrapContentSize(),
-                    text = "Id: ${argument.id}",
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
+        customAnimatedComposable<Master> {
+            MasterView(onBack = {
+                navController.popBackStack()
+            }, onNavigate = {
+
+            })
+        }
+        customAnimatedComposable<Slave> {
+            SlaveView(onBack = {
+                navController.popBackStack()
+            })
         }
     }
+}
+
+private inline fun <reified T : Any> NavGraphBuilder.customAnimatedComposable(
+    crossinline content: @Composable () -> Unit
+) = composable<T>(enterTransition = {
+    return@composable slideIntoContainer(
+        AnimatedContentTransitionScope.SlideDirection.Start, tween(700)
+    )
+}, popExitTransition = {
+    return@composable slideOutOfContainer(
+        AnimatedContentTransitionScope.SlideDirection.End, tween(700)
+    )
+}) {
+    content()
 }

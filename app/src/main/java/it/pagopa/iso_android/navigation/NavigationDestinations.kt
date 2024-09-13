@@ -6,4 +6,7 @@ import kotlinx.serialization.Serializable
 data object Home
 
 @Serializable
-data class SecondScreen(val id: Int)
+data object Master
+
+@Serializable
+data object Slave

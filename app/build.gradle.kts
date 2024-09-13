@@ -55,6 +55,7 @@ composeCompiler {
     reportsDestination = layout.buildDirectory.dir("compose_compiler")
     stabilityConfigurationFile = rootProject.layout.projectDirectory.file("stability_config.conf")
 }
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -67,6 +68,12 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.play.services.basement)
+    //camera
+    implementation(libs.cameraX2)
+    implementation(libs.cameraXCore)
+    implementation(libs.cameraXView)
+    implementation(libs.cameraXLifecycle)
+    implementation(libs.qrCodeScanner)
     //Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
