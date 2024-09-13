@@ -47,7 +47,7 @@ fun MainActivity.IsoAndroidPocNavHost(
             ) {
                 BigText(
                     modifier = Modifier.wrapContentSize(),
-                    text = "Second Screen",
+                    text = "Second Screen with id",
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.height(24.dp))
