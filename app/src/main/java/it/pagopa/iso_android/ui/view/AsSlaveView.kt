@@ -38,7 +38,8 @@ fun SlaveView(
         BigText(
             modifier = Modifier
                 .wrapContentSize()
-                .align(Alignment.BottomCenter),
+                .align(Alignment.BottomCenter)
+                .background(MaterialTheme.colorScheme.background),
             text = qrCodeString,
             color = MaterialTheme.colorScheme.primary
         )

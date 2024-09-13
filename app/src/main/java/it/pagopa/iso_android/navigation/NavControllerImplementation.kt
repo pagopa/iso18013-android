@@ -15,9 +15,12 @@ import it.pagopa.iso_android.ui.view.HomeView
 import it.pagopa.iso_android.ui.view.MasterView
 import it.pagopa.iso_android.ui.view.SlaveView
 
+private const val AnimDurationMillis = 700
+
 @Composable
 fun MainActivity.IsoAndroidPocNavHost(
-    navController: NavHostController, innerPadding: PaddingValues
+    navController: NavHostController,
+    innerPadding: PaddingValues
 ) {
     NavHost(
         navController = navController,
@@ -26,12 +29,12 @@ fun MainActivity.IsoAndroidPocNavHost(
     ) {
         composable<Home>(exitTransition = {
             return@composable slideOutOfContainer(
-                AnimatedContentTransitionScope.SlideDirection.Start, tween(700)
+                AnimatedContentTransitionScope.SlideDirection.Start, tween(AnimDurationMillis)
             )
         }, popEnterTransition = {
             return@composable slideIntoContainer(
                 towards = AnimatedContentTransitionScope.SlideDirection.End,
-                animationSpec = tween(700)
+                animationSpec = tween(AnimDurationMillis)
             )
         }) {
             HomeView(onBack = {
@@ -61,11 +64,16 @@ private inline fun <reified T : Any> NavGraphBuilder.customAnimatedComposable(
     crossinline content: @Composable () -> Unit
 ) = composable<T>(enterTransition = {
     return@composable slideIntoContainer(
-        AnimatedContentTransitionScope.SlideDirection.Start, tween(700)
+        AnimatedContentTransitionScope.SlideDirection.Start, tween(AnimDurationMillis)
+    )
+}, popEnterTransition = {
+    return@composable slideIntoContainer(
+        towards = AnimatedContentTransitionScope.SlideDirection.End,
+        animationSpec = tween(AnimDurationMillis)
     )
 }, popExitTransition = {
     return@composable slideOutOfContainer(
-        AnimatedContentTransitionScope.SlideDirection.End, tween(700)
+        AnimatedContentTransitionScope.SlideDirection.End, tween(AnimDurationMillis)
     )
 }) {
     content()
