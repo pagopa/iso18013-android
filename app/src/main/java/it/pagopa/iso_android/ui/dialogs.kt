@@ -52,7 +52,7 @@ fun LoaderDialog(onDismiss: () -> Unit) {
 
 data class AppDialog(
     val title: String? = null,
-    val image: Painter,
+    val image: Painter? = null,
     val description: String? = null,
     val button: DialogButton
 ) {
@@ -91,13 +91,14 @@ fun GenericDialog(
                     text = dialog.title,
                     textColor = MaterialTheme.colorScheme.onBackground
                 )
-            Spacer(modifier = Modifier.height(8.dp))
-            Image(
-                modifier = Modifier.size(80.dp),
-                painter = dialog.image,
-                contentDescription = null
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            if (dialog.image != null)
+                Image(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .padding(vertical = 8.dp),
+                    painter = dialog.image,
+                    contentDescription = null
+                )
             if (dialog.description != null)
                 HorizontallyCenteredText(
                     modifier = Modifier

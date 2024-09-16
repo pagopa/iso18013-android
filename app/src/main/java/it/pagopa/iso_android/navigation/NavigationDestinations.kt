@@ -5,8 +5,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data object Home
 
-@Serializable
-data object Master
+sealed class HomeDestination {
+    @Serializable
+    data object Master : HomeDestination()
 
-@Serializable
-data object Slave
+    @Serializable
+    data object Slave : HomeDestination()
+}

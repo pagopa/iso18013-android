@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.compose.compiler)
-    kotlin("plugin.serialization") version "2.0.20"
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -58,6 +58,7 @@ composeCompiler {
 
 dependencies {
     implementation(project(":proximity"))
+    implementation(project(":cbor_implementation"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

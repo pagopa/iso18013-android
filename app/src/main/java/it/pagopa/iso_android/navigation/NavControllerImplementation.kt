@@ -39,20 +39,18 @@ fun MainActivity.IsoAndroidPocNavHost(
         }) {
             HomeView(onBack = {
                 this@IsoAndroidPocNavHost.finishAndRemoveTask()
-            }, onNavigate = { asMaster ->
-                if (!asMaster) {
-                    navController.navigate(Slave)
-                } else navController.navigate(Master)
+            }, onNavigate = { destination ->
+                navController.navigate(destination)
             })
         }
-        customAnimatedComposable<Master> {
+        customAnimatedComposable<HomeDestination.Master> {
             MasterView(onBack = {
                 navController.popBackStack()
             }, onNavigate = {
 
             })
         }
-        customAnimatedComposable<Slave> {
+        customAnimatedComposable<HomeDestination.Slave> {
             SlaveView(onBack = {
                 navController.popBackStack()
             })

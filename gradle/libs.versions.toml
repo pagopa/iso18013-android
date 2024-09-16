@@ -13,9 +13,10 @@ navigationCompose = "2.8.0"
 playServicesBasement = "18.4.0"
 appcompat = "1.7.0"
 material = "1.12.0"
-mockk = "1.13.11"
+mockk = "1.13.12"
 cameraX = "1.3.4"
 qrCodeScanner = "17.3.0"
+cbor = "1.7.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -43,9 +44,11 @@ cameraX2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraX" 
 cameraXView = { module = "androidx.camera:camera-view", version.ref = "cameraX" }
 cameraXLifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraX" }
 qrCodeScanner = { module = "com.google.mlkit:barcode-scanning", version.ref = "qrCodeScanner" }
+kotlinx-cbor = { module = "org.jetbrains.kotlinx:kotlinx-serialization-cbor", version.ref = "cbor" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
