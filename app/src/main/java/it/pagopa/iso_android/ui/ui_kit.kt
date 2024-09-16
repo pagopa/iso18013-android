@@ -1,30 +1,22 @@
 package it.pagopa.iso_android.ui
 
-import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import it.pagopa.iso_android.ui.theme.IsoAndroidPocTheme
 
 @Composable
@@ -33,6 +25,11 @@ fun BasePreview(content: @Composable () -> Unit) {
         content()
     }
 }
+
+enum class KindOfText {
+    BIG, MEDIUM, SMALL
+}
+
 
 @Composable
 fun BigText(modifier: Modifier, text: String, color: Color) {
@@ -79,27 +76,20 @@ fun CenteredComposable(
 }
 
 @Composable
-fun LoaderDialog(onDismiss: () -> Unit) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        DialogProperties(
-            dismissOnBackPress = false,
-            dismissOnClickOutside = false
-        )
+fun HorizontallyCenteredText(
+    modifier: Modifier,
+    kindOfText: KindOfText,
+    text: String,
+    textColor: Color
+) {
+    Column(
+        modifier = modifier.semantics { disabled() },
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier
-                .wrapContentSize()
-                .background(
-                    MaterialTheme.colorScheme.background,
-                    shape = RoundedCornerShape(8.dp)
-                ),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(16.dp))
+        when (kindOfText) {
+            KindOfText.BIG -> BigText(modifier = Modifier, text = text, color = textColor)
+            KindOfText.MEDIUM -> MediumText(modifier = Modifier, text = text, color = textColor)
+            KindOfText.SMALL -> SmallText(modifier = Modifier, text = text, color = textColor)
         }
     }
 }

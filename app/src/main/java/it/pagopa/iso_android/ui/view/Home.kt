@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.BigText
 import it.pagopa.iso_android.ui.CenteredComposable
+import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.SmallText
 import it.pagopa.iso_android.ui.TwoButtonsInARow
 
@@ -61,6 +62,12 @@ fun HomeView(
             BigText(
                 modifier = Modifier.wrapContentSize(),
                 text = "Welcome",
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(24.dp))
+            MediumText(
+                modifier = Modifier.wrapContentSize(),
+                text = "to",
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.height(24.dp))

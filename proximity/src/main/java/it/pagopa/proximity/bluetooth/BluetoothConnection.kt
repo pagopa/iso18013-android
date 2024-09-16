@@ -8,7 +8,7 @@ import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
-import it.pagopa.proximity.LibraryLogger
+import it.pagopa.proximity.ProximityLogger
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -29,18 +29,18 @@ class BluetoothConnection(
     fun connect() {
         if (bluetoothAdapter == null) {
             // Device doesn't support Bluetooth
-            LibraryLogger.e(tag, "Device doesn't support Bluetooth")
+            ProximityLogger.e(tag, "Device doesn't support Bluetooth")
             return
         }
 
         if (!bluetoothAdapter.isEnabled) {
             // Bluetooth is not enabled
-            LibraryLogger.e(tag, "Bluetooth is not enabled")
+            ProximityLogger.e(tag, "Bluetooth is not enabled")
             return
         }
         // return if device is not found
         val device: BluetoothDevice = bluetoothAdapter.getRemoteDevice(deviceAddress) ?: run {
-            LibraryLogger.e(tag, "Device not found")
+            ProximityLogger.e(tag, "Device not found")
             return
         }
 
@@ -49,7 +49,7 @@ class BluetoothConnection(
                 Manifest.permission.BLUETOOTH_CONNECT
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            LibraryLogger.e(tag, "Bluetooth Permission not granted")
+            ProximityLogger.e(tag, "Bluetooth Permission not granted")
             return
         }
         try {
@@ -77,7 +77,7 @@ class BluetoothConnection(
         try {
             outputStream?.write(data)
         } catch (e: IOException) {
-            LibraryLogger.e(tag, "Exception while sending data: $e")
+            ProximityLogger.e(tag, "Exception while sending data: $e")
         }
     }
 
@@ -89,7 +89,7 @@ class BluetoothConnection(
                 return buffer.copyOfRange(0, bytesRead)
             }
         } catch (e: IOException) {
-            LibraryLogger.e(tag, "Exception while receiving data: $e")
+            ProximityLogger.e(tag, "Exception while receiving data: $e")
         }
         return null
     }
