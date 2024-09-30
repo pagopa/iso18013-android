@@ -11,6 +11,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import it.pagopa.iso_android.MainActivity
+import it.pagopa.iso_android.ui.view.CborView
 import it.pagopa.iso_android.ui.view.HomeView
 import it.pagopa.iso_android.ui.view.MasterView
 import it.pagopa.iso_android.ui.view.SlaveView
@@ -52,6 +53,11 @@ fun MainActivity.IsoAndroidPocNavHost(
         }
         customAnimatedComposable<HomeDestination.Slave> {
             SlaveView(onBack = {
+                navController.popBackStack()
+            })
+        }
+        customAnimatedComposable<HomeDestination.Cbor> {
+            CborView(onBack = {
                 navController.popBackStack()
             })
         }

@@ -37,7 +37,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.kotlinx.cbor)
+    implementation(libs.cbor)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

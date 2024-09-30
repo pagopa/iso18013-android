@@ -76,6 +76,7 @@ dependencies {
     implementation(libs.cameraXView)
     implementation(libs.cameraXLifecycle)
     implementation(libs.qrCodeScanner)
+
     //Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -84,6 +85,8 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.qrcode.kotlin)
+
 }
 
 tasks.getByName("clean").doFirst {
