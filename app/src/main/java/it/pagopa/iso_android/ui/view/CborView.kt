@@ -18,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import it.pagopa.cbor_implementation.impl.MDoc
+import it.pagopa.cbor_implementation.model.DocumentX
 import it.pagopa.iso_android.ui.BasePreview
 
 @Composable
@@ -36,21 +38,37 @@ fun CborView(
     onBack: () -> Unit
 ) {
     var cborText by remember { mutableStateOf("") }
+    var listToShow by remember { mutableStateOf<List<Map<String, List<DocumentX>>?>?>(null) }
 
-    val listToShow = remember(cborText) {
-        try {
-            MDoc().decodeMDoc(cborText).documents
-                ?.map {
-                    it.issuerSigned?.nameSpaces
+    BackHandler(onBack = onBack)
+
+    LaunchedEffect(
+        key1 = cborText,
+        block = {
+            MDoc().decodeMDoc(
+                source = cborText,
+                onComplete = { list ->
+                    listToShow = list.documents?.map {
+                        it.issuerSigned?.nameSpaces
+                    }
+                },
+                onError = { ex ->
+                    listToShow = listOf(
+                        mapOf(
+                            "Error" to listOf(
+                                DocumentX(
+                                    digestID = 0,
+                                    random = ByteArray(0),
+                                    elementIdentifier = "Exception:",
+                                    elementValue = ex
+                                )
+                            )
+                        )
+                    )
                 }
-        } catch (e: Exception) {
-            listOf()
+            )
         }
-    }
-
-    BackHandler {
-        onBack.invoke()
-    }
+    )
 
     Column(
         modifier = Modifier
