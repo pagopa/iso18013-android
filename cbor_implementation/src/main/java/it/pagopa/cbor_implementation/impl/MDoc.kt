@@ -10,45 +10,43 @@ import it.pagopa.cbor_implementation.model.ModelMDoc
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
-class MDoc {
+class MDoc private constructor(
+    private val source: Any,
+    private val isByteArray: Boolean = false
+) {
+    constructor(source: String) : this(source, false)
+    constructor(source: ByteArray) : this(source, true)
+
     @OptIn(ExperimentalEncodingApi::class)
     fun decodeMDoc(
-        source: String,
         onComplete: (ModelMDoc) -> Unit,
         onError: (Exception) -> Unit
     ) {
         try {
             decodeMDoc(
-                source = Base64.decode(source),
-                onComplete = onComplete,
-                onError = onError
+                if (isByteArray) source as ByteArray
+                else Base64.decode(source as String), onComplete, onError
             )
         } catch (ex: Exception) {
             onError.invoke(ex)
         }
     }
 
-    fun decodeMDoc(
+    private fun decodeMDoc(
         source: ByteArray,
         onComplete: (ModelMDoc) -> Unit,
         onError: (Exception) -> Unit
     ) {
-        try {
-            ModelMDoc.fromCBORObject(
-                model = CBORObject.DecodeFromBytes(source),
-                onComplete = onComplete,
-                onError = onError
-            )
-        } catch (ex: Exception) {
-            onError.invoke(ex)
-        }
+        ModelMDoc.fromCBORObject(
+            model = CBORObject.DecodeFromBytes(source),
+            onComplete = onComplete,
+            onError = onError
+        )
     }
 
     fun verifyValidity(
         issuerSigned: Document?,
-        onValidate: () -> Unit,
-        onError: (Exception) -> Unit
-    ) {
+    ): Pair<Boolean, Exception?> {
         val needDataForMdl = listOf(
             "family_name",
             "given_name",
@@ -69,8 +67,7 @@ class MDoc {
             MDL_DOCTYPE -> needDataForMdl
             EU_PID_DOCTYPE -> needDataForEuPid
             else -> {
-                onError.invoke(DocTypeNotValid(issuerSigned?.docType))
-                return
+                return false to DocTypeNotValid(issuerSigned?.docType)
             }
         }
 
@@ -83,9 +80,9 @@ class MDoc {
                 usedKeys?.contains(it)?.not() ?: true
             }
 
-        if (list.isEmpty())
-            onValidate.invoke()
+        return if (list.isEmpty())
+            true to null
         else
-            onError.invoke(MandatoryFieldNotFound(list))
+            false to MandatoryFieldNotFound(list)
     }
 }

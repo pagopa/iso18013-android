@@ -25,8 +25,8 @@ class CborViewViewModel : ViewModel() {
     var cborText by mutableStateOf("")
     var listToShow by mutableStateOf<List<Map<String, List<DocumentX>>?>?>(null)
     fun decodeMDoc() {
-        MDoc().decodeMDoc(
-            source = this.cborText,
+        val mDoc = MDoc(this.cborText)
+        mDoc.decodeMDoc(
             onComplete = { list ->
                 this.listToShow = list.documents?.map {
                     it.issuerSigned?.nameSpaces
@@ -103,8 +103,7 @@ class CborViewViewModel : ViewModel() {
                         item.elementValue as ByteArray,
                         0,
                         (item.elementValue as ByteArray).size
-                    )
-                        .asImageBitmap(),
+                    ).asImageBitmap(),
                     contentDescription = null
                 )
             } else {
