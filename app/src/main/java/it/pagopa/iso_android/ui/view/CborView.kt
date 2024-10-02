@@ -1,149 +1,96 @@
 package it.pagopa.iso_android.ui.view
 
 import android.content.res.Configuration
-import android.graphics.BitmapFactory
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import it.pagopa.cbor_implementation.impl.MDoc
-import it.pagopa.cbor_implementation.model.DocumentX
+import androidx.lifecycle.viewmodel.compose.viewModel
 import it.pagopa.iso_android.ui.BasePreview
+import it.pagopa.iso_android.ui.BigText
+import it.pagopa.iso_android.ui.view_model.CborViewViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun CborView(
     onBack: () -> Unit
 ) {
-    var cborText by remember { mutableStateOf("") }
-    var listToShow by remember { mutableStateOf<List<Map<String, List<DocumentX>>?>?>(null) }
-
+    val vm = viewModel<CborViewViewModel>()
     BackHandler(onBack = onBack)
-
     LaunchedEffect(
-        key1 = cborText,
+        key1 = vm.cborText,
         block = {
-            MDoc().decodeMDoc(
-                source = cborText,
-                onComplete = { list ->
-                    listToShow = list.documents?.map {
-                        it.issuerSigned?.nameSpaces
-                    }
-                },
-                onError = { ex ->
-                    listToShow = listOf(
-                        mapOf(
-                            "Error" to listOf(
-                                DocumentX(
-                                    digestID = 0,
-                                    random = ByteArray(0),
-                                    elementIdentifier = "Exception:",
-                                    elementValue = ex
-                                )
-                            )
-                        )
-                    )
-                }
-            )
+            vm.decodeMDoc()
         }
     )
-
-    Column(
+    val scope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        TextField(
-            modifier = Modifier
-                .height(100.dp),
-            value = cborText,
-            onValueChange = {
-                cborText = it
-            }
-        )
-
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp),
-            state = rememberLazyListState(),
-            verticalArrangement = Arrangement.Bottom
+                .padding(start = 16.dp, end = 16.dp),
+            state = listState,
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            listToShow
-                ?.forEach {
-                    it?.keys?.forEach { key ->
-                        item {
-                            Text(
-                                modifier = Modifier
-                                    .padding(top = 16.dp),
-                                text = key,
-                                color = Color.Black
+            item {
+                BigText(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    text = "Insert CBOR String Here",
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Button(modifier = Modifier.padding(bottom = 16.dp), onClick = {
+                    vm.cborText = ""
+                }) {
+                    Text("clear CBOR text")
+                }
+                TextField(
+                    modifier = Modifier
+                        .wrapContentHeight()
+                        .padding(bottom = 16.dp),
+                    value = vm.cborText,
+                    onValueChange = {
+                        vm.cborText = it.trim()
+                        scope.launch {
+                            delay(500L)
+                            listState.scrollToItem(
+                                if (vm.listToShow?.isNotEmpty() == true) 1 else 0
                             )
                         }
-                        items(
-                            items = it[key].orEmpty(),
-                            itemContent = { item ->
-                                Column(
-                                    modifier = Modifier
-                                        .padding(top = 16.dp)
-                                        .fillMaxWidth()
-                                        .background(Color.LightGray)
-                                        .padding(8.dp),
-                                ) {
-                                    Text(
-                                        modifier = Modifier
-                                            .fillMaxWidth(),
-                                        text = "${item.elementIdentifier} (${item.elementValue?.javaClass?.name})"
-                                    )
-
-                                    if (item.elementIdentifier == "portrait") {
-                                        Image(
-                                            modifier = Modifier
-                                                .padding(top = 16.dp)
-                                                .fillMaxWidth(),
-                                            bitmap = BitmapFactory.decodeByteArray(item.elementValue as ByteArray, 0, (item.elementValue as ByteArray).size)
-                                                .asImageBitmap(),
-                                            contentDescription = null
-                                        )
-                                    } else {
-                                        Text(
-                                            modifier = Modifier
-                                                .padding(top = 16.dp)
-                                                .fillMaxWidth(),
-                                            text = item.elementValue.toString()
-                                        )
-                                    }
-                                }
-                            }
-                        )
                     }
+                )
+            }
+            vm.listToShow
+                ?.forEach {
+                    vm.mapToLazyColumnItem(map = it, lazyColumnScope = this)
                 }
         }
     }
 }
+
 
 @Preview
 @Composable

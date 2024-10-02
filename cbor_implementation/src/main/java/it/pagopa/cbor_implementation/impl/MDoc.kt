@@ -74,8 +74,7 @@ class MDoc {
             }
         }
 
-        val usedKeys = issuerSigned.issuerSigned?.nameSpaces?.values
-            ?.first()
+        val usedKeys = issuerSigned.issuerSigned?.nameSpaces?.get(issuerSigned.docType)
             ?.filter { it.elementValue != null }
             ?.map { it.elementIdentifier }
 
@@ -88,6 +87,5 @@ class MDoc {
             onValidate.invoke()
         else
             onError.invoke(MandatoryFieldNotFound(list))
-
     }
 }
