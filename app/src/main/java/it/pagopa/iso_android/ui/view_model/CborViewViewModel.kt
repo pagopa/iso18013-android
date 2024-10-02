@@ -24,7 +24,7 @@ import it.pagopa.cbor_implementation.model.DocumentX
 class CborViewViewModel : ViewModel() {
     var cborText by mutableStateOf("")
     var listToShow by mutableStateOf<List<Map<String, List<DocumentX>>?>?>(null)
-    fun decodeMDoc(){
+    fun decodeMDoc() {
         MDoc().decodeMDoc(
             source = this.cborText,
             onComplete = { list ->
@@ -48,6 +48,7 @@ class CborViewViewModel : ViewModel() {
             }
         )
     }
+
     fun mapToLazyColumnItem(
         map: Map<String, List<DocumentX?>>?,
         lazyColumnScope: LazyListScope
@@ -56,6 +57,7 @@ class CborViewViewModel : ViewModel() {
             lazyColumnScope.lazyColumnItem(map, key)
         }
     }
+
     private fun LazyListScope.lazyColumnItem(
         map: Map<String, List<DocumentX?>>,
         key: String
