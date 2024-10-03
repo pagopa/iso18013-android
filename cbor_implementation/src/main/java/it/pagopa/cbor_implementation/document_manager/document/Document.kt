@@ -1,5 +1,9 @@
-package it.pagopa.cbor_implementation.document_manager
+package it.pagopa.cbor_implementation.document_manager.document
 
+import it.pagopa.cbor_implementation.document_manager.document.DeferredDocument.Companion.invoke
+import it.pagopa.cbor_implementation.document_manager.document.IssuedDocument.Companion.invoke
+import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument.Companion.invoke
+import it.pagopa.cbor_implementation.document_manager.state
 import java.time.Instant
 import com.android.identity.document.Document as BaseDocument
 
@@ -55,9 +59,9 @@ sealed interface Document {
     companion object {
 
         internal operator fun invoke(baseDocument: BaseDocument) = when (baseDocument.state) {
-            State.UNSIGNED -> UnsignedDocument(baseDocument)
-            State.DEFERRED -> DeferredDocument(baseDocument)
-            State.ISSUED -> IssuedDocument(baseDocument)
+            State.UNSIGNED -> UnsignedDocument.Companion(baseDocument)
+            State.DEFERRED -> DeferredDocument.Companion(baseDocument)
+            State.ISSUED -> IssuedDocument.Companion(baseDocument)
         }
     }
 }

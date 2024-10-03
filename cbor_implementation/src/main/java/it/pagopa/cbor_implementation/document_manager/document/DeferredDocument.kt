@@ -1,8 +1,15 @@
-package it.pagopa.cbor_implementation.document_manager
+package it.pagopa.cbor_implementation.document_manager.document
 
 import com.android.identity.credential.SecureAreaBoundCredential
 import com.android.identity.crypto.javaX509Certificates
-import it.pagopa.cbor_implementation.document_manager.Document.State
+import it.pagopa.cbor_implementation.document_manager.createdAt
+import it.pagopa.cbor_implementation.document_manager.deferredRelatedData
+import it.pagopa.cbor_implementation.document_manager.docType
+import it.pagopa.cbor_implementation.document_manager.document.Document.State
+import it.pagopa.cbor_implementation.document_manager.documentName
+import it.pagopa.cbor_implementation.document_manager.requiresUserAuth
+import it.pagopa.cbor_implementation.document_manager.state
+import it.pagopa.cbor_implementation.document_manager.usesStrongBox
 import java.security.cert.X509Certificate
 import java.time.Instant
 import com.android.identity.document.Document as BaseDocument
@@ -10,7 +17,7 @@ import com.android.identity.document.Document as BaseDocument
 /**
  * A [DeferredDocument] is as [UnsignedDocument] with extra [relatedData] that can be used later on
  * by the issuing process. To store the [DeferredDocument] and its related data, use the
- * [DocumentManager.storeDeferredDocument]
+ * [it.pagopa.cbor_implementation.document_manager.DocumentManager.storeDeferredDocument]
  *
  * @property relatedData the related data
  */

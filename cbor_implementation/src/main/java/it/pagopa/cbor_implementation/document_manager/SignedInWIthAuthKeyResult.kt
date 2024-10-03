@@ -3,7 +3,7 @@ package it.pagopa.cbor_implementation.document_manager
 import androidx.biometric.BiometricPrompt
 
 /**
- * The result of [UnsignedDocument.signWithAuthKey] method
+ * The result of [it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument.signWithAuthKey] method
  */
 sealed interface SignedWithAuthKeyResult {
     /**

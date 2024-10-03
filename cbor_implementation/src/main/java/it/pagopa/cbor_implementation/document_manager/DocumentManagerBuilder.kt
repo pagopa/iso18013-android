@@ -1,5 +1,3 @@
-@file:Suppress("UNUSED")
-
 package it.pagopa.cbor_implementation.document_manager
 
 import android.app.KeyguardManager
@@ -63,7 +61,7 @@ class DocumentManagerBuilder(val context: Context) {
      * Sets whether to check public key in MSO before adding document to storage.
      * By default this is set to true.
      * This check is done to prevent adding documents with public key that is not in MSO.
-     * The public key from the [UnsignedDocument] must match the public key in MSO.
+     * The public key from the [it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument] must match the public key in MSO.
      *
      * @see [DocumentManager.storeIssuedDocument]
      *

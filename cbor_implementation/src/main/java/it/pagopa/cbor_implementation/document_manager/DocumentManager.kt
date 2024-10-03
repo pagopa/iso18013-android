@@ -18,6 +18,8 @@ import com.android.identity.mdoc.mso.StaticAuthDataGenerator
 import com.android.identity.securearea.KeyPurpose
 import com.android.identity.securearea.SecureAreaRepository
 import com.upokecenter.cbor.CBORObject
+import it.pagopa.cbor_implementation.document_manager.document.Document
+import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
 import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResult
 import it.pagopa.cbor_implementation.document_manager.results.StoreDocumentResult
 import it.pagopa.cbor_implementation.extensions.asNameSpacedData
@@ -104,7 +106,7 @@ class DocumentManager private constructor() {
                 domain = domain,
                 secureArea = builder.androidSecureArea,
                 createKeySettings = keySettings,
-                docType = docType,
+                docType = docType
             )
             documentCredential.pendingCredentials
                 .filterIsInstance<SecureAreaBoundCredential>()
@@ -165,8 +167,8 @@ class DocumentManager private constructor() {
                 val mso = MobileSecurityObjectParser(msoBytes).parse()
 
                 if (mso.deviceKey != unsignedDocument.publicKey.toEcPublicKey(mso.deviceKey.curve)) {
-                    val msg = "Public key in MSO does not match the one in the request"
                     if (builder.checkPublicKeyBeforeAdding) {
+                        val msg = "Public key in MSO does not match the one in the request"
                         result.failure(IllegalArgumentException(msg))
                         return
                     }

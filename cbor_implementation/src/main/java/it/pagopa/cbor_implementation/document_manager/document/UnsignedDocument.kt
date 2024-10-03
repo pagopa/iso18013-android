@@ -1,4 +1,4 @@
-package it.pagopa.cbor_implementation.document_manager
+package it.pagopa.cbor_implementation.document_manager.document
 
 import com.android.identity.android.securearea.AndroidKeystoreKeyUnlockData
 import com.android.identity.credential.SecureAreaBoundCredential
@@ -6,6 +6,14 @@ import com.android.identity.crypto.EcPublicKey
 import com.android.identity.crypto.javaX509Certificates
 import com.android.identity.crypto.toDer
 import com.android.identity.securearea.KeyLockedException
+import it.pagopa.cbor_implementation.document_manager.SignedWithAuthKeyResult
+import it.pagopa.cbor_implementation.document_manager.algorithm.Algorithm
+import it.pagopa.cbor_implementation.document_manager.createdAt
+import it.pagopa.cbor_implementation.document_manager.docType
+import it.pagopa.cbor_implementation.document_manager.documentName
+import it.pagopa.cbor_implementation.document_manager.requiresUserAuth
+import it.pagopa.cbor_implementation.document_manager.state
+import it.pagopa.cbor_implementation.document_manager.usesStrongBox
 import java.security.PublicKey
 import java.security.cert.X509Certificate
 import java.time.Instant
@@ -16,11 +24,11 @@ import com.android.identity.document.Document as BaseDocument
  * It contains the information required to issue the document and can be used to sign the
  * proof of possession required by the issuers using the [UnsignedDocument.signWithAuthKey] method.
  *
- * Use the [DocumentManager.createDocument] method to create a [UnsignedDocument]
+ * Use the [it.pagopa.cbor_implementation.document_manager.DocumentManager.createDocument] method to create a [UnsignedDocument]
  *
  * Once the document is issued and document's data are available by the issuer, use the
- * [DocumentManager.storeIssuedDocument] to store the document. This will transform the [UnsignedDocument] to
- * an [it.pagopa.cbor_implementation.document_manager.IssuedDocument]
+ * [it.pagopa.cbor_implementation.document_manager.DocumentManager.storeIssuedDocument] to store the document. This will transform the [UnsignedDocument] to
+ * an [it.pagopa.cbor_implementation.document_manager.document.IssuedDocument]
  *
  * @property name the name of the document. This name can be updated before the document is issued
  * @property certificatesNeedAuth list of certificates that will be used for issuing the document
@@ -41,7 +49,7 @@ open class UnsignedDocument(
 
     internal val ecPublicKey: EcPublicKey?
         get() = base?.pendingCredentials
-            ?.firstOrNull() { it is SecureAreaBoundCredential }
+            ?.firstOrNull { it is SecureAreaBoundCredential }
             ?.let { it as SecureAreaBoundCredential }
             ?.attestation
             ?.publicKey
@@ -62,7 +70,7 @@ open class UnsignedDocument(
      * Sign given data with authentication key
      *
      * Available algorithms are:
-     * - [Algorithm.SHA256withECDSA]
+     * - [Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA]
      *
      * @param data to be signed
      * @param alg algorithm to be used for signing the data (example: "SHA256withECDSA")
@@ -72,7 +80,7 @@ open class UnsignedDocument(
      */
     fun signWithAuthKey(
         data: ByteArray,
-        @Algorithm alg: String = Algorithm.SHA256withECDSA
+        alg: Algorithm.SupportedAlgorithms = Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA
     ): SignedWithAuthKeyResult {
         return when (val cred = base?.pendingCredentials
             ?.firstOrNull { it is SecureAreaBoundCredential }
@@ -80,11 +88,12 @@ open class UnsignedDocument(
 
             null -> SignedWithAuthKeyResult.Failure(Exception("Not initialized correctly. Use DocumentManager.createDocument method."))
             else -> {
+                val algorithm = Algorithm(alg).getCryptoAlgorithm()
                 val keyUnlockData = AndroidKeystoreKeyUnlockData(cred.alias)
                 try {
                     cred.secureArea.sign(
                         cred.alias,
-                        alg.algorithm,
+                        algorithm,
                         data,
                         keyUnlockData
                     ).let {
@@ -93,7 +102,7 @@ open class UnsignedDocument(
                 } catch (e: Exception) {
                     when (e) {
                         is KeyLockedException -> SignedWithAuthKeyResult.UserAuthRequired(
-                            keyUnlockData.getCryptoObjectForSigning(alg.algorithm)
+                            keyUnlockData.getCryptoObjectForSigning(algorithm)
                         )
 
                         else -> SignedWithAuthKeyResult.Failure(e)

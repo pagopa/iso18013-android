@@ -3,6 +3,7 @@ package it.pagopa.cbor_implementation.document_manager
 import com.android.identity.android.securearea.AndroidKeystoreKeyInfo
 import com.android.identity.credential.SecureAreaBoundCredential
 import com.android.identity.document.NameSpacedData
+import it.pagopa.cbor_implementation.document_manager.document.Document
 import java.time.Instant
 import com.android.identity.document.Document as BaseDocument
 
@@ -77,7 +78,7 @@ internal val BaseDocument.usesStrongBox: Boolean
         .firstOrNull()
         ?.let { it.secureArea.getKeyInfo(it.alias) }
         ?.let { it as AndroidKeystoreKeyInfo }
-        ?.isStrongBoxBacked ?: false
+        ?.isStrongBoxBacked == true
 
 internal val BaseDocument.requiresUserAuth: Boolean
     @JvmSynthetic
@@ -88,7 +89,7 @@ internal val BaseDocument.requiresUserAuth: Boolean
         .firstOrNull()
         ?.let { it.secureArea.getKeyInfo(it.alias) }
         ?.let { it as AndroidKeystoreKeyInfo }
-        ?.isUserAuthenticationRequired ?: false
+        ?.isUserAuthenticationRequired == true
 
 
 internal var BaseDocument.attestationChallenge: ByteArray

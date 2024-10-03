@@ -1,15 +1,23 @@
 @file:JvmMultifileClass
 
-package it.pagopa.cbor_implementation.document_manager
+package it.pagopa.cbor_implementation.document_manager.document
 
 import com.upokecenter.cbor.CBORObject
+import it.pagopa.cbor_implementation.document_manager.createdAt
+import it.pagopa.cbor_implementation.document_manager.docType
+import it.pagopa.cbor_implementation.document_manager.documentName
+import it.pagopa.cbor_implementation.document_manager.issuedAt
+import it.pagopa.cbor_implementation.document_manager.nameSpacedData
+import it.pagopa.cbor_implementation.document_manager.requiresUserAuth
+import it.pagopa.cbor_implementation.document_manager.state
+import it.pagopa.cbor_implementation.document_manager.usesStrongBox
 import it.pagopa.cbor_implementation.helper.parse
 import java.time.Instant
 import com.android.identity.document.Document as BaseDocument
 
 /**
  * An [IssuedDocument] is a document that has been issued. It contains the data that was issued.
- * To store the [IssuedDocument], use the [DocumentManager.storeIssuedDocument] method.
+ * To store the [IssuedDocument], use the [it.pagopa.cbor_implementation.document_manager.DocumentManager.storeIssuedDocument] method.
  *
  * @property issuedAt document's issuance date
  * @property requiresUserAuth flag that indicates if the document requires user authentication to be accessed
