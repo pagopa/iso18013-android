@@ -38,6 +38,10 @@ dependencies {
     implementation(libs.material)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.cbor)
+    implementation(libs.cose)
+    implementation(libs.kotlinx.io.core)
+    implementation(libs.kotlinx.io.bytestring)
+    implementation(libs.biometric.ktx)
     //Google identity
     implementation(libs.google.identity) {
         exclude(group = "org.bouncycastle")
@@ -51,6 +55,7 @@ dependencies {
     // Bouncy castle
     implementation(libs.bouncy.castle.pkix)
     implementation(libs.bouncy.castle.prov)
+    implementation(libs.kotlinx.datetime)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
