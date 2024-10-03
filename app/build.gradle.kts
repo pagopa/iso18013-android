@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "it.pagopa.iso_android"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -47,6 +47,7 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += listOf("/META-INF/versions/9/OSGI-INF/MANIFEST.MF")
         }
     }
 }

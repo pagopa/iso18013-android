@@ -1,5 +1,7 @@
 package it.pagopa.cbor_implementation
 
+import com.upokecenter.cbor.CBORException
+import it.pagopa.cbor_implementation.exception.MandatoryFieldNotFound
 import it.pagopa.cbor_implementation.impl.*
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -10,6 +12,10 @@ class MDocDataTest {
         val mDoc = MDoc(source = oneDocSource)
         mDoc.decodeMDoc(onComplete = { modelMDoc ->
             println(modelMDoc.documents)
+            assert(modelMDoc.documents?.size!! > 0)
+            val document = modelMDoc.documents?.get(0)!!
+            assert(document.docType == "org.iso.18013.5.1.mDL")
+            assert(document.issuerSigned!!.nameSpaces!!["org.iso.18013.5.1"]?.get(0)!!.digestID == 0)
         }, onError = {
 
         })
@@ -24,6 +30,10 @@ class MDocDataTest {
                     val (isValid, error) = mDoc.verifyValidity(it)
                     val errorToPrint = if (error != null) " error: $error" else ""
                     println("document -> $i: isValid: $isValid$errorToPrint")
+                    assert(if (i == 0) isValid else !isValid)
+                    if (i == 1) {
+                        assert(error is MandatoryFieldNotFound)
+                    }
                 }
             },
             onError = {
@@ -37,6 +47,10 @@ class MDocDataTest {
         val mDoc = MDoc(source = Base64.decode(oneDocSource))
         mDoc.decodeMDoc(onComplete = { modelMDoc ->
             println(modelMDoc.documents)
+            assert(modelMDoc.documents?.size!! > 0)
+            val document = modelMDoc.documents?.get(0)!!
+            assert(document.docType == "org.iso.18013.5.1.mDL")
+            assert(document.issuerSigned!!.nameSpaces!!["org.iso.18013.5.1"]?.get(0)!!.digestID == 0)
         }, onError = {
 
         })
@@ -52,10 +66,26 @@ class MDocDataTest {
                     val (isValid, error) = mDoc.verifyValidity(it)
                     val errorToPrint = if (error != null) " error: $error" else ""
                     println("document -> $i: isValid: $isValid$errorToPrint")
+                    assert(if (i == 0) isValid else !isValid)
+                    if (i == 1) {
+                        assert(error is MandatoryFieldNotFound)
+                    }
                 }
             },
             onError = {
 
             })
+    }
+
+
+    @OptIn(ExperimentalEncodingApi::class)
+    @org.junit.Test
+    fun base64NotValid() {
+        val mDoc = MDoc(source = Base64.decode("Test"))
+        mDoc.decodeMDoc(onComplete = { modelMDoc ->
+            println(modelMDoc.documents)
+        }, onError = {
+            assert(it is CBORException)
+        })
     }
 }

@@ -61,7 +61,11 @@ class MDoc private constructor(
             "un_distinguishing_sign"
         )
 
-        val needDataForEuPid = listOf<String>()
+        val needDataForEuPid = listOf(
+            "family_name",
+            "given_name",
+            "birth_date"
+        )
 
         val needData = when (issuerSigned?.docType) {
             MDL_DOCTYPE -> needDataForMdl
@@ -77,7 +81,7 @@ class MDoc private constructor(
 
         val list = needData
             .filter {
-                usedKeys?.contains(it)?.not() ?: true
+                usedKeys?.contains(it)?.not() != false
             }
 
         return if (list.isEmpty())

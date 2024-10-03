@@ -9,7 +9,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 24
+        minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -38,6 +38,19 @@ dependencies {
     implementation(libs.material)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.cbor)
+    //Google identity
+    implementation(libs.google.identity) {
+        exclude(group = "org.bouncycastle")
+    }
+    implementation(libs.google.identity.android) {
+        exclude(group = "org.bouncycastle")
+    }
+    implementation(libs.google.identity.mdoc) {
+        exclude(group = "org.bouncycastle")
+    }
+    // Bouncy castle
+    implementation(libs.bouncy.castle.pkix)
+    implementation(libs.bouncy.castle.prov)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
