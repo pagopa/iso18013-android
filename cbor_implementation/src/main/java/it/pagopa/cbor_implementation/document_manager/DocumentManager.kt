@@ -21,6 +21,7 @@ import com.upokecenter.cbor.CBORObject
 import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
 import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResult
+import it.pagopa.cbor_implementation.document_manager.results.IssuerSignedRetriever
 import it.pagopa.cbor_implementation.document_manager.results.StoreDocumentResult
 import it.pagopa.cbor_implementation.extensions.asNameSpacedData
 import it.pagopa.cbor_implementation.extensions.getEmbeddedCBORObject
@@ -169,6 +170,31 @@ class DocumentManager private constructor() {
         signature.update(dataToVerify)
         return signature.verify(signatureBytes)
     }*/
+
+    fun retrieveIssuerDocumentData(
+        documentData: ByteArray,
+        result: IssuerSignedRetriever
+    ) {
+        try {
+            var listBack: List<ByteArray> = listOf()
+            val maybeList = CBORObject
+                .DecodeFromBytes(documentData)["documents"]
+            val isList = maybeList != null
+            if (isList) {
+                val docListSize = maybeList.size()
+                for (i in 0 until docListSize) {
+                    listBack += maybeList[i]["issuerSigned"].EncodeToBytes()
+                }
+            } else {
+                listBack += CBORObject
+                    .DecodeFromBytes(documentData)["issuerSigned"]
+                    .EncodeToBytes()
+            }
+            result.success(listBack)
+        } catch (e: Exception) {
+            result.failure(e)
+        }
+    }
 
     fun storeIssuedDocument(
         unsignedDocument: UnsignedDocument,
