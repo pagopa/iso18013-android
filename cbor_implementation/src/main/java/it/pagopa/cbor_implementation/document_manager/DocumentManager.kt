@@ -197,6 +197,10 @@ class DocumentManager private constructor() {
                     docType = obj["docType"].AsString()
                 )
             }
+            if(listBack.isEmpty()){
+                result.failure(IllegalArgumentException("No document found"))
+                return
+            }
             result.success(listBack)
         } catch (e: Exception) {
             result.failure(e)
