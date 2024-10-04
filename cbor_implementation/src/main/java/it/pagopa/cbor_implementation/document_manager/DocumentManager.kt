@@ -197,7 +197,7 @@ class DocumentManager private constructor() {
                     docType = obj["docType"].AsString()
                 )
             }
-            if(listBack.isEmpty()){
+            if (listBack.isEmpty()) {
                 result.failure(IllegalArgumentException("No document found"))
                 return
             }
@@ -219,9 +219,13 @@ class DocumentManager private constructor() {
                 return
             }
             val issuerSigned = CBORObject.DecodeFromBytes(issuerDocumentData)
-
+            val issuerAuth = issuerSigned["issuerAuth"]
+            if (issuerAuth == null) {
+                result.failure(IllegalArgumentException("No issuerAuth found"))
+                return
+            }
             with(documentCredential) {
-                val issuerAuthBytes = issuerSigned["issuerAuth"].EncodeToBytes()
+                val issuerAuthBytes = issuerAuth.EncodeToBytes()
                 val issuerAuth = Message
                     .DecodeFromBytes(issuerAuthBytes, MessageTag.Sign1) as Sign1Message
                 val msoBytes = issuerAuth.GetContent().getEmbeddedCBORObject().EncodeToBytes()
