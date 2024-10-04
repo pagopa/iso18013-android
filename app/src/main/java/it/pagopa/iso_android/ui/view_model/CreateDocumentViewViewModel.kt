@@ -67,6 +67,7 @@ class CreateDocumentViewViewModel(private val res: Resources) : ViewModel() {
                 override fun success(issuerDocumentsData: List<DocumentRetrieved>) {
                     issuerDocumentsData.forEach { singleDocData ->
                         CborLogger.i("document", singleDocData.docType)
+                        //if(singleDocData.docType == MDL_DOCTYPE)//this is an example if I just want to sign MDL
                         documentManager!!.storeIssuedDocument(
                             unsignedDocument = this@storeDocument,
                             issuerDocumentData = singleDocData.issuerDocumentsData,
