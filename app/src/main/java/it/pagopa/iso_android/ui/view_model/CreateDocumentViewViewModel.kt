@@ -10,6 +10,7 @@ import it.pagopa.cbor_implementation.document_manager.DocumentManagerBuilder
 import it.pagopa.cbor_implementation.document_manager.document.DocumentId
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
 import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResult
+import it.pagopa.cbor_implementation.document_manager.results.DocumentRetrieved
 import it.pagopa.cbor_implementation.document_manager.results.IssuerSignedRetriever
 import it.pagopa.cbor_implementation.document_manager.results.StoreDocumentResult
 import it.pagopa.cbor_implementation.model.MDL_DOCTYPE
@@ -61,13 +62,14 @@ class CreateDocumentViewViewModel(private val res: Resources) : ViewModel() {
     @OptIn(ExperimentalEncodingApi::class)
     private fun UnsignedDocument.storeDocument() {
         documentManager!!.retrieveIssuerDocumentData(
-            documentData = Base64.decode(base64Mocked),
+            documentData = Base64.decode(base64mockedMoreDocs),
             result = object : IssuerSignedRetriever {
-                override fun success(issuerDocumentsData: List<ByteArray>) {
+                override fun success(issuerDocumentsData: List<DocumentRetrieved>) {
                     issuerDocumentsData.forEach { singleDocData ->
+                        CborLogger.i("document", singleDocData.docType)
                         documentManager!!.storeIssuedDocument(
                             unsignedDocument = this@storeDocument,
-                            issuerDocumentData = singleDocData,
+                            issuerDocumentData = singleDocData.issuerDocumentsData,
                             result = object : StoreDocumentResult {
                                 override fun success(
                                     documentId: DocumentId,

@@ -21,6 +21,7 @@ import com.upokecenter.cbor.CBORObject
 import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
 import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResult
+import it.pagopa.cbor_implementation.document_manager.results.DocumentRetrieved
 import it.pagopa.cbor_implementation.document_manager.results.IssuerSignedRetriever
 import it.pagopa.cbor_implementation.document_manager.results.StoreDocumentResult
 import it.pagopa.cbor_implementation.extensions.asNameSpacedData
@@ -176,19 +177,25 @@ class DocumentManager private constructor() {
         result: IssuerSignedRetriever
     ) {
         try {
-            var listBack: List<ByteArray> = listOf()
+            var listBack: List<DocumentRetrieved> = listOf()
             val maybeList = CBORObject
                 .DecodeFromBytes(documentData)["documents"]
             val isList = maybeList != null
             if (isList) {
                 val docListSize = maybeList.size()
                 for (i in 0 until docListSize) {
-                    listBack += maybeList[i]["issuerSigned"].EncodeToBytes()
+                    listBack += DocumentRetrieved(
+                        issuerDocumentsData = maybeList[i]["issuerSigned"].EncodeToBytes(),
+                        docType = maybeList[i]["docType"].AsString()
+                    )
                 }
             } else {
-                listBack += CBORObject
-                    .DecodeFromBytes(documentData)["issuerSigned"]
-                    .EncodeToBytes()
+                val obj = CBORObject
+                    .DecodeFromBytes(documentData)
+                listBack += DocumentRetrieved(
+                    issuerDocumentsData = obj["issuerSigned"].EncodeToBytes(),
+                    docType = obj["docType"].AsString()
+                )
             }
             result.success(listBack)
         } catch (e: Exception) {
