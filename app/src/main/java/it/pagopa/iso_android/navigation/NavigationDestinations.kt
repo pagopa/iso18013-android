@@ -13,5 +13,8 @@ sealed class HomeDestination {
     data object Slave : HomeDestination()
 
     @Serializable
-    data object Cbor : HomeDestination()
+    data object CreateDocument : HomeDestination()
+
+    @Serializable
+    data object ReadDocument : HomeDestination()
 }

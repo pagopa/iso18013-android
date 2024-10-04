@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -76,6 +78,7 @@ fun GenericDialog(
         CenteredComposable(
             modifier = Modifier
                 .wrapContentSize()
+                .verticalScroll(rememberScrollState())
                 .background(
                     MaterialTheme.colorScheme.background,
                     shape = RoundedCornerShape(8.dp)

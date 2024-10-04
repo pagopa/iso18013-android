@@ -28,8 +28,12 @@ import it.pagopa.cbor_implementation.extensions.toDigestIdMapping
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.SecureRandom
 import java.security.Security
+import java.security.Signature
+import java.security.cert.CertificateFactory
 import java.time.Instant
 import java.util.UUID
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 class DocumentManager private constructor() {
     init {
@@ -144,6 +148,28 @@ class DocumentManager private constructor() {
         }
     }
 
+    /*@OptIn(ExperimentalEncodingApi::class)
+    fun verifySignature(
+        issuerDocumentData: ByteArray
+    ): Boolean {
+        val issuerSigned = CBORObject.DecodeFromBytes(issuerDocumentData)
+        val certificateBase64 = issuerSigned.get("issuerAuth").get(1).values.first().AsString()
+        // Decodifica del certificato e della firma
+        val certificateBytes = Base64.decode(certificateBase64)
+        val signatureBytes = Base64.decode(signatureBase64)
+
+        // Creazione del certificato X.509
+        val certificateFactory = CertificateFactory.getInstance("X.509", "BC")
+        val certificate = certificateFactory.generateCertificate(certificateBytes.inputStream())
+        // Estrazione della chiave pubblica dal certificato
+        val publicKey = certificate.publicKey
+        // Verifica della firma
+        val signature = Signature.getInstance("SHA256withECDSA", "BC")
+        signature.initVerify(publicKey)
+        signature.update(dataToVerify)
+        return signature.verify(signatureBytes)
+    }*/
+
     fun storeIssuedDocument(
         unsignedDocument: UnsignedDocument,
         issuerDocumentData: ByteArray,
@@ -161,11 +187,8 @@ class DocumentManager private constructor() {
                 val issuerAuthBytes = issuerSigned["issuerAuth"].EncodeToBytes()
                 val issuerAuth = Message
                     .DecodeFromBytes(issuerAuthBytes, MessageTag.Sign1) as Sign1Message
-
                 val msoBytes = issuerAuth.GetContent().getEmbeddedCBORObject().EncodeToBytes()
-
                 val mso = MobileSecurityObjectParser(msoBytes).parse()
-
                 if (mso.deviceKey != unsignedDocument.publicKey.toEcPublicKey(mso.deviceKey.curve)) {
                     if (builder.checkPublicKeyBeforeAdding) {
                         val msg = "Public key in MSO does not match the one in the request"

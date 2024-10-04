@@ -47,7 +47,7 @@ open class UnsignedDocument(
     @JvmSynthetic
     internal var base: BaseDocument? = null
 
-    internal val ecPublicKey: EcPublicKey?
+    val ecPublicKey: EcPublicKey?
         get() = base?.pendingCredentials
             ?.firstOrNull { it is SecureAreaBoundCredential }
             ?.let { it as SecureAreaBoundCredential }
@@ -115,7 +115,7 @@ open class UnsignedDocument(
     }
 
     override fun toString(): String {
-        return "UnsignedDocument(id=$id, docType='$docType', usesStrongBox=$usesStrongBox, requiresUserAuth=$requiresUserAuth, createdAt=$createdAt, state=$state, certificatesNeedAuth=$certificatesNeedAuth, name='$name')"
+        return "UnsignedDocument(id=$id,\n ecPublicKey:${ecPublicKey},\n publicKey:${publicKey},\n docType='$docType',\n usesStrongBox=$usesStrongBox,\n requiresUserAuth=$requiresUserAuth,\n createdAt=$createdAt,\n state=$state,\n certificatesNeedAuth=$certificatesNeedAuth,\n name='$name')"
     }
 
     internal companion object {

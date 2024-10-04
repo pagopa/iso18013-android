@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import it.pagopa.cbor_implementation.impl.MDoc
 import it.pagopa.cbor_implementation.model.DocumentX
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 class CborViewViewModel : ViewModel() {
     var cborText by mutableStateOf("")
@@ -78,6 +80,7 @@ class CborViewViewModel : ViewModel() {
         )
     }
 
+    @OptIn(ExperimentalEncodingApi::class)
     @Composable
     private fun DocumentX.ElementDecoded() {
         val item = this
@@ -95,17 +98,24 @@ class CborViewViewModel : ViewModel() {
             )
 
             if (item.elementIdentifier == "portrait") {
-                Image(
-                    modifier = Modifier
-                        .padding(top = 16.dp)
-                        .fillMaxWidth(),
-                    bitmap = BitmapFactory.decodeByteArray(
-                        item.elementValue as ByteArray,
-                        0,
-                        (item.elementValue as ByteArray).size
-                    ).asImageBitmap(),
-                    contentDescription = null
-                )
+                val bArray: ByteArray? = when (item.elementValue) {
+                    is ByteArray -> item.elementValue as ByteArray
+                    is String -> Base64.decode(item.elementValue as String)
+                    else -> null
+                }
+                bArray?.let {
+                    Image(
+                        modifier = Modifier
+                            .padding(top = 16.dp)
+                            .fillMaxWidth(),
+                        bitmap = BitmapFactory.decodeByteArray(
+                            it,
+                            0,
+                            it.size
+                        ).asImageBitmap(),
+                        contentDescription = null
+                    )
+                }
             } else {
                 Text(
                     modifier = Modifier
