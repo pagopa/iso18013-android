@@ -44,6 +44,7 @@ fun CreateDocumentView(onBack: () -> Unit) {
         )
         Switch(checked = vm.switchChecked.value,
             onCheckedChange = {
+                vm.switchChecked.value = it
                 vm.useRetrieveBefore = it
             }
         )
