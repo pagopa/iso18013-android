@@ -18,8 +18,10 @@ import com.android.identity.mdoc.mso.StaticAuthDataGenerator
 import com.android.identity.securearea.KeyPurpose
 import com.android.identity.securearea.SecureAreaRepository
 import com.upokecenter.cbor.CBORObject
+import it.pagopa.cbor_implementation.CborLogger
 import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
+import it.pagopa.cbor_implementation.document_manager.results.AddDataToDocumentResult
 import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResult
 import it.pagopa.cbor_implementation.document_manager.results.DocumentRetrieved
 import it.pagopa.cbor_implementation.document_manager.results.IssuerSignedRetriever
@@ -30,12 +32,8 @@ import it.pagopa.cbor_implementation.extensions.toDigestIdMapping
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.SecureRandom
 import java.security.Security
-import java.security.Signature
-import java.security.cert.CertificateFactory
 import java.time.Instant
 import java.util.UUID
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 class DocumentManager private constructor() {
     init {
@@ -184,25 +182,51 @@ class DocumentManager private constructor() {
             if (isList) {
                 val docListSize = maybeList.size()
                 for (i in 0 until docListSize) {
-                    listBack += DocumentRetrieved(
-                        issuerDocumentsData = maybeList[i]["issuerSigned"].EncodeToBytes(),
-                        docType = maybeList[i]["docType"].AsString()
-                    )
+                    val issuerDocumentData = maybeList[i]["issuerSigned"].EncodeToBytes()
+                    val docType = maybeList[i]["docType"].EncodeToBytes()
+                    if (issuerDocumentData != null && docType != null) {
+                        listBack += DocumentRetrieved(
+                            issuerDocumentsData = maybeList[i]["issuerSigned"].EncodeToBytes(),
+                            docType = maybeList[i]["docType"].AsString()
+                        )
+                    }
                 }
             } else {
                 val obj = CBORObject
                     .DecodeFromBytes(documentData)
-                listBack += DocumentRetrieved(
-                    issuerDocumentsData = obj["issuerSigned"].EncodeToBytes(),
-                    docType = obj["docType"].AsString()
-                )
+                val issuerDocumentData = obj["issuerSigned"].EncodeToBytes()
+                val docType = obj["docType"].EncodeToBytes()
+                if (issuerDocumentData != null && docType != null) {
+                    listBack += DocumentRetrieved(
+                        issuerDocumentsData = obj["issuerSigned"].EncodeToBytes(),
+                        docType = obj["docType"].AsString()
+                    )
+                }
             }
             if (listBack.isEmpty()) {
-                result.failure(IllegalArgumentException("No document found"))
+                result.failure(IllegalArgumentException("No valid document found"))
                 return
             }
             result.success(listBack)
         } catch (e: Exception) {
+            result.failure(e)
+        }
+    }
+
+    fun addDataToDoc(
+        unsignedDocument: UnsignedDocument,
+        data: ByteArray,
+        result: AddDataToDocumentResult
+    ) {
+        try {
+            val documentCredential = documentStore.lookupDocument(unsignedDocument.id)
+            if (documentCredential == null) {
+                result.failure(IllegalArgumentException("No credential found for ${unsignedDocument.id}"))
+                return
+            }
+            documentCredential.applicationData.setData("", data)
+        } catch (e: Exception) {
+            CborLogger.e("AddDataToDoc", e.toString())
             result.failure(e)
         }
     }
