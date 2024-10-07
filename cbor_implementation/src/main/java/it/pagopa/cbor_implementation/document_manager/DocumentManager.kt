@@ -20,11 +20,12 @@ import com.android.identity.securearea.SecureAreaRepository
 import com.upokecenter.cbor.CBORObject
 import it.pagopa.cbor_implementation.CborLogger
 import it.pagopa.cbor_implementation.document_manager.document.Document
+import it.pagopa.cbor_implementation.document_manager.document.SignedWithCOSEDocument
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
-import it.pagopa.cbor_implementation.document_manager.results.AddDataToDocumentResult
 import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResult
 import it.pagopa.cbor_implementation.document_manager.results.DocumentRetrieved
 import it.pagopa.cbor_implementation.document_manager.results.IssuerSignedRetriever
+import it.pagopa.cbor_implementation.document_manager.results.SignDataWithCOSEResult
 import it.pagopa.cbor_implementation.document_manager.results.StoreDocumentResult
 import it.pagopa.cbor_implementation.extensions.asNameSpacedData
 import it.pagopa.cbor_implementation.extensions.getEmbeddedCBORObject
@@ -86,9 +87,8 @@ class DocumentManager private constructor() {
     fun createDocument(
         docType: String,
         strongBox: Boolean,
-        attestationChallenge: ByteArray?,
-        result: CreateDocumentResult
-    ) {
+        attestationChallenge: ByteArray?
+    ): CreateDocumentResult {
         try {
             val domain = "pagopa"
             val documentId = "${UUID.randomUUID()}"
@@ -117,13 +117,12 @@ class DocumentManager private constructor() {
                 .firstOrNull()
                 ?.attestation
                 ?.publicKey
-
             documentStore.addDocument(documentCredential)
 
             val unsignedDocument = UnsignedDocument(documentCredential)
-            result.success(unsignedDocument)
+            return CreateDocumentResult.Success(unsignedDocument)
         } catch (e: Exception) {
-            result.failure(e)
+            return CreateDocumentResult.Failure(e)
         }
     }
 
@@ -148,28 +147,6 @@ class DocumentManager private constructor() {
         }
     }
 
-    /*@OptIn(ExperimentalEncodingApi::class)
-    fun verifySignature(
-        issuerDocumentData: ByteArray
-    ): Boolean {
-        val issuerSigned = CBORObject.DecodeFromBytes(issuerDocumentData)
-        val certificateBase64 = issuerSigned.get("issuerAuth").get(1).values.first().AsString()
-        // Decodifica del certificato e della firma
-        val certificateBytes = Base64.decode(certificateBase64)
-        val signatureBytes = Base64.decode(signatureBase64)
-
-        // Creazione del certificato X.509
-        val certificateFactory = CertificateFactory.getInstance("X.509", "BC")
-        val certificate = certificateFactory.generateCertificate(certificateBytes.inputStream())
-        // Estrazione della chiave pubblica dal certificato
-        val publicKey = certificate.publicKey
-        // Verifica della firma
-        val signature = Signature.getInstance("SHA256withECDSA", "BC")
-        signature.initVerify(publicKey)
-        signature.update(dataToVerify)
-        return signature.verify(signatureBytes)
-    }*/
-
     fun retrieveIssuerDocumentData(
         documentData: ByteArray,
         result: IssuerSignedRetriever
@@ -187,7 +164,8 @@ class DocumentManager private constructor() {
                     if (issuerDocumentData != null && docType != null) {
                         listBack += DocumentRetrieved(
                             issuerDocumentsData = maybeList[i]["issuerSigned"].EncodeToBytes(),
-                            docType = maybeList[i]["docType"].AsString()
+                            docType = maybeList[i]["docType"].AsString(),
+                            nameSpaces = maybeList[i]["issuerSigned"]["nameSpaces"]?.EncodeToBytes()
                         )
                     }
                 }
@@ -199,7 +177,8 @@ class DocumentManager private constructor() {
                 if (issuerDocumentData != null && docType != null) {
                     listBack += DocumentRetrieved(
                         issuerDocumentsData = obj["issuerSigned"].EncodeToBytes(),
-                        docType = obj["docType"].AsString()
+                        docType = obj["docType"].AsString(),
+                        nameSpaces = obj["issuerSigned"]["nameSpaces"]?.EncodeToBytes()
                     )
                 }
             }
@@ -209,24 +188,106 @@ class DocumentManager private constructor() {
             }
             result.success(listBack)
         } catch (e: Exception) {
+            CborLogger.e("retrieveIssuerDocumentData", e.toString())
             result.failure(e)
         }
     }
 
-    fun addDataToDoc(
-        unsignedDocument: UnsignedDocument,
-        data: ByteArray,
-        result: AddDataToDocumentResult
+    fun signWithCOSE(
+        documents: List<DocumentRetrieved>,
+        privateKey: String,
+        issuerCertificate: String,
+        strongBox: Boolean,
+        attestationChallenge: ByteArray?,
+        result: SignDataWithCOSEResult
     ) {
         try {
-            val documentCredential = documentStore.lookupDocument(unsignedDocument.id)
-            if (documentCredential == null) {
-                result.failure(IllegalArgumentException("No credential found for ${unsignedDocument.id}"))
+            var backList = listOf<SignedWithCOSEDocument>()
+            documents.forEach {
+                val analysis = AnalyzeOneDoc.analyzeWithDocumentRetrieved(
+                    documentRetrieved = it,
+                    documentManager = this,
+                    useStrongBox = strongBox && supportStrongBox,
+                    attestationChallenge = attestationChallenge,
+                    privateKey = privateKey,
+                    issuerCertificate = issuerCertificate
+                )
+                if (analysis.itsOk) {
+                    backList += SignedWithCOSEDocument(
+                        analysis.generateData(),
+                        analysis.document!!
+                    )
+                } else
+                    result.failure(Exception(analysis.msg))
+            }
+            if (backList.isEmpty()) {
+                result.failure(Exception("No valid document found"))
                 return
             }
-            documentCredential.applicationData.setData("", data)
+            result.success(backList)
         } catch (e: Exception) {
-            CborLogger.e("AddDataToDoc", e.toString())
+            CborLogger.e("signWithCOSE", e.toString())
+            result.failure(e)
+        }
+    }
+
+    fun signWithCOSE(
+        data: ByteArray,
+        privateKey: String,
+        issuerCertificate: String,
+        strongBox: Boolean,
+        attestationChallenge: ByteArray?,
+        result: SignDataWithCOSEResult
+    ) {
+        try {
+            val cborData = CBORObject.DecodeFromBytes(data)
+            val maybeList = cborData["documents"]
+            val isList = maybeList != null
+            var backList = listOf<SignedWithCOSEDocument>()
+            if (isList) {
+                maybeList.values.forEach { documentCbor ->
+                    val analysis = AnalyzeOneDoc.analyzeWithCborObject(
+                        documentCbor = documentCbor,
+                        documentManager = this,
+                        useStrongBox = strongBox && supportStrongBox,
+                        attestationChallenge = attestationChallenge,
+                        privateKey = privateKey,
+                        issuerCertificate = issuerCertificate
+                    )
+                    if (analysis.itsOk) {
+                        backList += SignedWithCOSEDocument(
+                            analysis.generateData(),
+                            analysis.document!!
+                        )
+                    } else
+                        result.failure(Exception(analysis.msg))
+                }
+            } else {
+                val analysis = AnalyzeOneDoc.analyzeWithCborObject(
+                    documentCbor = cborData,
+                    documentManager = this,
+                    useStrongBox = strongBox && supportStrongBox,
+                    attestationChallenge = attestationChallenge,
+                    privateKey = privateKey,
+                    issuerCertificate = issuerCertificate
+                )
+                if (analysis.itsOk) {
+                    backList += SignedWithCOSEDocument(
+                        analysis.generateData(),
+                        analysis.document!!
+                    )
+                } else {
+                    result.failure(Exception(analysis.msg))
+                    return
+                }
+            }
+            if (backList.isEmpty()) {
+                result.failure(Exception("No valid document found"))
+                return
+            }
+            result.success(backList)
+        } catch (e: Exception) {
+            CborLogger.e("signWithCOSE", e.toString())
             result.failure(e)
         }
     }

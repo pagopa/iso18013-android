@@ -47,7 +47,7 @@ open class UnsignedDocument(
     @JvmSynthetic
     internal var base: BaseDocument? = null
 
-    val ecPublicKey: EcPublicKey?
+    internal val ecPublicKey: EcPublicKey?
         get() = base?.pendingCredentials
             ?.firstOrNull { it is SecureAreaBoundCredential }
             ?.let { it as SecureAreaBoundCredential }
