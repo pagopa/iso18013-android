@@ -6,6 +6,7 @@ import it.pagopa.cbor_implementation.model.Document
 import it.pagopa.cbor_implementation.model.DocumentX
 import it.pagopa.cbor_implementation.model.IssuerSigned
 import it.pagopa.cbor_implementation.model.ModelMDoc
+import java.util.Base64
 
 internal fun CBORObject.parse(): Any? {
     if (isNull) return null
@@ -14,7 +15,7 @@ internal fun CBORObject.parse(): Any? {
 
     return when (this.type) {
         CBORType.Boolean, CBORType.SimpleValue -> isTrue
-        CBORType.ByteString -> GetByteString()
+        CBORType.ByteString -> Base64.getEncoder().encodeToString(GetByteString())
         CBORType.TextString -> AsString()
         CBORType.Array -> values.map { it.parse() }.toList()
         CBORType.Map -> keys.associate { it.parse() to this[it].parse() }
