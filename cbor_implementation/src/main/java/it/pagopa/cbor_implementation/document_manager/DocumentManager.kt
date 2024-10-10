@@ -241,7 +241,7 @@ class DocumentManager private constructor() {
     /** if the issuer requires the user to prove possession of the private key corresponding to the certificateNeedAuth
      * then user can use the method below to sign issuer's data and send the signature to the issuer*/
     @CheckResult
-    fun signUnsignedDocument(
+    fun signUnsignedDocumentIssuerData(
         unsignedDocument: UnsignedDocument,
         data: ByteArray
     ): SignedWithAuthKeyResult = unsignedDocument.signWithAuthKey(data)

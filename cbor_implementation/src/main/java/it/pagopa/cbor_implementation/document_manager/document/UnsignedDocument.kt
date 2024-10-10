@@ -113,6 +113,40 @@ open class UnsignedDocument(
         }
     }
 
+    fun signWithAuthKeyCOSE(
+        data: ByteArray,
+        alg: Algorithm.SupportedAlgorithms = Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA
+    ): SignedWithAuthKeyResult {
+        return when (val cred = base?.pendingCredentials
+            ?.firstOrNull { it is SecureAreaBoundCredential }
+            ?.let { it as SecureAreaBoundCredential }) {
+
+            null -> SignedWithAuthKeyResult.Failure(Exception("Not initialized correctly. Use DocumentManager.createDocument method."))
+            else -> {
+                val algorithm = Algorithm(alg).getCryptoAlgorithm()
+                val keyUnlockData = AndroidKeystoreKeyUnlockData(cred.alias)
+                try {
+                    cred.secureArea.sign(
+                        cred.alias,
+                        algorithm,
+                        data,
+                        keyUnlockData
+                    ).let {
+                        SignedWithAuthKeyResult.Success(it.toCoseEncoded())
+                    }
+                } catch (e: Exception) {
+                    when (e) {
+                        is KeyLockedException -> SignedWithAuthKeyResult.UserAuthRequired(
+                            keyUnlockData.getCryptoObjectForSigning(algorithm)
+                        )
+
+                        else -> SignedWithAuthKeyResult.Failure(e)
+                    }
+                }
+            }
+        }
+    }
+
     override fun toString(): String {
         return "UnsignedDocument(id=$id,\n ecPublicKey:${ecPublicKey},\n publicKey:${publicKey},\n docType='$docType',\n usesStrongBox=$usesStrongBox,\n requiresUserAuth=$requiresUserAuth,\n createdAt=$createdAt,\n state=$state,\n certificatesNeedAuth=$certificatesNeedAuth,\n name='$name')"
     }

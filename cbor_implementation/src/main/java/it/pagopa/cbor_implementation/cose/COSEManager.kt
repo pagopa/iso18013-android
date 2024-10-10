@@ -16,7 +16,9 @@ import com.upokecenter.cbor.CBORObject
 import it.pagopa.cbor_implementation.CborLogger
 import it.pagopa.cbor_implementation.document_manager.DocumentManagerBuilder
 import it.pagopa.cbor_implementation.document_manager.DocumentManagerBuilder.Companion.AUTH_TIMEOUT
+import it.pagopa.cbor_implementation.document_manager.SignedWithAuthKeyResult
 import it.pagopa.cbor_implementation.document_manager.algorithm.Algorithm
+import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
 import kotlinx.io.files.Path
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -106,7 +108,8 @@ class COSEManager(val context: Context) {
         data: ByteArray,
         strongBox: Boolean,
         attestationChallenge: ByteArray?,
-        alg: Algorithm.SupportedAlgorithms
+        alg: Algorithm.SupportedAlgorithms,
+        alias: String = "pagoPaAlias"
     ): SignWithCOSEResult {
         try {
             val nonEmptyChallenge = attestationChallenge
@@ -117,10 +120,26 @@ class COSEManager(val context: Context) {
                     nonEmptyChallenge,
                     strongBox && supportStrongBox
                 )
-            ).withAlg(alg).sign(_context, data)
+            ).withAlg(alg)
+                .withAlias(alias)
+                .sign(_context, data)
         } catch (e: Exception) {
             CborLogger.e("signWithCOSE", e.toString())
             return SignWithCOSEResult.Failure(e.toString())
+        }
+    }
+
+    @CheckResult
+    fun signWithDocumentKey(
+        data: ByteArray,
+        unsignedDocument: UnsignedDocument,
+        alg: Algorithm.SupportedAlgorithms = Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA
+    ): SignedWithAuthKeyResult {
+        try {
+            return CreateCOSE.signWithDocumentKey(data, unsignedDocument, alg)
+        } catch (e: Exception) {
+            CborLogger.e("signWithCOSE", e.toString())
+            return SignedWithAuthKeyResult.Failure(e)
         }
     }
 
