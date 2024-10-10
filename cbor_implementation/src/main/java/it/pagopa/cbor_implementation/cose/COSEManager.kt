@@ -55,13 +55,22 @@ class COSEManager(val context: Context) {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
                 context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
     }
+    /**
+     * Sets whether to require user authentication to sign.
+     * If the device is not secured, this will be set to false.
+     * @param enable
+     * @return [COSEManager]
+     */
+    fun enableUserAuth(enable: Boolean) = apply {
+        this.userAuth = enable && context.getSystemService(KeyguardManager::class.java).isDeviceSecure
+    }
 
     /**
      * The directory to store data files in.
      * By default, the [Context.getNoBackupFilesDir] is used.
      *
      * @param storageDir
-     * @return [DocumentManagerBuilder]
+     * @return [COSEManager]
      */
     fun withStorageDir(storageDir: File) = apply {
         this.storageDir = storageDir

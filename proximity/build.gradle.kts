@@ -36,6 +36,16 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.google.identity) {
+        exclude(group = "org.bouncycastle")
+    }
+    implementation(libs.google.identity.android) {
+        exclude(group = "org.bouncycastle")
+    }
+    implementation(libs.google.identity.mdoc) {
+        exclude(group = "org.bouncycastle")
+    }
+    implementation(libs.bouncy.castle.prov)
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.junit)

@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,13 +31,16 @@ import it.pagopa.iso_android.ui.view_model.viewModelWithCOSEManager
 fun SignAndVerifyView(onBack: () -> Unit) {
     val context = LocalContext.current
     val vm = viewModelWithCOSEManager<SignAndVerifyViewViewModel>(
-        coseManager = COSEManager(context).useEncryption(true)
+        coseManager = COSEManager(context)
+            .useEncryption(true)
+            .enableUserAuth(false)
     )
     BackHandler(onBack = onBack)
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.height(16.dp))
@@ -85,6 +90,12 @@ fun SignAndVerifyView(onBack: () -> Unit) {
             }
         )
         Spacer(Modifier.height(16.dp))
+        Button(onClick = {
+            vm.verify()
+        }) {
+            Text(text = "check it all")
+        }
+        Spacer(Modifier.height(8.dp))
         MediumText(
             modifier = Modifier.wrapContentSize(),
             text = "is valid: ${vm.isValidString.value}",// text is valid or not

@@ -19,25 +19,22 @@ import com.android.identity.mdoc.mso.StaticAuthDataGenerator
 import com.android.identity.securearea.KeyPurpose
 import com.android.identity.securearea.SecureAreaRepository
 import com.upokecenter.cbor.CBORObject
-import it.pagopa.cbor_implementation.CborLogger
 import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
 import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResult
-import it.pagopa.cbor_implementation.document_manager.results.DocumentIssuerAuth
-import it.pagopa.cbor_implementation.document_manager.results.DocumentRetrieved
-import it.pagopa.cbor_implementation.document_manager.results.IssuerAuthRetriever
-import it.pagopa.cbor_implementation.document_manager.results.IssuerSignedRetriever
 import it.pagopa.cbor_implementation.document_manager.results.StoreDocumentResult
 import it.pagopa.cbor_implementation.extensions.asNameSpacedData
 import it.pagopa.cbor_implementation.extensions.getEmbeddedCBORObject
 import it.pagopa.cbor_implementation.extensions.toDigestIdMapping
+import it.pagopa.cbor_implementation.model.EU_PID_DOCTYPE
+import it.pagopa.cbor_implementation.model.MDL_DOCTYPE
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.SecureRandom
 import java.security.Security
 import java.time.Instant
 import java.util.UUID
 
-class DocumentManager private constructor() {
+class DocumentManager private constructor() : LibIso18013DAO {
     init {
         val isBcAlreadyIntoProviders = Security.getProviders().any {
             it.name == BouncyCastleProvider.PROVIDER_NAME
@@ -92,7 +89,8 @@ class DocumentManager private constructor() {
         .setKeyPurposes(setOf(KeyPurpose.SIGN))
         .build()
 
-    fun createDocument(
+
+    override fun createDocument(
         docType: String,
         documentName: String,
         strongBox: Boolean,
@@ -135,123 +133,41 @@ class DocumentManager private constructor() {
         }
     }
 
-    fun storeDeferredDocument(
-        unsignedDocument: UnsignedDocument,
-        relatedData: ByteArray,
-        result: StoreDocumentResult
-    ) {
-        try {
-            val documentCredential = documentStore.lookupDocument(unsignedDocument.id)
-            if (documentCredential == null) {
-                result.failure(IllegalArgumentException("No credential found for ${unsignedDocument.id}"))
-                return
+    override fun getAllDocuments(): Array<Document> {
+        val list = documentStore.listDocuments()
+        if (list.isEmpty()) return arrayOf()
+        val listBack = ArrayList<Document>()
+        list.forEach { docId ->
+            documentStore.lookupDocument(docId)?.let {
+                listBack.add(Document(it))
             }
-            with(documentCredential) {
-                state = Document.State.DEFERRED
-                deferredRelatedData = relatedData
-            }
-            result.success(documentCredential.name, byteArrayOf())
-        } catch (e: Exception) {
-            result.failure(e)
         }
+        return listBack.toTypedArray()
     }
 
-    fun retrieveIssuerDocumentData(
-        documentData: ByteArray,
-        result: IssuerSignedRetriever
-    ) {
-        try {
-            var listBack: List<DocumentRetrieved> = listOf()
-            val maybeList = CBORObject
-                .DecodeFromBytes(documentData)["documents"]
-            val isList = maybeList != null
-            if (isList) {
-                val docListSize = maybeList.size()
-                for (i in 0 until docListSize) {
-                    val issuerDocumentData = maybeList[i]["issuerSigned"].EncodeToBytes()
-                    val docType = maybeList[i]["docType"].EncodeToBytes()
-                    if (issuerDocumentData != null && docType != null) {
-                        listBack += DocumentRetrieved(
-                            issuerDocumentsData = maybeList[i]["issuerSigned"].EncodeToBytes(),
-                            docType = maybeList[i]["docType"].AsString(),
-                            nameSpaces = maybeList[i]["issuerSigned"]["nameSpaces"]?.EncodeToBytes()
-                        )
-                    }
-                }
-            } else {
-                val obj = CBORObject
-                    .DecodeFromBytes(documentData)
-                val issuerDocumentData = obj["issuerSigned"].EncodeToBytes()
-                val docType = obj["docType"].EncodeToBytes()
-                if (issuerDocumentData != null && docType != null) {
-                    listBack += DocumentRetrieved(
-                        issuerDocumentsData = obj["issuerSigned"].EncodeToBytes(),
-                        docType = obj["docType"].AsString(),
-                        nameSpaces = obj["issuerSigned"]["nameSpaces"]?.EncodeToBytes()
-                    )
-                }
-            }
-            if (listBack.isEmpty()) {
-                result.failure(IllegalArgumentException("No valid document found"))
-                return
-            }
-            result.success(listBack)
-        } catch (e: Exception) {
-            CborLogger.e("retrieveIssuerDocumentData", e.toString())
-            result.failure(e)
-        }
+    override fun getAllMdlDocuments() = getAllDocuments().filter {
+        it.docType == MDL_DOCTYPE
+    }.toTypedArray()
+
+    override fun getAllEuPidDocuments() = getAllDocuments().filter {
+        it.docType == EU_PID_DOCTYPE
+    }.toTypedArray()
+
+    override fun getDocumentByIdentifier(id: String): Document? {
+        return documentStore.lookupDocument(id)?.let { Document(it) }
     }
 
-    fun retrieveIssuerAuth(
-        documentData: ByteArray,
-        retriever: IssuerAuthRetriever
-    ) {
-        try {
-            retrieveIssuerDocumentData(documentData, object : IssuerSignedRetriever {
-                override fun success(issuerDocumentsData: List<DocumentRetrieved>) {
-                    retriever.success(issuerDocumentsData.map { docData ->
-                        val cborObj = CBORObject
-                            .DecodeFromBytes(docData.issuerDocumentsData)
-                        val issuerAuth = cborObj["issuerAuth"]
-                        DocumentIssuerAuth(issuerAuth?.EncodeToBytes(), docData.docType)
-                    })
-                }
-
-                override fun failure(throwable: Throwable) {
-                    retriever.failure(throwable)
-                }
-            })
-        } catch (e: Exception) {
-            CborLogger.e("retrieveIssuerAuth", e.toString())
-            retriever.failure(e)
-        }
+    override fun deleteDocument(id: String): Boolean {
+        documentStore.deleteDocument(id)
+        return documentStore.lookupDocument(id) == null
     }
 
-    fun verifyDocumentSignature(
-        unsignedDocument: UnsignedDocument,
-        issuerAuthBytes: ByteArray
-    ): Boolean {
-        val issuerAuth = Message
-            .DecodeFromBytes(issuerAuthBytes, MessageTag.Sign1) as Sign1Message
-        val msoBytes = issuerAuth.GetContent().getEmbeddedCBORObject().EncodeToBytes()
-        val mso = MobileSecurityObjectParser(msoBytes).parse()
-        return mso.deviceKey == unsignedDocument.publicKey.toEcPublicKey(mso.deviceKey.curve)
-    }
-
-    /** if the issuer requires the user to prove possession of the private key corresponding to the certificateNeedAuth
-     * then user can use the method below to sign issuer's data and send the signature to the issuer*/
-    @CheckResult
-    fun signUnsignedDocumentIssuerData(
-        unsignedDocument: UnsignedDocument,
-        data: ByteArray
-    ): SignedWithAuthKeyResult = unsignedDocument.signWithAuthKey(data)
-
-    fun storeIssuedDocument(
+    override fun storeDocument(
         unsignedDocument: UnsignedDocument,
         issuerDocumentData: ByteArray,
         result: StoreDocumentResult
     ) {
-        try {//TODO: eccezione custom e fare il throw
+        try {
             val documentCredential = documentStore.lookupDocument(unsignedDocument.id)
             if (documentCredential == null) {
                 result.failure(IllegalArgumentException("No credential found for ${unsignedDocument.id}"))
@@ -295,6 +211,46 @@ class DocumentManager private constructor() {
             result.failure(e)
         }
     }
+
+    internal fun storeDeferredDocument(
+        unsignedDocument: UnsignedDocument,
+        relatedData: ByteArray,
+        result: StoreDocumentResult
+    ) {
+        try {
+            val documentCredential = documentStore.lookupDocument(unsignedDocument.id)
+            if (documentCredential == null) {
+                result.failure(IllegalArgumentException("No credential found for ${unsignedDocument.id}"))
+                return
+            }
+            with(documentCredential) {
+                state = Document.State.DEFERRED
+                deferredRelatedData = relatedData
+            }
+            result.success(documentCredential.name, byteArrayOf())
+        } catch (e: Exception) {
+            result.failure(e)
+        }
+    }
+
+    fun verifyDocumentSignature(
+        unsignedDocument: UnsignedDocument,
+        issuerAuthBytes: ByteArray
+    ): Boolean {
+        val issuerAuth = Message
+            .DecodeFromBytes(issuerAuthBytes, MessageTag.Sign1) as Sign1Message
+        val msoBytes = issuerAuth.GetContent().getEmbeddedCBORObject().EncodeToBytes()
+        val mso = MobileSecurityObjectParser(msoBytes).parse()
+        return mso.deviceKey == unsignedDocument.publicKey.toEcPublicKey(mso.deviceKey.curve)
+    }
+
+    /** if the issuer requires the user to prove possession of the private key corresponding to the certificateNeedAuth
+     * then user can use the method below to sign issuer's data and send the signature to the issuer*/
+    @CheckResult
+    fun signUnsignedDocumentIssuerData(
+        unsignedDocument: UnsignedDocument,
+        data: ByteArray
+    ): SignedWithAuthKeyResult = unsignedDocument.signWithAuthKey(data)
 
     companion object {
         fun build(builder: DocumentManagerBuilder) = DocumentManager().apply {

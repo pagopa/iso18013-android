@@ -4,9 +4,13 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -14,9 +18,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import it.pagopa.iso_android.MainActivity
 import it.pagopa.iso_android.ui.view.CborView
-import it.pagopa.iso_android.ui.view.SignAndVerifyView
 import it.pagopa.iso_android.ui.view.HomeView
 import it.pagopa.iso_android.ui.view.MasterView
+import it.pagopa.iso_android.ui.view.SignAndVerifyView
 import it.pagopa.iso_android.ui.view.SlaveView
 
 private const val AnimDurationMillis = 700
@@ -25,7 +29,8 @@ private const val AnimDurationMillis = 700
 fun MainActivity.IsoAndroidPocNavHost(
     navController: NavHostController,
     showMenu: MutableState<Boolean>,
-    innerPadding: PaddingValues
+    innerPadding: PaddingValues,
+    topBarImage: MutableState<ImageVector>
 ) {
     NavHost(
         navController = navController,
@@ -42,6 +47,7 @@ fun MainActivity.IsoAndroidPocNavHost(
                 animationSpec = tween(AnimDurationMillis)
             )
         }) {
+            topBarImage.value = Icons.Default.Menu
             HomeView(onBack = {
                 backLogic(showMenu) {
                     this@IsoAndroidPocNavHost.finishAndRemoveTask()
@@ -51,6 +57,7 @@ fun MainActivity.IsoAndroidPocNavHost(
             })
         }
         customAnimatedComposable<HomeDestination.Master> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             MasterView(onBack = {
                 backLogic(showMenu) {
                     navController.popBackStack()
@@ -60,6 +67,7 @@ fun MainActivity.IsoAndroidPocNavHost(
             })
         }
         customAnimatedComposable<HomeDestination.Slave> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             SlaveView(onBack = {
                 backLogic(showMenu) {
                     navController.popBackStack()
@@ -67,6 +75,7 @@ fun MainActivity.IsoAndroidPocNavHost(
             })
         }
         customAnimatedComposable<HomeDestination.ReadDocument> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             CborView(onBack = {
                 backLogic(showMenu) {
                     navController.popToHome()
@@ -74,6 +83,7 @@ fun MainActivity.IsoAndroidPocNavHost(
             })
         }
         customAnimatedComposable<HomeDestination.SignAndVerify> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             SignAndVerifyView(onBack = {
                 backLogic(showMenu) {
                     navController.popToHome()

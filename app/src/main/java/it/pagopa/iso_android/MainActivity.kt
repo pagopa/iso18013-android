@@ -9,10 +9,13 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.compose.rememberNavController
 import it.pagopa.cbor_implementation.CborLogger
 import it.pagopa.iso_android.navigation.IsoAndroidPocNavHost
@@ -32,16 +35,23 @@ class MainActivity : ComponentActivity() {
         CborLogger.enabled = BuildConfig.DEBUG
         setContent {
             IsoAndroidPocTheme {
+                var topBarImage = remember { mutableStateOf<ImageVector>(Icons.Default.Menu) }
                 var showMenu = remember { mutableStateOf(false) }
+                val navController = rememberNavController()
                 Scaffold(modifier = Modifier.fillMaxSize(),
                     topBar = {
-                        TopBar(titleResId = R.string.app_name) {
-                            showMenu.value = !showMenu.value
+                        TopBar(
+                            image = topBarImage.value,
+                            titleResId = R.string.app_name
+                        ) {
+                            if (topBarImage.value == Icons.Default.Menu)
+                                showMenu.value = !showMenu.value
+                            else
+                                navController.popBackStack()
                         }
                     }
                 ) { innerPadding ->
-                    val navController = rememberNavController()
-                    this.IsoAndroidPocNavHost(navController, showMenu,innerPadding)
+                    this.IsoAndroidPocNavHost(navController, showMenu, innerPadding, topBarImage)
                     AnimatedVisibility(
                         modifier = Modifier
                             .padding(innerPadding),

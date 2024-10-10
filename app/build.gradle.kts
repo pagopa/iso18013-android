@@ -72,6 +72,8 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.play.services.basement)
+    // Zxing for qr code
+    implementation(libs.zxing.core)
     //camera
     implementation(libs.cameraX2)
     implementation(libs.cameraXCore)
