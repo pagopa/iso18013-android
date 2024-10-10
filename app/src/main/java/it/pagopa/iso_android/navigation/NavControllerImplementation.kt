@@ -14,7 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import it.pagopa.iso_android.MainActivity
 import it.pagopa.iso_android.ui.view.CborView
-import it.pagopa.iso_android.ui.view.CreateDocumentView
+import it.pagopa.iso_android.ui.view.SignAndVerifyView
 import it.pagopa.iso_android.ui.view.HomeView
 import it.pagopa.iso_android.ui.view.MasterView
 import it.pagopa.iso_android.ui.view.SlaveView
@@ -73,8 +73,8 @@ fun MainActivity.IsoAndroidPocNavHost(
                 }
             })
         }
-        customAnimatedComposable<HomeDestination.CreateDocument> {
-            CreateDocumentView(onBack = {
+        customAnimatedComposable<HomeDestination.SignAndVerify> {
+            SignAndVerifyView(onBack = {
                 backLogic(showMenu) {
                     navController.popToHome()
                 }

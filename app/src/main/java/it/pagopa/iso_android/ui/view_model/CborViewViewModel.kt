@@ -97,7 +97,7 @@ class CborViewViewModel : ViewModel() {
                 text = "${item.elementIdentifier} (${item.elementValue?.javaClass?.name})"
             )
 
-            if (item.elementIdentifier == "portrait") {
+            if (item.elementIdentifier == "portrait" || item.elementIdentifier == "signature_usual_mark") {
                 val bArray: ByteArray? = when (item.elementValue) {
                     is ByteArray -> item.elementValue as ByteArray
                     is String -> Base64.decode(item.elementValue as String)

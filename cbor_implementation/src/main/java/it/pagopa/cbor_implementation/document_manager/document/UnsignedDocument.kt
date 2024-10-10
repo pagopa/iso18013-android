@@ -3,6 +3,7 @@ package it.pagopa.cbor_implementation.document_manager.document
 import com.android.identity.android.securearea.AndroidKeystoreKeyUnlockData
 import com.android.identity.credential.SecureAreaBoundCredential
 import com.android.identity.crypto.EcPublicKey
+import com.android.identity.crypto.javaPublicKey
 import com.android.identity.crypto.javaX509Certificates
 import com.android.identity.crypto.toDer
 import com.android.identity.securearea.KeyLockedException
@@ -108,9 +109,7 @@ open class UnsignedDocument(
                         else -> SignedWithAuthKeyResult.Failure(e)
                     }
                 }
-
             }
-
         }
     }
 

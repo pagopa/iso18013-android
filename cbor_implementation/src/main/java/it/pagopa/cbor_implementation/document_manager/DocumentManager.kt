@@ -6,6 +6,7 @@ import COSE.Sign1Message
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.annotation.CheckResult
 import com.android.identity.android.securearea.AndroidKeystoreCreateKeySettings
 import com.android.identity.credential.CredentialFactory
 import com.android.identity.credential.SecureAreaBoundCredential
@@ -20,12 +21,12 @@ import com.android.identity.securearea.SecureAreaRepository
 import com.upokecenter.cbor.CBORObject
 import it.pagopa.cbor_implementation.CborLogger
 import it.pagopa.cbor_implementation.document_manager.document.Document
-import it.pagopa.cbor_implementation.document_manager.document.SignedWithCOSEDocument
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
 import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResult
+import it.pagopa.cbor_implementation.document_manager.results.DocumentIssuerAuth
 import it.pagopa.cbor_implementation.document_manager.results.DocumentRetrieved
+import it.pagopa.cbor_implementation.document_manager.results.IssuerAuthRetriever
 import it.pagopa.cbor_implementation.document_manager.results.IssuerSignedRetriever
-import it.pagopa.cbor_implementation.document_manager.results.SignDataWithCOSEResult
 import it.pagopa.cbor_implementation.document_manager.results.StoreDocumentResult
 import it.pagopa.cbor_implementation.extensions.asNameSpacedData
 import it.pagopa.cbor_implementation.extensions.getEmbeddedCBORObject
@@ -38,8 +39,15 @@ import java.util.UUID
 
 class DocumentManager private constructor() {
     init {
-        Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
-        Security.insertProviderAt(BouncyCastleProvider(), 1)
+        val isBcAlreadyIntoProviders = Security.getProviders().any {
+            it.name == BouncyCastleProvider.PROVIDER_NAME
+        }
+        if (!isBcAlreadyIntoProviders) {
+            Security.insertProviderAt(BouncyCastleProvider(), 1)
+        } else {
+            Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
+            Security.insertProviderAt(BouncyCastleProvider(), 1)
+        }
     }
 
     private lateinit var context: Context
@@ -86,6 +94,7 @@ class DocumentManager private constructor() {
 
     fun createDocument(
         docType: String,
+        documentName: String,
         strongBox: Boolean,
         attestationChallenge: ByteArray?
     ): CreateDocumentResult {
@@ -98,10 +107,10 @@ class DocumentManager private constructor() {
                 ?: generateRandomBytes()
             val keySettings = createKeySettings(nonEmptyChallenge, useStrongBox)
             val documentCredential = documentStore.createDocument(documentId).apply {
-                state = Document.State.UNSIGNED
+                this.state = Document.State.UNSIGNED
                 this.docType = docType
-                documentName = docType
-                createdAt = Instant.now()
+                this.documentName = documentName
+                this.createdAt = Instant.now()
                 this.attestationChallenge = nonEmptyChallenge
             }
             MdocCredential(
@@ -193,111 +202,56 @@ class DocumentManager private constructor() {
         }
     }
 
-    fun signWithCOSE(
-        documents: List<DocumentRetrieved>,
-        privateKey: String,
-        issuerCertificate: String,
-        strongBox: Boolean,
-        attestationChallenge: ByteArray?,
-        result: SignDataWithCOSEResult
+    fun retrieveIssuerAuth(
+        documentData: ByteArray,
+        retriever: IssuerAuthRetriever
     ) {
         try {
-            var backList = listOf<SignedWithCOSEDocument>()
-            documents.forEach {
-                val analysis = AnalyzeOneDoc.analyzeWithDocumentRetrieved(
-                    documentRetrieved = it,
-                    documentManager = this,
-                    useStrongBox = strongBox && supportStrongBox,
-                    attestationChallenge = attestationChallenge,
-                    privateKey = privateKey,
-                    issuerCertificate = issuerCertificate
-                )
-                if (analysis.itsOk) {
-                    backList += SignedWithCOSEDocument(
-                        analysis.generateData(),
-                        analysis.document!!
-                    )
-                } else
-                    result.failure(Exception(analysis.msg))
-            }
-            if (backList.isEmpty()) {
-                result.failure(Exception("No valid document found"))
-                return
-            }
-            result.success(backList)
+            retrieveIssuerDocumentData(documentData, object : IssuerSignedRetriever {
+                override fun success(issuerDocumentsData: List<DocumentRetrieved>) {
+                    retriever.success(issuerDocumentsData.map { docData ->
+                        val cborObj = CBORObject
+                            .DecodeFromBytes(docData.issuerDocumentsData)
+                        val issuerAuth = cborObj["issuerAuth"]
+                        DocumentIssuerAuth(issuerAuth?.EncodeToBytes(), docData.docType)
+                    })
+                }
+
+                override fun failure(throwable: Throwable) {
+                    retriever.failure(throwable)
+                }
+            })
         } catch (e: Exception) {
-            CborLogger.e("signWithCOSE", e.toString())
-            result.failure(e)
+            CborLogger.e("retrieveIssuerAuth", e.toString())
+            retriever.failure(e)
         }
     }
 
-    fun signWithCOSE(
-        data: ByteArray,
-        privateKey: String,
-        issuerCertificate: String,
-        strongBox: Boolean,
-        attestationChallenge: ByteArray?,
-        result: SignDataWithCOSEResult
-    ) {
-        try {
-            val cborData = CBORObject.DecodeFromBytes(data)
-            val maybeList = cborData["documents"]
-            val isList = maybeList != null
-            var backList = listOf<SignedWithCOSEDocument>()
-            if (isList) {
-                maybeList.values.forEach { documentCbor ->
-                    val analysis = AnalyzeOneDoc.analyzeWithCborObject(
-                        documentCbor = documentCbor,
-                        documentManager = this,
-                        useStrongBox = strongBox && supportStrongBox,
-                        attestationChallenge = attestationChallenge,
-                        privateKey = privateKey,
-                        issuerCertificate = issuerCertificate
-                    )
-                    if (analysis.itsOk) {
-                        backList += SignedWithCOSEDocument(
-                            analysis.generateData(),
-                            analysis.document!!
-                        )
-                    } else
-                        result.failure(Exception(analysis.msg))
-                }
-            } else {
-                val analysis = AnalyzeOneDoc.analyzeWithCborObject(
-                    documentCbor = cborData,
-                    documentManager = this,
-                    useStrongBox = strongBox && supportStrongBox,
-                    attestationChallenge = attestationChallenge,
-                    privateKey = privateKey,
-                    issuerCertificate = issuerCertificate
-                )
-                if (analysis.itsOk) {
-                    backList += SignedWithCOSEDocument(
-                        analysis.generateData(),
-                        analysis.document!!
-                    )
-                } else {
-                    result.failure(Exception(analysis.msg))
-                    return
-                }
-            }
-            if (backList.isEmpty()) {
-                result.failure(Exception("No valid document found"))
-                return
-            }
-            result.success(backList)
-        } catch (e: Exception) {
-            CborLogger.e("signWithCOSE", e.toString())
-            result.failure(e)
-        }
+    fun verifyDocumentSignature(
+        unsignedDocument: UnsignedDocument,
+        issuerAuthBytes: ByteArray
+    ): Boolean {
+        val issuerAuth = Message
+            .DecodeFromBytes(issuerAuthBytes, MessageTag.Sign1) as Sign1Message
+        val msoBytes = issuerAuth.GetContent().getEmbeddedCBORObject().EncodeToBytes()
+        val mso = MobileSecurityObjectParser(msoBytes).parse()
+        return mso.deviceKey == unsignedDocument.publicKey.toEcPublicKey(mso.deviceKey.curve)
     }
+
+    /** if the issuer requires the user to prove possession of the private key corresponding to the certificateNeedAuth
+     * then user can use the method below to sign issuer's data and send the signature to the issuer*/
+    @CheckResult
+    fun signUnsignedDocument(
+        unsignedDocument: UnsignedDocument,
+        data: ByteArray
+    ): SignedWithAuthKeyResult = unsignedDocument.signWithAuthKey(data)
 
     fun storeIssuedDocument(
         unsignedDocument: UnsignedDocument,
         issuerDocumentData: ByteArray,
         result: StoreDocumentResult
     ) {
-        try {
+        try {//TODO: eccezione custom e fare il throw
             val documentCredential = documentStore.lookupDocument(unsignedDocument.id)
             if (documentCredential == null) {
                 result.failure(IllegalArgumentException("No credential found for ${unsignedDocument.id}"))
@@ -322,19 +276,19 @@ class DocumentManager private constructor() {
                         return
                     }
                 }
-                state = Document.State.ISSUED
-                docType = mso.docType
-                issuedAt = Instant.now()
+                this.state = Document.State.ISSUED
+                this.docType = mso.docType
+                this.issuedAt = Instant.now()
                 clearDeferredRelatedData()
 
                 val nameSpaces = issuerSigned["nameSpaces"]
                 val digestIdMapping = nameSpaces.toDigestIdMapping()
                 val staticAuthData = StaticAuthDataGenerator(digestIdMapping, issuerAuthBytes)
                     .generate()
-                pendingCredentials.forEach { credential ->
+                this.pendingCredentials.forEach { credential ->
                     credential.certify(staticAuthData, mso.validFrom, mso.validUntil)
                 }
-                nameSpacedData = nameSpaces.asNameSpacedData()
+                this.nameSpacedData = nameSpaces.asNameSpacedData()
             }
             result.success(documentCredential.name, null)
         } catch (e: Exception) {

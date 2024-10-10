@@ -1,8 +1,12 @@
 package it.pagopa.cbor_implementation.document_manager.results
 
-import it.pagopa.cbor_implementation.document_manager.document.SignedWithCOSEDocument
+import androidx.biometric.BiometricPrompt
 
-interface SignDataWithCOSEResult {
-    fun success(docs: List<SignedWithCOSEDocument>)
-    fun failure(e: Throwable)
+
+sealed interface SignDataWithCOSEResult {
+    data class Success(val cborBytes: ByteArray) : SignDataWithCOSEResult
+    data class Failure(val msg: String) : SignDataWithCOSEResult
+    data class UserAuthRequired(
+        val cryptoObject: BiometricPrompt.CryptoObject?
+    ) : SignDataWithCOSEResult
 }

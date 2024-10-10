@@ -13,7 +13,7 @@ sealed class HomeDestination {
     data object Slave : HomeDestination()
 
     @Serializable
-    data object CreateDocument : HomeDestination()
+    data object SignAndVerify : HomeDestination()
 
     @Serializable
     data object ReadDocument : HomeDestination()

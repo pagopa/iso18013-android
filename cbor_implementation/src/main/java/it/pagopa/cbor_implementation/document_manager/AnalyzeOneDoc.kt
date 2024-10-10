@@ -1,6 +1,6 @@
 package it.pagopa.cbor_implementation.document_manager
 
-import com.upokecenter.cbor.CBORObject
+/*import com.upokecenter.cbor.CBORObject
 import it.pagopa.cbor_implementation.cose.CreateCOSEDoc
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
 import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResult
@@ -48,16 +48,11 @@ internal class AnalyzeOneDoc private constructor(
                                 false,
                                 "Auth Key is null for doc with id: ${result.unsignedDocument.id}"
                             )
-                        val issuerAuth = CreateCOSEDoc
-                            .withPrivateKey(privateKey)
-                            .withIssuerCertificate(issuerCertificate)
-                            .generateMso(DIGEST_ALG, docType, authKey, nameSpaces)
-                            .signMso()
                         AnalyzeOneDoc(
                             result.unsignedDocument,
                             true,
                             "",
-                            issuerAuth,
+                            CBORObject.Null,
                             nameSpaces
                         )
                     }
@@ -88,7 +83,7 @@ internal class AnalyzeOneDoc private constructor(
                     attestationChallenge = attestationChallenge
                 )) {
                     is CreateDocumentResult.Success -> {
-                        val nameSpaces=CBORObject.DecodeFromBytes(documentRetrieved.nameSpaces)
+                        val nameSpaces = CBORObject.DecodeFromBytes(documentRetrieved.nameSpaces)
                         result.unsignedDocument.name = documentRetrieved.docType
                         val authKey = result.unsignedDocument.ecPublicKey
                         if (authKey == null)
@@ -97,21 +92,11 @@ internal class AnalyzeOneDoc private constructor(
                                 false,
                                 "Auth Key is null for doc with id: ${result.unsignedDocument.id}"
                             )
-                        val issuerAuth = CreateCOSEDoc
-                            .withPrivateKey(privateKey)
-                            .withIssuerCertificate(issuerCertificate)
-                            .generateMso(
-                                DIGEST_ALG,
-                                documentRetrieved.docType,
-                                authKey,
-                                nameSpaces
-                            )
-                            .signMso()
                         AnalyzeOneDoc(
                             result.unsignedDocument,
                             true,
                             "",
-                            issuerAuth,
+                            CBORObject.Null,
                             nameSpaces
                         )
                     }
@@ -127,4 +112,4 @@ internal class AnalyzeOneDoc private constructor(
             }
         }
     }
-}
+}*/
