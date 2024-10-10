@@ -2,7 +2,8 @@ package it.pagopa.cbor_implementation.document_manager.results
 
 data class DocumentRetrieved(
     val issuerDocumentsData: ByteArray,
-    val docType: String
+    val docType: String,
+    val nameSpaces: ByteArray? = null
 )
 
 interface IssuerSignedRetriever {

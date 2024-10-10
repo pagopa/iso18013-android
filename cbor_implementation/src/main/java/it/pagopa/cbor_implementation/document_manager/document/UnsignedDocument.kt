@@ -3,6 +3,7 @@ package it.pagopa.cbor_implementation.document_manager.document
 import com.android.identity.android.securearea.AndroidKeystoreKeyUnlockData
 import com.android.identity.credential.SecureAreaBoundCredential
 import com.android.identity.crypto.EcPublicKey
+import com.android.identity.crypto.javaPublicKey
 import com.android.identity.crypto.javaX509Certificates
 import com.android.identity.crypto.toDer
 import com.android.identity.securearea.KeyLockedException
@@ -47,7 +48,7 @@ open class UnsignedDocument(
     @JvmSynthetic
     internal var base: BaseDocument? = null
 
-    val ecPublicKey: EcPublicKey?
+    internal val ecPublicKey: EcPublicKey?
         get() = base?.pendingCredentials
             ?.firstOrNull { it is SecureAreaBoundCredential }
             ?.let { it as SecureAreaBoundCredential }
@@ -108,9 +109,41 @@ open class UnsignedDocument(
                         else -> SignedWithAuthKeyResult.Failure(e)
                     }
                 }
-
             }
+        }
+    }
 
+    fun signWithAuthKeyCOSE(
+        data: ByteArray,
+        alg: Algorithm.SupportedAlgorithms = Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA
+    ): SignedWithAuthKeyResult {
+        return when (val cred = base?.pendingCredentials
+            ?.firstOrNull { it is SecureAreaBoundCredential }
+            ?.let { it as SecureAreaBoundCredential }) {
+
+            null -> SignedWithAuthKeyResult.Failure(Exception("Not initialized correctly. Use DocumentManager.createDocument method."))
+            else -> {
+                val algorithm = Algorithm(alg).getCryptoAlgorithm()
+                val keyUnlockData = AndroidKeystoreKeyUnlockData(cred.alias)
+                try {
+                    cred.secureArea.sign(
+                        cred.alias,
+                        algorithm,
+                        data,
+                        keyUnlockData
+                    ).let {
+                        SignedWithAuthKeyResult.Success(it.toCoseEncoded())
+                    }
+                } catch (e: Exception) {
+                    when (e) {
+                        is KeyLockedException -> SignedWithAuthKeyResult.UserAuthRequired(
+                            keyUnlockData.getCryptoObjectForSigning(algorithm)
+                        )
+
+                        else -> SignedWithAuthKeyResult.Failure(e)
+                    }
+                }
+            }
         }
     }
 

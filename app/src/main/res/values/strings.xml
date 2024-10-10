@@ -1,7 +1,8 @@
 <resources>
     <string name="app_name">Iso Android Poc</string>
-    <string name="create_document">Create Document</string>
+    <string name="sign_and_verify">Sign and verify</string>
     <string name="read_document">Read Document</string>
-    <string name="create_doc">Create doc</string>
+    <string name="sign_doc">Sign doc</string>
     <string name="store_doc">Store doc</string>
+    <string name="verify_doc">Verify doc</string>
 </resources>

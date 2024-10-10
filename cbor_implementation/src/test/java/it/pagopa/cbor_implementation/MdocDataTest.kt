@@ -27,7 +27,7 @@ class MDocDataTest {
         mDoc.decodeMDoc(
             onComplete = { docModel ->
                 docModel.documents?.forEachIndexed { i, it ->
-                    val (isValid, error) = mDoc.verifyValidity(it)
+                    val (isValid, error) = it.verifyValidity()
                     val errorToPrint = if (error != null) " error: $error" else ""
                     println("document -> $i: isValid: $isValid$errorToPrint")
                     assert(if (i == 0) isValid else !isValid)
@@ -63,7 +63,7 @@ class MDocDataTest {
         mDoc.decodeMDoc(
             onComplete = { docModel ->
                 docModel.documents?.forEachIndexed { i, it ->
-                    val (isValid, error) = mDoc.verifyValidity(it)
+                    val (isValid, error) = it.verifyValidity()
                     val errorToPrint = if (error != null) " error: $error" else ""
                     println("document -> $i: isValid: $isValid$errorToPrint")
                     assert(if (i == 0) isValid else !isValid)
