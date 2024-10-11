@@ -5,6 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.compose.rememberNavController
 import it.pagopa.cbor_implementation.CborLogger
 import it.pagopa.iso_android.navigation.IsoAndroidPocNavHost
@@ -56,8 +62,14 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier
                             .padding(innerPadding),
                         visible = showMenu.value,
-                        enter = slideInHorizontally(),
-                        exit = slideOutHorizontally()
+                        enter = slideInHorizontally(animationSpec = spring(
+                            stiffness = Spring.StiffnessMedium,
+                            visibilityThreshold = IntOffset.VisibilityThreshold
+                        ), initialOffsetX = { -it / 2 }),
+                        exit = slideOutHorizontally(animationSpec = tween(
+                            durationMillis = 1000,
+                            easing = FastOutSlowInEasing
+                        ), targetOffsetX = { -it })
                     ) {
                         DrawerBody(
                             menuItems = drawerScreens,
