@@ -2,8 +2,6 @@ package it.pagopa.cbor_implementation.cose
 
 import android.app.KeyguardManager
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import androidx.annotation.CheckResult
 import com.android.identity.android.securearea.AndroidKeystoreCreateKeySettings
 import com.android.identity.android.storage.AndroidStorageEngine
@@ -19,13 +17,14 @@ import it.pagopa.cbor_implementation.document_manager.DocumentManagerBuilder.Com
 import it.pagopa.cbor_implementation.document_manager.SignedWithAuthKeyResult
 import it.pagopa.cbor_implementation.document_manager.algorithm.Algorithm
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
+import it.pagopa.cbor_implementation.extensions.isDeviceSecure
+import it.pagopa.cbor_implementation.extensions.supportStrongBox
+import it.pagopa.cbor_implementation.helper.addBcIfNeeded
 import kotlinx.io.files.Path
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.File
 import java.security.KeyFactory
 import java.security.SecureRandom
-import java.security.Security
 import java.security.Signature
 import java.security.spec.X509EncodedKeySpec
 import kotlin.io.encoding.Base64
@@ -35,26 +34,15 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * With this class you can sign every object with COSE*/
 class COSEManager(val context: Context) {
     init {
-        val isBcAlreadyIntoProviders = Security.getProviders().any {
-            it.name == BouncyCastleProvider.PROVIDER_NAME
-        }
-        if (!isBcAlreadyIntoProviders) {
-            Security.insertProviderAt(BouncyCastleProvider(), 1)
-        } else {
-            Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
-            Security.insertProviderAt(BouncyCastleProvider(), 1)
-        }
+        addBcIfNeeded()
     }
 
     private val _context = context.applicationContext
     var storageDir: File = _context.noBackupFilesDir
     var useEncryption: Boolean = true
-    var userAuth: Boolean = context.getSystemService(KeyguardManager::class.java).isDeviceSecure
+    var userAuth: Boolean = context.isDeviceSecure
     var userAuthTimeoutInMillis: Long = AUTH_TIMEOUT
-    private val supportStrongBox by lazy {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
-                context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
-    }
+
     /**
      * Sets whether to require user authentication to sign.
      * If the device is not secured, this will be set to false.
@@ -62,7 +50,8 @@ class COSEManager(val context: Context) {
      * @return [COSEManager]
      */
     fun enableUserAuth(enable: Boolean) = apply {
-        this.userAuth = enable && context.getSystemService(KeyguardManager::class.java).isDeviceSecure
+        this.userAuth =
+            enable && context.isDeviceSecure
     }
 
     /**
@@ -127,7 +116,7 @@ class COSEManager(val context: Context) {
             return CreateCOSE.with(
                 this.storageEngine, createKeySettings(
                     nonEmptyChallenge,
-                    strongBox && supportStrongBox
+                    strongBox && _context.supportStrongBox
                 )
             ).withAlg(alg)
                 .withAlias(alias)

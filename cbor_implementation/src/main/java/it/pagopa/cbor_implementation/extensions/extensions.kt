@@ -1,9 +1,22 @@
 package it.pagopa.cbor_implementation.extensions
 
+import android.app.KeyguardManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import com.android.identity.document.NameSpacedData
 import com.upokecenter.cbor.CBORObject
 import it.pagopa.cbor_implementation.helper.parse
 
+internal val Context.supportStrongBox: Boolean
+    @JvmSynthetic
+    get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && this.packageManager.hasSystemFeature(
+        PackageManager.FEATURE_STRONGBOX_KEYSTORE
+    )
+
+internal val Context.isDeviceSecure: Boolean
+    @JvmSynthetic
+    get() = this.getSystemService(KeyguardManager::class.java).isDeviceSecure
 
 @JvmSynthetic
 internal fun ByteArray.getEmbeddedCBORObject(): CBORObject {

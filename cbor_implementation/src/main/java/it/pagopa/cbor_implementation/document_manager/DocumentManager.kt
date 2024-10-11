@@ -4,8 +4,6 @@ import COSE.Message
 import COSE.MessageTag
 import COSE.Sign1Message
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
 import androidx.annotation.CheckResult
 import com.android.identity.android.securearea.AndroidKeystoreCreateKeySettings
 import com.android.identity.credential.CredentialFactory
@@ -25,26 +23,18 @@ import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResu
 import it.pagopa.cbor_implementation.document_manager.results.StoreDocumentResult
 import it.pagopa.cbor_implementation.extensions.asNameSpacedData
 import it.pagopa.cbor_implementation.extensions.getEmbeddedCBORObject
+import it.pagopa.cbor_implementation.extensions.supportStrongBox
 import it.pagopa.cbor_implementation.extensions.toDigestIdMapping
+import it.pagopa.cbor_implementation.helper.addBcIfNeeded
 import it.pagopa.cbor_implementation.model.EU_PID_DOCTYPE
 import it.pagopa.cbor_implementation.model.MDL_DOCTYPE
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.SecureRandom
-import java.security.Security
 import java.time.Instant
 import java.util.UUID
 
 class DocumentManager private constructor() : LibIso18013DAO {
     init {
-        val isBcAlreadyIntoProviders = Security.getProviders().any {
-            it.name == BouncyCastleProvider.PROVIDER_NAME
-        }
-        if (!isBcAlreadyIntoProviders) {
-            Security.insertProviderAt(BouncyCastleProvider(), 1)
-        } else {
-            Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
-            Security.insertProviderAt(BouncyCastleProvider(), 1)
-        }
+        addBcIfNeeded()
     }
 
     private lateinit var context: Context
@@ -63,10 +53,6 @@ class DocumentManager private constructor() : LibIso18013DAO {
     }
     private val documentStore: DocumentStore by lazy {
         DocumentStore(builder.storageEngine, secureAreaRepository, credentialFactory)
-    }
-    private val supportStrongBox by lazy {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
-                context.packageManager.hasSystemFeature(PackageManager.FEATURE_STRONGBOX_KEYSTORE)
     }
 
     private fun generateRandomBytes(): ByteArray {
@@ -99,7 +85,7 @@ class DocumentManager private constructor() : LibIso18013DAO {
         try {
             val domain = "pagopa"
             val documentId = "${UUID.randomUUID()}"
-            val useStrongBox = strongBox && supportStrongBox
+            val useStrongBox = strongBox && context.supportStrongBox
             val nonEmptyChallenge = attestationChallenge
                 ?.takeUnless { it.isEmpty() }
                 ?: generateRandomBytes()

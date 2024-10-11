@@ -1,11 +1,11 @@
 package it.pagopa.cbor_implementation.document_manager
 
-import android.app.KeyguardManager
 import android.content.Context
 import com.android.identity.android.securearea.AndroidKeystoreSecureArea
 import com.android.identity.android.securearea.UserAuthenticationType
 import com.android.identity.android.storage.AndroidStorageEngine
 import com.android.identity.storage.StorageEngine
+import it.pagopa.cbor_implementation.extensions.isDeviceSecure
 import kotlinx.io.files.Path
 import java.io.File
 import kotlin.Boolean
@@ -14,7 +14,7 @@ class DocumentManagerBuilder(val context: Context) {
     private val _context = context.applicationContext
     var storageDir: File = _context.noBackupFilesDir
     var useEncryption: Boolean = true
-    var userAuth: Boolean = context.getSystemService(KeyguardManager::class.java).isDeviceSecure
+    var userAuth: Boolean = context.isDeviceSecure
     var userAuthTimeoutInMillis: Long = AUTH_TIMEOUT
     var checkPublicKeyBeforeAdding: Boolean = true
 
@@ -46,7 +46,7 @@ class DocumentManagerBuilder(val context: Context) {
      * @return [DocumentManagerBuilder]
      */
     fun enableUserAuth(enable: Boolean) = apply {
-        this.userAuth = enable && context.getSystemService(KeyguardManager::class.java).isDeviceSecure
+        this.userAuth = enable && context.isDeviceSecure
     }
 
     /**
@@ -63,7 +63,7 @@ class DocumentManagerBuilder(val context: Context) {
      * This check is done to prevent adding documents with public key that is not in MSO.
      * The public key from the [it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument] must match the public key in MSO.
      *
-     * @see [DocumentManager.storeIssuedDocument]
+     * @see [DocumentManager.storeDocument]
      *
      * @param check
      */
