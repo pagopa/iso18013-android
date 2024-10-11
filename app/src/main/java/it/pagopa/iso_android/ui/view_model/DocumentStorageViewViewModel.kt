@@ -13,7 +13,6 @@ import it.pagopa.cbor_implementation.model.EU_PID_DOCTYPE
 import it.pagopa.cbor_implementation.model.MDL_DOCTYPE
 import it.pagopa.iso_android.base64mockedMoreDocs
 import it.pagopa.iso_android.ui.AppDialog
-import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 class DocumentStorageViewViewModel(
