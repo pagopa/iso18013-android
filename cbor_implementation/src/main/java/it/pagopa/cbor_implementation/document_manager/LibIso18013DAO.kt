@@ -1,26 +1,39 @@
 package it.pagopa.cbor_implementation.document_manager
 
+import it.pagopa.cbor_implementation.document_manager.algorithm.Algorithm
 import it.pagopa.cbor_implementation.document_manager.document.Document
+import it.pagopa.cbor_implementation.document_manager.document.DocumentId
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
-import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResult
-import it.pagopa.cbor_implementation.document_manager.results.StoreDocumentResult
+import kotlin.jvm.Throws
 
 interface LibIso18013DAO {
-    fun getAllDocuments(): Array<Document>
-    fun getAllMdlDocuments(): Array<Document>
-    fun getAllEuPidDocuments(): Array<Document>
-    fun getDocumentByIdentifier(id: String): Document?
-    fun deleteDocument(id: String): Boolean
+    fun getAllDocuments(state: Document.State?): Array<Document>
+    fun getAllMdlDocuments(state: Document.State?): Array<Document>
+    fun getAllEuPidDocuments(state: Document.State?): Array<Document>
+
+    @Throws(DocumentWithIdentifierNotFound::class)
+    fun getDocumentByIdentifier(id: DocumentId): Document?
+
+    @Throws(DocumentWithIdentifierNotFound::class)
+    fun deleteDocument(id: DocumentId): Boolean
+
+    @Throws(StrongBoxNotSupported::class, StrongBoxNotSupportedAlgorithm::class)
     fun createDocument(
         docType: String,
         documentName: String,
-        strongBox: Boolean,
+        forceStrongBox: Boolean,
+        algorithm: Algorithm.SupportedAlgorithms,
         attestationChallenge: ByteArray?
-    ): CreateDocumentResult
+    ): UnsignedDocument
 
-    fun storeDocument(
-        unsignedDocument: UnsignedDocument,
-        issuerDocumentData: ByteArray,
-        result: StoreDocumentResult
+    @Throws(
+        DocumentDecodingException::class,
+        InvalidDeviceKeyException::class,
+        DocumentWithIdentifierNotFound::class,
+        DocumentAlreadyStoredException::class
     )
+    fun storeDocument(
+        id: DocumentId,
+        issuerDocumentData: ByteArray
+    ): DocumentId
 }

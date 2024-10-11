@@ -13,7 +13,6 @@ import kotlin.Boolean
 class DocumentManagerBuilder(val context: Context) {
     private val _context = context.applicationContext
     var storageDir: File = _context.noBackupFilesDir
-    var useEncryption: Boolean = true
     var userAuth: Boolean = context.isDeviceSecure
     var userAuthTimeoutInMillis: Long = AUTH_TIMEOUT
     var checkPublicKeyBeforeAdding: Boolean = true
@@ -28,16 +27,6 @@ class DocumentManagerBuilder(val context: Context) {
     fun withStorageDir(storageDir: File) = apply {
         this.storageDir = storageDir
     }
-
-    /**
-     * Sets whether to encrypt the values stored on disk.
-     * Note that keys are not encrypted, only values.
-     * By default, this is set to true.
-     *
-     * @param useEncryption
-     * @return [DocumentManagerBuilder]
-     */
-    fun useEncryption(useEncryption: Boolean) = apply { this.useEncryption = useEncryption }
 
     /**
      * Sets whether to require user authentication to access the document.
@@ -57,6 +46,7 @@ class DocumentManagerBuilder(val context: Context) {
      */
     fun userAuthTimeout(timeoutInMillis: Long) =
         apply { this.userAuthTimeoutInMillis = timeoutInMillis }
+
     /**
      * Sets whether to check public key in MSO before adding document to storage.
      * By default this is set to true.
@@ -69,6 +59,7 @@ class DocumentManagerBuilder(val context: Context) {
      */
     fun checkPublicKeyBeforeAdding(check: Boolean) =
         apply { this.checkPublicKeyBeforeAdding = check }
+
     /**
      * The directory to store data files in.
      * By default, the [Context.getNoBackupFilesDir] is used.
@@ -79,7 +70,7 @@ class DocumentManagerBuilder(val context: Context) {
     internal val storageEngine: StorageEngine by lazy {
         val path = Path(File(storageDir.path, "pagopa-identity.bin").path)
         AndroidStorageEngine.Builder(_context, path)
-            .setUseEncryption(useEncryption)
+            .setUseEncryption(true)
             .build()
     }
 

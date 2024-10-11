@@ -3,7 +3,6 @@ package it.pagopa.cbor_implementation.document_manager.document
 import com.android.identity.android.securearea.AndroidKeystoreKeyUnlockData
 import com.android.identity.credential.SecureAreaBoundCredential
 import com.android.identity.crypto.EcPublicKey
-import com.android.identity.crypto.javaPublicKey
 import com.android.identity.crypto.javaX509Certificates
 import com.android.identity.crypto.toDer
 import com.android.identity.securearea.KeyLockedException
@@ -28,7 +27,7 @@ import com.android.identity.document.Document as BaseDocument
  * Use the [it.pagopa.cbor_implementation.document_manager.DocumentManager.createDocument] method to create a [UnsignedDocument]
  *
  * Once the document is issued and document's data are available by the issuer, use the
- * [it.pagopa.cbor_implementation.document_manager.DocumentManager.storeIssuedDocument] to store the document. This will transform the [UnsignedDocument] to
+ * [it.pagopa.cbor_implementation.document_manager.DocumentManager.storeDocument] to store the document. This will transform the [UnsignedDocument] to
  * an [it.pagopa.cbor_implementation.document_manager.document.IssuedDocument]
  *
  * @property name the name of the document. This name can be updated before the document is issued

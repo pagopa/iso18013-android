@@ -1,11 +1,6 @@
 package it.pagopa.cbor_implementation.impl
 
 import com.upokecenter.cbor.CBORObject
-import it.pagopa.cbor_implementation.exception.DocTypeNotValid
-import it.pagopa.cbor_implementation.exception.MandatoryFieldNotFound
-import it.pagopa.cbor_implementation.model.Document
-import it.pagopa.cbor_implementation.model.EU_PID_DOCTYPE
-import it.pagopa.cbor_implementation.model.MDL_DOCTYPE
 import it.pagopa.cbor_implementation.model.ModelMDoc
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi

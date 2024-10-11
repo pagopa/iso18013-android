@@ -149,7 +149,7 @@ class QrEngagement private constructor(
     companion object {
         /**
          * Create an instance and configures the QR engagement
-         * To create a QrCode use [QrEngagement.getQrCode] method
+         * To create a QrCode use [QrEngagement.getQrCodeString] method
          * To observe all events call [QrEngagement.withListener] method
          * To close the connection call [QrEngagement.close] method
          */

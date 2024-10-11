@@ -17,9 +17,10 @@ import com.android.identity.mdoc.mso.StaticAuthDataGenerator
 import com.android.identity.securearea.KeyPurpose
 import com.android.identity.securearea.SecureAreaRepository
 import com.upokecenter.cbor.CBORObject
+import it.pagopa.cbor_implementation.document_manager.algorithm.Algorithm
 import it.pagopa.cbor_implementation.document_manager.document.Document
+import it.pagopa.cbor_implementation.document_manager.document.DocumentId
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
-import it.pagopa.cbor_implementation.document_manager.results.CreateDocumentResult
 import it.pagopa.cbor_implementation.document_manager.results.StoreDocumentResult
 import it.pagopa.cbor_implementation.extensions.asNameSpacedData
 import it.pagopa.cbor_implementation.extensions.getEmbeddedCBORObject
@@ -65,8 +66,9 @@ class DocumentManager private constructor() : LibIso18013DAO {
     private fun createKeySettings(
         challenge: ByteArray,
         useStrongBox: Boolean,
+        curve: EcCurve
     ) = AndroidKeystoreCreateKeySettings.Builder(challenge)
-        .setEcCurve(EcCurve.P256)
+        .setEcCurve(curve)
         .setUseStrongBox(useStrongBox)
         .setUserAuthenticationRequired(
             builder.userAuth, builder.userAuthTimeoutInMillis,
@@ -75,51 +77,58 @@ class DocumentManager private constructor() : LibIso18013DAO {
         .setKeyPurposes(setOf(KeyPurpose.SIGN))
         .build()
 
-
+    @Throws(
+        StrongBoxNotSupported::class,
+        StrongBoxNotSupportedAlgorithm::class
+    )
     override fun createDocument(
         docType: String,
         documentName: String,
-        strongBox: Boolean,
+        forceStrongBox: Boolean,
+        algorithm: Algorithm.SupportedAlgorithms,
         attestationChallenge: ByteArray?
-    ): CreateDocumentResult {
-        try {
-            val domain = "pagopa"
-            val documentId = "${UUID.randomUUID()}"
-            val useStrongBox = strongBox && context.supportStrongBox
-            val nonEmptyChallenge = attestationChallenge
-                ?.takeUnless { it.isEmpty() }
-                ?: generateRandomBytes()
-            val keySettings = createKeySettings(nonEmptyChallenge, useStrongBox)
-            val documentCredential = documentStore.createDocument(documentId).apply {
-                this.state = Document.State.UNSIGNED
-                this.docType = docType
-                this.documentName = documentName
-                this.createdAt = Instant.now()
-                this.attestationChallenge = nonEmptyChallenge
-            }
-            MdocCredential(
-                document = documentCredential,
-                asReplacementFor = null,
-                domain = domain,
-                secureArea = builder.androidSecureArea,
-                createKeySettings = keySettings,
-                docType = docType
-            )
-            documentCredential.pendingCredentials
-                .filterIsInstance<SecureAreaBoundCredential>()
-                .firstOrNull()
-                ?.attestation
-                ?.publicKey
-            documentStore.addDocument(documentCredential)
-
-            val unsignedDocument = UnsignedDocument(documentCredential)
-            return CreateDocumentResult.Success(unsignedDocument)
-        } catch (e: Exception) {
-            return CreateDocumentResult.Failure(e)
+    ): UnsignedDocument {
+        val domain = "pagopa"
+        val documentId = "${UUID.randomUUID()}"
+        if (forceStrongBox && !context.supportStrongBox)
+            throw StrongBoxNotSupported()
+        if (forceStrongBox && algorithm != Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA)
+            throw StrongBoxNotSupportedAlgorithm(algorithm.toAlgorithm())
+        val useStrongBox =
+            context.supportStrongBox && algorithm == Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA
+        val nonEmptyChallenge = attestationChallenge
+            ?.takeUnless { it.isEmpty() }
+            ?: generateRandomBytes()
+        val keySettings = createKeySettings(
+            nonEmptyChallenge,
+            useStrongBox,
+            algorithm.toAlgorithm().toEcCurve()
+        )
+        val documentCredential = documentStore.createDocument(documentId).apply {
+            this.state = Document.State.UNSIGNED
+            this.docType = docType
+            this.documentName = documentName
+            this.createdAt = Instant.now()
+            this.attestationChallenge = nonEmptyChallenge
         }
+        MdocCredential(
+            document = documentCredential,
+            asReplacementFor = null,
+            domain = domain,
+            secureArea = builder.androidSecureArea,
+            createKeySettings = keySettings,
+            docType = docType
+        )
+        documentCredential.pendingCredentials
+            .filterIsInstance<SecureAreaBoundCredential>()
+            .firstOrNull()
+            ?.attestation
+            ?.publicKey
+        documentStore.addDocument(documentCredential)
+        return UnsignedDocument(documentCredential)
     }
 
-    override fun getAllDocuments(): Array<Document> {
+    override fun getAllDocuments(state: Document.State?): Array<Document> {
         val list = documentStore.listDocuments()
         if (list.isEmpty()) return arrayOf()
         val listBack = ArrayList<Document>()
@@ -128,74 +137,81 @@ class DocumentManager private constructor() : LibIso18013DAO {
                 listBack.add(Document(it))
             }
         }
-        return listBack.toTypedArray()
+        val filteredList = if (state != null) {
+            listBack.filter { it.state == state }
+        } else
+            listBack
+        return filteredList.toTypedArray()
     }
 
-    override fun getAllMdlDocuments() = getAllDocuments().filter {
+    override fun getAllMdlDocuments(state: Document.State?) = getAllDocuments(state).filter {
         it.docType == MDL_DOCTYPE
     }.toTypedArray()
 
-    override fun getAllEuPidDocuments() = getAllDocuments().filter {
+    override fun getAllEuPidDocuments(state: Document.State?) = getAllDocuments(state).filter {
         it.docType == EU_PID_DOCTYPE
     }.toTypedArray()
 
-    override fun getDocumentByIdentifier(id: String): Document? {
-        return documentStore.lookupDocument(id)?.let { Document(it) }
+    @Throws(DocumentWithIdentifierNotFound::class)
+    override fun getDocumentByIdentifier(id: String): Document {
+        val doc = documentStore.lookupDocument(id)
+        if (doc == null) throw DocumentWithIdentifierNotFound()
+        return Document(doc)
     }
 
+    @Throws(DocumentWithIdentifierNotFound::class)
     override fun deleteDocument(id: String): Boolean {
+        if (documentStore.lookupDocument(id) == null) throw DocumentWithIdentifierNotFound()
         documentStore.deleteDocument(id)
         return documentStore.lookupDocument(id) == null
     }
 
+    @Throws(
+        DocumentDecodingException::class,
+        InvalidDeviceKeyException::class,
+        DocumentWithIdentifierNotFound::class,
+        DocumentAlreadyStoredException::class
+    )
     override fun storeDocument(
-        unsignedDocument: UnsignedDocument,
-        issuerDocumentData: ByteArray,
-        result: StoreDocumentResult
-    ) {
-        try {
-            val documentCredential = documentStore.lookupDocument(unsignedDocument.id)
-            if (documentCredential == null) {
-                result.failure(IllegalArgumentException("No credential found for ${unsignedDocument.id}"))
-                return
+        id: DocumentId,
+        issuerDocumentData: ByteArray
+    ): DocumentId {
+        val documentCredential = documentStore.lookupDocument(id)
+        if (documentCredential == null) throw DocumentWithIdentifierNotFound()
+        val document = Document(documentCredential)
+        if (document.state != Document.State.UNSIGNED)
+            throw DocumentAlreadyStoredException()
+        val unsignedDocument = UnsignedDocument(documentCredential)
+        val issuerSigned = CBORObject.DecodeFromBytes(issuerDocumentData)
+        val issuerAuth = issuerSigned["issuerAuth"]
+        if (issuerAuth == null) throw DocumentDecodingException()
+        with(documentCredential) {
+            val issuerAuthBytes = issuerAuth.EncodeToBytes()
+            val issuerAuth: Sign1Message = try {
+                Message.DecodeFromBytes(issuerAuthBytes, MessageTag.Sign1) as Sign1Message
+            } catch (_: Exception) {
+                throw DocumentDecodingException()
             }
-            val issuerSigned = CBORObject.DecodeFromBytes(issuerDocumentData)
-            val issuerAuth = issuerSigned["issuerAuth"]
-            if (issuerAuth == null) {
-                result.failure(IllegalArgumentException("No issuerAuth found"))
-                return
+            val msoBytes = issuerAuth.GetContent().getEmbeddedCBORObject().EncodeToBytes()
+            val mso = MobileSecurityObjectParser(msoBytes).parse()
+            if (mso.deviceKey != unsignedDocument.publicKey.toEcPublicKey(mso.deviceKey.curve)) {
+                if (builder.checkPublicKeyBeforeAdding)
+                    throw InvalidDeviceKeyException()
             }
-            with(documentCredential) {
-                val issuerAuthBytes = issuerAuth.EncodeToBytes()
-                val issuerAuth = Message
-                    .DecodeFromBytes(issuerAuthBytes, MessageTag.Sign1) as Sign1Message
-                val msoBytes = issuerAuth.GetContent().getEmbeddedCBORObject().EncodeToBytes()
-                val mso = MobileSecurityObjectParser(msoBytes).parse()
-                if (mso.deviceKey != unsignedDocument.publicKey.toEcPublicKey(mso.deviceKey.curve)) {
-                    if (builder.checkPublicKeyBeforeAdding) {
-                        val msg = "Public key in MSO does not match the one in the request"
-                        result.failure(IllegalArgumentException(msg))
-                        return
-                    }
-                }
-                this.state = Document.State.ISSUED
-                this.docType = mso.docType
-                this.issuedAt = Instant.now()
-                clearDeferredRelatedData()
-
-                val nameSpaces = issuerSigned["nameSpaces"]
-                val digestIdMapping = nameSpaces.toDigestIdMapping()
-                val staticAuthData = StaticAuthDataGenerator(digestIdMapping, issuerAuthBytes)
-                    .generate()
-                this.pendingCredentials.forEach { credential ->
-                    credential.certify(staticAuthData, mso.validFrom, mso.validUntil)
-                }
-                this.nameSpacedData = nameSpaces.asNameSpacedData()
+            this@with.state = Document.State.ISSUED
+            this@with.docType = mso.docType
+            this@with.issuedAt = Instant.now()
+            this@with.clearDeferredRelatedData()
+            val nameSpaces = issuerSigned["nameSpaces"]
+            val digestIdMapping = nameSpaces.toDigestIdMapping()
+            val staticAuthData = StaticAuthDataGenerator(digestIdMapping, issuerAuthBytes)
+                .generate()
+            this@with.pendingCredentials.forEach { credential ->
+                credential.certify(staticAuthData, mso.validFrom, mso.validUntil)
             }
-            result.success(documentCredential.name, null)
-        } catch (e: Exception) {
-            result.failure(e)
+            this@with.nameSpacedData = nameSpaces.asNameSpacedData()
         }
+        return documentCredential.name
     }
 
     internal fun storeDeferredDocument(
@@ -242,6 +258,11 @@ class DocumentManager private constructor() : LibIso18013DAO {
         fun build(builder: DocumentManagerBuilder) = DocumentManager().apply {
             this.context = builder.context
             this.builder = builder
+        }
+
+        fun buildWithContext(context: Context) = DocumentManager().apply {
+            this.context = context
+            this.builder = DocumentManagerBuilder(context)
         }
     }
 }
