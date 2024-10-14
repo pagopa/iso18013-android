@@ -41,7 +41,6 @@ internal fun CBORObject.toModelMDoc(): ModelMDoc {
         return Document(
             docType = doc.get("docType").AsString(),
             issuerSigned = IssuerSigned(
-                //issuerAuth
                 nameSpaces = issuerSigned.get("nameSpaces").keys
                     .let { keys ->
                         val mNameSpaces =
@@ -73,6 +72,7 @@ internal fun CBORObject.toModelMDoc(): ModelMDoc {
 
                         mNameSpaces
                     },
+                rawValue = issuerSigned.EncodeToBytes(),
                 issuerAuth = issuerSigned.get("issuerAuth").EncodeToBytes()
             )
         )

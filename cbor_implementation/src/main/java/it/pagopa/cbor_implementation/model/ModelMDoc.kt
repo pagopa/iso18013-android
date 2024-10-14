@@ -83,6 +83,7 @@ data class Document(
 
 data class IssuerSigned(
     var nameSpaces: Map<String, List<DocumentX>>?,
+    val rawValue: ByteArray? = null,
     val issuerAuth: ByteArray? = null
 ) {
     fun hasIssuerAuth() = this.issuerAuth != null

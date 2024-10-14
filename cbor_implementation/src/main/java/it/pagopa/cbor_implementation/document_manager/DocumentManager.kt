@@ -88,7 +88,7 @@ class DocumentManager private constructor() : LibIso18013DAO {
         algorithm: Algorithm.SupportedAlgorithms,
         attestationChallenge: ByteArray?
     ): UnsignedDocument {
-        val domain = "pagopa"
+        val domain = this.context.applicationContext.packageName.replace(".", "_")
         val documentId = "${UUID.randomUUID()}"
         if (forceStrongBox && !context.supportStrongBox)
             throw StrongBoxNotSupported()
