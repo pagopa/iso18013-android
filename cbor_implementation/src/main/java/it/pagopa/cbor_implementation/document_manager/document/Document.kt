@@ -38,10 +38,10 @@ sealed interface Document {
         get() = state == State.UNSIGNED
 
     val isDeferred: Boolean
-        get() = state ==  State.DEFERRED
+        get() = state == State.DEFERRED
 
     val isIssued: Boolean
-        get() = state ==  State.ISSUED
+        get() = state == State.ISSUED
 
     /**
      * The state of the document.

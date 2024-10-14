@@ -14,6 +14,7 @@ import it.pagopa.proximity.ProximityLogger
 import it.pagopa.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.proximity.retrieval.connectionMethods
 import it.pagopa.proximity.retrieval.transportOptions
+import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
 import java.util.concurrent.Executor
@@ -22,7 +23,7 @@ import java.util.concurrent.Executor
  * To build use [QrEngagement.build] static method
  * */
 class QrEngagement private constructor(
-    private val context: Context
+    val context: Context
 ) {
     init {
         val isBcAlreadyIntoProviders = Security.getProviders().any {
@@ -35,6 +36,7 @@ class QrEngagement private constructor(
             Security.insertProviderAt(BouncyCastleProvider(), 1)
         }
     }
+
     private lateinit var qrEngagement: QrEngagementHelper
     private var listener: QrEngagementListener? = null
     private var deviceRetrievalHelper: DeviceRetrievalHelper? = null
@@ -75,7 +77,13 @@ class QrEngagement private constructor(
             )
             deviceRetrievalHelper = builder.build()
             qrEngagement.close()
-            listener?.onDeviceRetrievalHelperReady(requireNotNull(deviceRetrievalHelper))
+            listener?.onDeviceRetrievalHelperReady(
+                DeviceRetrievalHelperWrapper(
+                    requireNotNull(
+                        deviceRetrievalHelper
+                    )
+                )
+            )
         }
 
         override fun onError(error: Throwable) {

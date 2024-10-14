@@ -1,6 +1,5 @@
 package it.pagopa.iso_android.ui.view_model
 
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,7 +18,6 @@ import it.pagopa.iso_android.ui.model.Actions
 import it.pagopa.iso_android.ui.model.ActionsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.Serializable
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 

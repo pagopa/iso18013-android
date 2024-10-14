@@ -63,8 +63,6 @@ fun MainActivity.IsoAndroidPocNavHost(
                 backLogic(showMenu) {
                     navController.popBackStack()
                 }
-            }, onNavigate = {
-
             })
         }
         customAnimatedComposable<HomeDestination.Slave> {

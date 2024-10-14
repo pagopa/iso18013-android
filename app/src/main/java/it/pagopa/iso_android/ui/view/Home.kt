@@ -2,6 +2,7 @@ package it.pagopa.iso_android.ui.view
 
 import android.Manifest
 import android.content.res.Configuration
+import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -51,6 +52,21 @@ fun HomeView(
                 Toast.LENGTH_LONG
             ).show()
     }
+    val bleLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionsMap ->
+        val granted = permissionsMap.map {
+            it.value == true
+        }
+        if (granted.size == permissionsMap.size)
+            onNavigate.invoke(HomeDestination.Master)
+        else
+            Toast.makeText(
+                context,
+                "Ho bisogno del permesso al bluetooth per procedere..",
+                Toast.LENGTH_LONG
+            ).show()
+    }
     BackHandler {
         onBack.invoke()
     }
@@ -86,7 +102,15 @@ fun HomeView(
             )
         }
         TwoButtonsInARow(leftBtnText = "do as Master", leftBtnAction = {
-            onNavigate.invoke(HomeDestination.Master)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                bleLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.BLUETOOTH_CONNECT,
+                        Manifest.permission.BLUETOOTH_ADVERTISE
+                    )
+                )
+            else
+                onNavigate.invoke(HomeDestination.Master)
         }, rightBtnText = "do as Slave", rightBtnAction = {
             launcher.launch(Manifest.permission.CAMERA)
         })

@@ -20,27 +20,29 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import it.pagopa.iso_android.qr_code.QrCode
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.BigText
 import it.pagopa.iso_android.ui.CenteredComposable
+import it.pagopa.iso_android.ui.view_model.MasterViewViewModel
+import it.pagopa.iso_android.ui.view_model.viewModelWithQrEngagement
 import it.pagopa.proximity.bluetooth.BleRetrievalMethod
 import it.pagopa.proximity.qr_code.QrEngagement
 import kotlin.math.roundToInt
 
 @Composable
 fun MasterView(
-    onBack: () -> Unit,
-    onNavigate: () -> Unit
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val qrCodeEngagement = QrEngagement.build(
-        context = context,
-        retrievalMethods = listOf(
-            BleRetrievalMethod(
-                peripheralServerMode = true,
-                centralClientMode = false,
-                clearBleCache = true
+    val viewModel = viewModelWithQrEngagement<MasterViewViewModel>(
+        QrEngagement.build(
+            context = context,
+            retrievalMethods = listOf(
+                BleRetrievalMethod(
+                    peripheralServerMode = true,
+                    centralClientMode = false,
+                    clearBleCache = true
+                )
             )
         )
     )
@@ -66,11 +68,7 @@ fun MasterView(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             Image(
-                bitmap = QrCode(
-                    qrCodeEngagement
-                        .getQrCodeString()
-                ).asBitmap(qrCodeSize)
-                    .asImageBitmap(),
+                bitmap = viewModel.getQrCodeBitmap(qrCodeSize).asImageBitmap(),
                 modifier = Modifier.size(200.dp),
                 contentDescription = "Qr code"
             )
@@ -82,7 +80,7 @@ fun MasterView(
 @Composable
 fun MasterViewPreview() {
     BasePreview {
-        MasterView(onBack = {}, onNavigate = {})
+        MasterView(onBack = {})
     }
 }
 
@@ -90,6 +88,6 @@ fun MasterViewPreview() {
 @Composable
 fun MasterViewPreviewNight() {
     BasePreview {
-        MasterView(onBack = {}, onNavigate = {})
+        MasterView(onBack = {})
     }
 }
