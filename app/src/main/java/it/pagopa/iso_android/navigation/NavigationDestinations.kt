@@ -17,4 +17,7 @@ sealed class HomeDestination {
 
     @Serializable
     data object ReadDocument : HomeDestination()
+
+    @Serializable
+    data object DocumentStorage : HomeDestination()
 }

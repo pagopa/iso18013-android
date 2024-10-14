@@ -18,6 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import it.pagopa.iso_android.MainActivity
 import it.pagopa.iso_android.ui.view.CborView
+import it.pagopa.iso_android.ui.view.DocumentStorageView
 import it.pagopa.iso_android.ui.view.HomeView
 import it.pagopa.iso_android.ui.view.MasterView
 import it.pagopa.iso_android.ui.view.SignAndVerifyView
@@ -85,6 +86,14 @@ fun MainActivity.IsoAndroidPocNavHost(
         customAnimatedComposable<HomeDestination.SignAndVerify> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             SignAndVerifyView(onBack = {
+                backLogic(showMenu) {
+                    navController.popToHome()
+                }
+            })
+        }
+        customAnimatedComposable<HomeDestination.DocumentStorage> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
+            DocumentStorageView(onBack = {
                 backLogic(showMenu) {
                     navController.popToHome()
                 }

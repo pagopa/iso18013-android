@@ -5,4 +5,6 @@
     <string name="sign_doc">Sign doc</string>
     <string name="store_doc">Store doc</string>
     <string name="verify_doc">Verify doc</string>
+    <string name="document_storage">Document Storage</string>
+    <string name="delete_doc">Delete Doc</string>
 </resources>

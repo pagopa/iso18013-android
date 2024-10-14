@@ -1,6 +1,5 @@
 package it.pagopa.cbor_implementation.cose
 
-import android.app.KeyguardManager
 import android.content.Context
 import androidx.annotation.CheckResult
 import com.android.identity.android.securearea.AndroidKeystoreCreateKeySettings
@@ -17,11 +16,13 @@ import it.pagopa.cbor_implementation.document_manager.DocumentManagerBuilder.Com
 import it.pagopa.cbor_implementation.document_manager.SignedWithAuthKeyResult
 import it.pagopa.cbor_implementation.document_manager.algorithm.Algorithm
 import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
+import it.pagopa.cbor_implementation.extensions.isDer
 import it.pagopa.cbor_implementation.extensions.isDeviceSecure
 import it.pagopa.cbor_implementation.extensions.supportStrongBox
 import it.pagopa.cbor_implementation.helper.addBcIfNeeded
 import kotlinx.io.files.Path
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.File
 import java.security.KeyFactory
 import java.security.SecureRandom
@@ -174,22 +175,18 @@ class COSEManager(val context: Context) {
     ): Boolean {
         return try {
             val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(publicKey)
-            // Crea una chiave pubblica
             val publicKeySpec = X509EncodedKeySpec(subjectPublicKeyInfo.getEncoded())
-            val keyFactory = KeyFactory.getInstance("ECDSA", "BC")
-
+            val keyFactory = KeyFactory.getInstance("ECDSA", BouncyCastleProvider.PROVIDER_NAME)
             val pubKey = keyFactory.generatePublic(publicKeySpec)
-
-            // Converte la firma nel formato appropriato
-            val derSignature = EcSignature.fromCoseEncoded(signature)
-
-            // Inizializza la verifica della firma utilizzando l'algoritmo ECDSA con SHA-256
-            val sig = Signature.getInstance(algorithmFromProtectedHeader(protectedHeader), "BC")
-            sig.initVerify(pubKey)
-            sig.update(data)
-
-            // Verifica la firma
-            sig.verify(derSignature.toDer())
+            val derSignature = if (EcSignature.isDer(signature))
+                signature
+            else
+                EcSignature.fromCoseEncoded(signature).toDer()
+            val alg = algorithmFromProtectedHeader(protectedHeader)
+            Signature.getInstance(alg, BouncyCastleProvider.PROVIDER_NAME).apply {
+                initVerify(pubKey)
+                update(data)
+            }.verify(derSignature)
         } catch (e: Exception) {
             CborLogger.e("verifying", e.toString())
             false

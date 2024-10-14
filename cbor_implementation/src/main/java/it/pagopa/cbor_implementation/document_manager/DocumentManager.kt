@@ -88,7 +88,7 @@ class DocumentManager private constructor() : LibIso18013DAO {
         algorithm: Algorithm.SupportedAlgorithms,
         attestationChallenge: ByteArray?
     ): UnsignedDocument {
-        val domain = "pagopa"
+        val domain = this.context.applicationContext.packageName.replace(".", "_")
         val documentId = "${UUID.randomUUID()}"
         if (forceStrongBox && !context.supportStrongBox)
             throw StrongBoxNotSupported()
@@ -153,14 +153,14 @@ class DocumentManager private constructor() : LibIso18013DAO {
     }.toTypedArray()
 
     @Throws(DocumentWithIdentifierNotFound::class)
-    override fun getDocumentByIdentifier(id: String): Document {
+    override fun getDocumentByIdentifier(id: DocumentId): Document {
         val doc = documentStore.lookupDocument(id)
         if (doc == null) throw DocumentWithIdentifierNotFound()
         return Document(doc)
     }
 
     @Throws(DocumentWithIdentifierNotFound::class)
-    override fun deleteDocument(id: String): Boolean {
+    override fun deleteDocument(id: DocumentId): Boolean {
         if (documentStore.lookupDocument(id) == null) throw DocumentWithIdentifierNotFound()
         documentStore.deleteDocument(id)
         return documentStore.lookupDocument(id) == null
