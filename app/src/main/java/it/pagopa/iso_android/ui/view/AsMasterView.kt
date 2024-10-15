@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -48,6 +49,9 @@ fun MasterView(
     )
     BackHandler(onBack = onBack)
     val qrCodeSize = with(LocalDensity.current) { 200.dp.toPx() }.roundToInt()
+    LaunchedEffect(viewModel) {
+        viewModel.getQrCodeBitmap(qrCodeSize)
+    }
     Column(
         Modifier
             .fillMaxSize()
@@ -67,11 +71,13 @@ fun MasterView(
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            Image(
-                bitmap = viewModel.getQrCodeBitmap(qrCodeSize).asImageBitmap(),
-                modifier = Modifier.size(200.dp),
-                contentDescription = "Qr code"
-            )
+            viewModel.qrCodeBitmap.value?.let { bitmap ->
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    modifier = Modifier.size(200.dp),
+                    contentDescription = "Qr code"
+                )
+            }
         }
     }
 }

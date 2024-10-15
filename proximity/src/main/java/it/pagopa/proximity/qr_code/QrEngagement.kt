@@ -10,6 +10,7 @@ import com.android.identity.android.mdoc.transport.DataTransport
 import com.android.identity.crypto.Crypto
 import com.android.identity.crypto.EcCurve
 import com.android.identity.crypto.EcPublicKey
+import com.android.identity.mdoc.request.DeviceRequestParser
 import it.pagopa.proximity.ProximityLogger
 import it.pagopa.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.proximity.retrieval.connectionMethods
@@ -38,11 +39,23 @@ class QrEngagement private constructor(
     }
 
     private lateinit var qrEngagement: QrEngagementHelper
+    private lateinit var qrEngagementBuilder: QrEngagementHelper.Builder
     private var listener: QrEngagementListener? = null
-    private var deviceRetrievalHelper: DeviceRetrievalHelper? = null
+    private var deviceRetrievalHelper: DeviceRetrievalHelperWrapper? = null
     private val eDevicePrivateKey by lazy {
         Crypto.createEcPrivateKey(EcCurve.P256)
     }
+
+    private fun checkQrEngagementInit(): Boolean {
+        val back = ::qrEngagement.isInitialized
+        if (!back)
+            ProximityLogger.e(
+                this.javaClass.name,
+                "OnDeviceConnected for QR engagement -> Have you called .configure method?"
+            )
+        return back
+    }
+
     private val qrEngagementListener = object : QrEngagementHelper.Listener {
 
         override fun onDeviceConnecting() {
@@ -51,6 +64,8 @@ class QrEngagement private constructor(
         }
 
         override fun onDeviceConnected(transport: DataTransport) {
+            if (!checkQrEngagementInit())
+                return
             if (deviceRetrievalHelper != null) {
                 ProximityLogger.d(
                     this.javaClass.name,
@@ -75,13 +90,11 @@ class QrEngagement private constructor(
                 qrEngagement.deviceEngagement,
                 qrEngagement.handover
             )
-            deviceRetrievalHelper = builder.build()
+            deviceRetrievalHelper = DeviceRetrievalHelperWrapper(builder.build())
             qrEngagement.close()
             listener?.onDeviceRetrievalHelperReady(
-                DeviceRetrievalHelperWrapper(
-                    requireNotNull(
-                        deviceRetrievalHelper
-                    )
+                requireNotNull(
+                    deviceRetrievalHelper
                 )
             )
         }
@@ -104,6 +117,11 @@ class QrEngagement private constructor(
                 this.javaClass.name,
                 "DeviceRetrievalHelper Listener (QR): OnDeviceRequest"
             )
+            val listRequested: List<DeviceRequestParser.DocRequest> = DeviceRequestParser(
+                deviceRequestBytes,
+                deviceRetrievalHelper!!.sessionTranscript()
+            ).parse().docRequests
+
             listener?.onNewDeviceRequest(deviceRequestBytes)
         }
 
@@ -132,13 +150,21 @@ class QrEngagement private constructor(
      * Gives back QR code string for engagement
      */
     fun getQrCodeString(): String {
+        if (!checkQrEngagementInit())
+            return ""
         return qrEngagement.deviceEngagementUriEncoded
+    }
+
+    fun configure()=apply {
+        qrEngagement = qrEngagementBuilder.build()
     }
 
     /**
      * Closes the connection with the mdoc verifier
      */
     fun close() {
+        if (!checkQrEngagementInit())
+            return
         try {
             qrEngagement.close()
         } catch (exception: RuntimeException) {
@@ -163,14 +189,13 @@ class QrEngagement private constructor(
          */
         fun build(context: Context, retrievalMethods: List<DeviceRetrievalMethod>): QrEngagement {
             return QrEngagement(context).apply {
-                qrEngagement = QrEngagementHelper.Builder(
+                qrEngagementBuilder = QrEngagementHelper.Builder(
                     context,
                     eDevicePrivateKey.publicKey,
                     retrievalMethods.transportOptions,
                     qrEngagementListener,
                     context.mainExecutor()
                 ).setConnectionMethods(retrievalMethods.connectionMethods)
-                    .build()
             }
         }
     }

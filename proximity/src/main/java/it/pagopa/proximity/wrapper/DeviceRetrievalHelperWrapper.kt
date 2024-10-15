@@ -19,4 +19,6 @@ class DeviceRetrievalHelperWrapper(
     fun disconnect() {
         deviceRetrievalHelper.stopPresentation(true, true)
     }
+
+    fun sessionTranscript() = this.deviceRetrievalHelper.sessionTranscript
 }
