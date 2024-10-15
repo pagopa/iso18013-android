@@ -101,7 +101,7 @@ class RequestWrapperTest {
                 RequestWrapper(Base64.decode(mockMdlRequest)).prepare()
             )
         )
-        assert(req.list[0].requiredFields is RequiredFieldsEuPid)
-        assert(req.list[1].requiredFields is RequiredFieldsMdl)
+        assert(req.getList()[0].requiredFields is RequiredFieldsEuPid)
+        assert(req.getList()[1].requiredFields is RequiredFieldsMdl)
     }
 }

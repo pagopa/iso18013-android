@@ -17,7 +17,7 @@ import com.android.identity.document.Document as BaseDocument
 
 /**
  * An [IssuedDocument] is a document that has been issued. It contains the data that was issued.
- * To store the [IssuedDocument], use the [it.pagopa.cbor_implementation.document_manager.DocumentManager.storeIssuedDocument] method.
+ * To store the [IssuedDocument], use the [it.pagopa.cbor_implementation.document_manager.DocumentManager.storeDocument] method.
  *
  * @property issuedAt document's issuance date
  * @property requiresUserAuth flag that indicates if the document requires user authentication to be accessed
@@ -55,6 +55,10 @@ data class IssuedDocument(
             }
             return map.toMap()
         }
+
+    fun getDocumentCborBytes(): ByteArray? {
+        return CBORObject.FromObject(this.nameSpacedData)?.EncodeToBytes()
+    }
 
     internal companion object {
         @JvmSynthetic

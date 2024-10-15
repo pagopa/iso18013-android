@@ -7,7 +7,7 @@ import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
-internal data class RequiredFieldsEuPid(
+data class RequiredFieldsEuPid(
     val gender: Boolean?,
     val portrait: Boolean?,
     val birthCity: Boolean?,

@@ -7,7 +7,7 @@ import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
-internal data class RequiredFieldsMdl(
+data class RequiredFieldsMdl(
     val height: Boolean?,
     val weight: Boolean?,
     val portrait: Boolean?,

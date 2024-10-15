@@ -14,12 +14,17 @@ import kotlinx.parcelize.Parcelize
 *
 * Example mdl
 * {"docType": "org.iso.18013.5.1.mDL", "nameSpaces": {"org.iso.18013.5.1": {"height": false, "weight": false, "portrait": false, "birth_date": false, "eye_colour": false, "given_name": false, "issue_date": false, "age_over_18": false, "age_over_21": false, "birth_place": false, "expiry_date": false, "family_name": false, "hair_colour": false, "nationality": false, "age_in_years": false, "resident_city": false, "age_birth_year": false, "resident_state": false, "document_number": false, "issuing_country": false, "resident_address": false, "resident_country": false, "issuing_authority": false, "driving_privileges": false, "issuing_jurisdiction": false, "resident_postal_code": false, "signature_usual_mark": false, "administrative_number": false, "portrait_capture_date": false, "un_distinguishing_sign": false, "given_name_national_character": false, "family_name_national_character": false}}}
+*
+* Example others
+* docRequests":[{ "itemsRequest": {"docType": "eu.europa.ec.eudi.pid.1", ecc..}}]
 * */
 @Parcelize
-data class RequestFromDevice(val list: List<RequestWrapper>) : Parcelable {
+data class RequestFromDevice(private val list: List<RequestWrapper>) : Parcelable {
+    @JvmName("getList1")
+    fun getList() = list.filter { it.requiredFields != null }
     override fun toString(): String {
         val sb = StringBuilder()
-        list.forEachIndexed { i, it ->
+        getList().forEachIndexed { i, it ->
             sb.append("element $i:\n")
             sb.append(it.toString())
             sb.append("\n")
@@ -32,17 +37,17 @@ data class RequestFromDevice(val list: List<RequestWrapper>) : Parcelable {
 @Parcelize
 data class RequestWrapper(private val cborByte: ByteArray) : Parcelable {
     @IgnoredOnParcel
-    internal var requiredFields: RequiredFields? = null
+    var requiredFields: RequiredFields? = null
 
-    @Throws(NoDocTypeException::class)
     fun prepare() = apply {
         val cbor = CBORObject.DecodeFromBytes(cborByte)
-        val docType = DocType.fromString(cbor.get("docType")?.AsString())
-        if (docType == null)
-            throw NoDocTypeException()
+        var docTypeCbor = cbor.get("docType")?.AsString()
+        val docType = DocType.fromString(docTypeCbor)
         val namespaces = cbor.get("nameSpaces")
-        val fields = namespaces.get(docType.nameSpacesValue)
-        this.requiredFields = RequiredFields.fromCbor(docType, fields)
+        if (DocType.isAcceptedDocType(docType)) {
+            val fields = namespaces.get(docType!!.nameSpacesValue)
+            this.requiredFields = RequiredFields.fromCbor(docType, fields)
+        }
     }
 
     override fun toString(): String {

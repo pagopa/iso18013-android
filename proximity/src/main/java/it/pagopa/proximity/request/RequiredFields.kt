@@ -3,7 +3,7 @@ package it.pagopa.proximity.request
 import com.upokecenter.cbor.CBORObject
 import it.pagopa.proximity.DocType
 
-internal abstract class RequiredFields {
+abstract class RequiredFields {
     abstract val docType: DocType
 
     companion object {

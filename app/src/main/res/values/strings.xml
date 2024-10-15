@@ -7,4 +7,6 @@
     <string name="verify_doc">Verify doc</string>
     <string name="document_storage">Document Storage</string>
     <string name="delete_doc">Delete Doc</string>
+    <string name="warning">Warning</string>
+    <string name="share_info_question">Are you sure do you want to share your document infos?</string>
 </resources>

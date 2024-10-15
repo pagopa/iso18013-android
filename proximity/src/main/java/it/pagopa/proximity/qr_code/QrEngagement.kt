@@ -128,7 +128,7 @@ class QrEngagement private constructor(
             ).parse().docRequests
             val requestWrapperList = arrayListOf<RequestWrapper>()
             listRequested.forEachIndexed { j, each ->
-                requestWrapperList.add(RequestWrapper(each.itemsRequest))
+                requestWrapperList.add(RequestWrapper(each.itemsRequest).prepare())
             }
             listener?.onNewDeviceRequest(RequestFromDevice(requestWrapperList.toList()))
         }
