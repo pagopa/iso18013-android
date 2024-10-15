@@ -35,7 +35,7 @@ data class IssuedDocument(
     val issuedAt: Instant,
     val nameSpacedData: Map<NameSpace, Map<ElementIdentifier, ByteArray>>,
 ) : Document {
-
+    //{"status": 0, "version": "1.0", "documents": [{"docType": "org.iso.18013.5.1.mDL",
     @set:JvmSynthetic
     override var state: Document.State = Document.State.ISSUED
         internal set
@@ -57,7 +57,16 @@ data class IssuedDocument(
         }
 
     fun getDocumentCborBytes(): ByteArray? {
-        return CBORObject.FromObject(this.nameSpacedData)?.EncodeToBytes()
+        val document = CBORObject.NewOrderedMap()
+        document.Add("docType", this.docType)
+        val documentsArray = CBORObject.NewArray()
+        documentsArray.Add(document)
+        document.Add("nameSpaces", CBORObject.FromObject(this.nameSpacedData.values))
+        val cborObject = CBORObject.NewOrderedMap()
+        cborObject.Add("status", 0)
+        cborObject.Add("version", "1.0")
+        cborObject.Add("documents", documentsArray)
+        return cborObject?.EncodeToBytes()
     }
 
     internal companion object {
