@@ -12,6 +12,8 @@ import com.android.identity.crypto.EcCurve
 import com.android.identity.crypto.EcPublicKey
 import com.android.identity.mdoc.request.DeviceRequestParser
 import it.pagopa.proximity.ProximityLogger
+import it.pagopa.proximity.request.RequestFromDevice
+import it.pagopa.proximity.request.RequestWrapper
 import it.pagopa.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.proximity.retrieval.connectionMethods
 import it.pagopa.proximity.retrieval.transportOptions
@@ -19,6 +21,7 @@ import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
 import java.util.concurrent.Executor
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * To build use [QrEngagement.build] static method
@@ -104,6 +107,8 @@ class QrEngagement private constructor(
             listener?.onCommunicationError("$error")
         }
     }
+
+    @OptIn(ExperimentalEncodingApi::class)
     private val deviceRetrievalHelperListener = object : DeviceRetrievalHelper.Listener {
         override fun onEReaderKeyReceived(eReaderKey: EcPublicKey) {
             ProximityLogger.d(
@@ -121,8 +126,11 @@ class QrEngagement private constructor(
                 deviceRequestBytes,
                 deviceRetrievalHelper!!.sessionTranscript()
             ).parse().docRequests
-
-            listener?.onNewDeviceRequest(deviceRequestBytes)
+            val requestWrapperList = arrayListOf<RequestWrapper>()
+            listRequested.forEachIndexed { j, each ->
+                requestWrapperList.add(RequestWrapper(each.itemsRequest))
+            }
+            listener?.onNewDeviceRequest(RequestFromDevice(requestWrapperList.toList()))
         }
 
         override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {
@@ -155,8 +163,13 @@ class QrEngagement private constructor(
         return qrEngagement.deviceEngagementUriEncoded
     }
 
-    fun configure()=apply {
+    fun configure() = apply {
         qrEngagement = qrEngagementBuilder.build()
+    }
+
+    fun sendResponse(response: ByteArray) {
+        if (deviceRetrievalHelper == null) return
+        deviceRetrievalHelper!!.sendResponse(response)
     }
 
     /**
@@ -166,6 +179,8 @@ class QrEngagement private constructor(
         if (!checkQrEngagementInit())
             return
         try {
+            if (deviceRetrievalHelper != null)
+                deviceRetrievalHelper!!.disconnect()
             qrEngagement.close()
         } catch (exception: RuntimeException) {
             ProximityLogger.e(this.javaClass.name, "Error closing QR engagement $exception")

@@ -47,7 +47,10 @@ fun MasterView(
             )
         )
     )
-    BackHandler(onBack = onBack)
+    BackHandler {
+        viewModel.qrCodeEngagement.close()
+        onBack.invoke()
+    }
     val qrCodeSize = with(LocalDensity.current) { 200.dp.toPx() }.roundToInt()
     LaunchedEffect(viewModel) {
         viewModel.getQrCodeBitmap(qrCodeSize)
