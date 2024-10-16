@@ -7,6 +7,6 @@ interface QrEngagementListener {
     fun onConnecting()
     fun onDeviceRetrievalHelperReady(deviceRetrievalHelper: DeviceRetrievalHelperWrapper)
     fun onCommunicationError(msg: String)
-    fun onNewDeviceRequest(request: RequestFromDevice)
+    fun onNewDeviceRequest(request: RequestFromDevice, sessionsTranscript: ByteArray)
     fun onDeviceDisconnected(transportSpecificTermination: Boolean)
 }

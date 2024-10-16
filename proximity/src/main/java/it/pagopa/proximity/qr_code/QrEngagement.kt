@@ -11,6 +11,7 @@ import com.android.identity.crypto.Crypto
 import com.android.identity.crypto.EcCurve
 import com.android.identity.crypto.EcPublicKey
 import com.android.identity.mdoc.request.DeviceRequestParser
+import com.android.identity.util.Constants
 import it.pagopa.proximity.ProximityLogger
 import it.pagopa.proximity.request.RequestFromDevice
 import it.pagopa.proximity.request.RequestWrapper
@@ -20,6 +21,7 @@ import it.pagopa.proximity.retrieval.transportOptions
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
+import java.util.OptionalLong
 import java.util.concurrent.Executor
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -122,15 +124,19 @@ class QrEngagement private constructor(
                 this.javaClass.name,
                 "DeviceRetrievalHelper Listener (QR): OnDeviceRequest"
             )
+            val sessionTranscript = deviceRetrievalHelper!!.sessionTranscript()
             val listRequested: List<DeviceRequestParser.DocRequest> = DeviceRequestParser(
                 deviceRequestBytes,
-                deviceRetrievalHelper!!.sessionTranscript()
+                sessionTranscript
             ).parse().docRequests
             val requestWrapperList = arrayListOf<RequestWrapper>()
             listRequested.forEachIndexed { j, each ->
                 requestWrapperList.add(RequestWrapper(each.itemsRequest).prepare())
             }
-            listener?.onNewDeviceRequest(RequestFromDevice(requestWrapperList.toList()))
+            listener?.onNewDeviceRequest(
+                RequestFromDevice(requestWrapperList.toList()),
+                sessionTranscript
+            )
         }
 
         override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {
@@ -169,7 +175,10 @@ class QrEngagement private constructor(
 
     fun sendResponse(response: ByteArray) {
         if (deviceRetrievalHelper == null) return
-        deviceRetrievalHelper!!.sendResponse(response)
+        deviceRetrievalHelper!!.sendResponse(
+            response,
+            Constants.SESSION_DATA_STATUS_SESSION_TERMINATION
+        )
     }
 
     /**

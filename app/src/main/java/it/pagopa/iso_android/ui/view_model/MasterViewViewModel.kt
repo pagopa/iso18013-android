@@ -11,14 +11,13 @@ import it.pagopa.cbor_implementation.document_manager.document.IssuedDocument
 import it.pagopa.iso_android.qr_code.QrCode
 import it.pagopa.proximity.DocType
 import it.pagopa.proximity.ProximityLogger
+import it.pagopa.proximity.document.DisclosedDocument
 import it.pagopa.proximity.qr_code.QrEngagement
 import it.pagopa.proximity.qr_code.QrEngagementListener
 import it.pagopa.proximity.request.RequestFromDevice
+import it.pagopa.proximity.response.ResponseGenerator
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -26,12 +25,6 @@ class MasterViewViewModel(
     val qrCodeEngagement: QrEngagement
 ) : ViewModel() {
     val qrCodeBitmap = mutableStateOf<Bitmap?>(null)
-    private var mdlRequested = false
-    private var euPidRequest = false
-    var mdlResponseToSend: ByteArray? = null
-    var euPidResponseToSend: ByteArray? = null
-    private val _onRequest = MutableStateFlow(false)
-    private val onRequest = _onRequest.asStateFlow()
     val documentManager by lazy {
         DocumentManager.build(
             DocumentManagerBuilder(
@@ -55,22 +48,6 @@ class MasterViewViewModel(
     }
 
     private fun attachListenerAndObserve() {
-        viewModelScope.launch(Dispatchers.IO) {
-            this@MasterViewViewModel.onRequest.collectLatest { requested ->
-                if (requested) {
-                    ProximityLogger.i("MDL response","$mdlResponseToSend")
-                    ProximityLogger.i("Eu pid response","$euPidResponseToSend")
-                    when {
-                        mdlRequested && euPidRequest -> qrCodeEngagement.sendResponse(
-                            mdlResponseToSend!! + euPidResponseToSend!!
-                        )
-
-                        mdlRequested -> qrCodeEngagement.sendResponse(mdlResponseToSend!!)
-                        euPidRequest -> qrCodeEngagement.sendResponse(euPidResponseToSend!!)
-                    }
-                }
-            }
-        }
         qrCodeEngagement.withListener(object : QrEngagementListener {
             override fun onConnecting() {}
             override fun onCommunicationError(msg: String) {}
@@ -79,20 +56,43 @@ class MasterViewViewModel(
                 this@MasterViewViewModel.deviceConnected = deviceRetrievalHelper
             }
 
-            override fun onNewDeviceRequest(request: RequestFromDevice) {
+            override fun onNewDeviceRequest(
+                request: RequestFromDevice,
+                sessionsTranscript: ByteArray
+            ) {
                 ProximityLogger.i("request", request.toString())
+                val disclosedDocuments = ArrayList<DisclosedDocument>()
                 request.getList().forEach {
-                    mdlRequested = it.requiredFields?.docType == DocType.MDL
-                    euPidRequest = it.requiredFields?.docType == DocType.EU_PID
+                    val issuedDoc = if (it.requiredFields?.docType == DocType.MDL) {
+                        getMdl() as IssuedDocument
+                    } else
+                        getEuPid() as IssuedDocument
+                    disclosedDocuments.add(
+                        DisclosedDocument(
+                            documentId = issuedDoc.id,
+                            docType = issuedDoc.docType,
+                            requestedFields = it.requiredFields!!,
+                            nameSpaces = issuedDoc.nameSpacedDataValues
+                        )
+                    )
                 }
-                if (mdlRequested)
-                    mdlResponseToSend =
-                        (getMdl() as? IssuedDocument)?.getDocumentCborBytes() ?: byteArrayOf()
-                if (euPidRequest)
-                    euPidResponseToSend =
-                        (getEuPid() as? IssuedDocument)?.getDocumentCborBytes() ?: byteArrayOf()
-                if (mdlRequested || euPidRequest)
-                    _onRequest.value = true
+                val responseToSend = ResponseGenerator(
+                    context = qrCodeEngagement.context,
+                    sessionsTranscript = sessionsTranscript
+                )
+                if (disclosedDocuments.isNotEmpty()) {
+                    responseToSend.createResponse(
+                        disclosedDocuments.toTypedArray()
+                    )?.let {
+                        qrCodeEngagement.sendResponse(it)
+                    } ?: run {
+                        ProximityLogger.e(
+                            "Sending resp",
+                            "found doc but fail to generate raw response"
+                        )
+                    }
+                } else
+                    ProximityLogger.e("Sending resp", "no doc found")
             }
         })
     }

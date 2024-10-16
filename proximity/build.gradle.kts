@@ -37,6 +37,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
+    implementation(libs.kotlinx.datetime)
+    implementation(libs.kotlinx.io.core)
     // to parse device request
     implementation(libs.cbor)
     implementation(libs.google.identity) {

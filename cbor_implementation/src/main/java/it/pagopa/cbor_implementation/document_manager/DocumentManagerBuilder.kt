@@ -12,21 +12,9 @@ import kotlin.Boolean
 
 class DocumentManagerBuilder(val context: Context) {
     private val _context = context.applicationContext
-    var storageDir: File = _context.noBackupFilesDir
     var userAuth: Boolean = context.isDeviceSecure
     var userAuthTimeoutInMillis: Long = AUTH_TIMEOUT
     var checkPublicKeyBeforeAdding: Boolean = true
-
-    /**
-     * The directory to store data files in.
-     * By default, the [Context.getNoBackupFilesDir] is used.
-     *
-     * @param storageDir
-     * @return [DocumentManagerBuilder]
-     */
-    fun withStorageDir(storageDir: File) = apply {
-        this.storageDir = storageDir
-    }
 
     /**
      * Sets whether to require user authentication to access the document.
@@ -64,11 +52,10 @@ class DocumentManagerBuilder(val context: Context) {
      * The directory to store data files in.
      * By default, the [Context.getNoBackupFilesDir] is used.
      *
-     * @param storageDir
      * @return [DocumentManagerBuilder]
      */
     internal val storageEngine: StorageEngine by lazy {
-        val path = Path(File(storageDir.path, "pagopa-identity.bin").path)
+        val path = Path(File(_context.noBackupFilesDir.path, "pagopa-identity.bin").path)
         AndroidStorageEngine.Builder(_context, path)
             .setUseEncryption(true)
             .build()
