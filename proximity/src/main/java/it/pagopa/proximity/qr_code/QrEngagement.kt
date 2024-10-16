@@ -21,7 +21,6 @@ import it.pagopa.proximity.retrieval.transportOptions
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
-import java.util.OptionalLong
 import java.util.concurrent.Executor
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -206,10 +205,11 @@ class QrEngagement private constructor(
 
     companion object {
         /**
-         * Create an instance and configures the QR engagement
-         * To create a QrCode use [QrEngagement.getQrCodeString] method
-         * To observe all events call [QrEngagement.withListener] method
-         * To close the connection call [QrEngagement.close] method
+         * Create an instance and configures the QR engagement.
+         * First of all you must call [QrEngagement.configure] to build QrEngagementHelper.
+         * To create a QrCode use [QrEngagement.getQrCodeString] method.
+         * To observe all events call [QrEngagement.withListener] method.
+         * To close the connection call [QrEngagement.close] method.
          */
         fun build(context: Context, retrievalMethods: List<DeviceRetrievalMethod>): QrEngagement {
             return QrEngagement(context).apply {
