@@ -62,11 +62,16 @@ class MasterViewViewModel(
             ) {
                 ProximityLogger.i("request", request.toString())
                 val disclosedDocuments = ArrayList<DisclosedDocument>()
+                //TODO: this->val toSendArray = ArrayList<String>()
                 request.getList().forEach {
                     val issuedDoc = if (it.requiredFields?.docType == DocType.MDL) {
                         getMdl() as IssuedDocument
                     } else
                         getEuPid() as IssuedDocument
+                    /*it.requiredFields?.toArray()?.forEach { (value, cborValue) ->
+                        if (value == true)
+                            toSendArray.add(cborValue)
+                    }*/
                     disclosedDocuments.add(
                         DisclosedDocument(
                             documentId = issuedDoc.id,

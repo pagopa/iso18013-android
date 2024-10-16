@@ -80,12 +80,6 @@ class ResponseGenerator(
         try {
             val deviceResponse = DeviceResponseGenerator(Constants.DEVICE_RESPONSE_STATUS_OK)
             disclosedDocuments.forEach { responseDocument ->
-                /* if (responseDocument.docType == "org.iso.18013.5.1.mDL" && responseDocument.selectedDocItems.filter { docItem ->
-                         docItem.elementIdentifier.startsWith("age_over_")
-                                 && docItem.namespace == "org.iso.18013.5.1"
-                     }.size > 2) {
-                     return null
-                 }*/
                 addDocumentToResponse(deviceResponse, responseDocument, sessionsTranscript)
             }
             return deviceResponse.generate()
