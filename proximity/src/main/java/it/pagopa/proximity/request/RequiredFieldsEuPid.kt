@@ -87,48 +87,55 @@ data class RequiredFieldsEuPid(
     )
 
     companion object {
+        private fun CBORObject?.toBoolOrFalse(): Boolean {
+            if (this == null) return false
+            return if (this.isNull || this.isUndefined)
+                false
+            else
+                this.isFalse
+        }
         fun fromCbor(cbor: CBORObject) = RequiredFieldsEuPid(
-            gender = cbor.get("gender")?.AsBoolean() to "gender",
-            portrait = cbor.get("portrait")?.AsBoolean() to "portrait",
-            birthCity = cbor.get("birth_city")?.AsBoolean() to "birth_city",
-            birthDate = cbor.get("birth_date")?.AsBoolean() to "birth_date",
-            givenName = cbor.get("given_name")?.AsBoolean() to "given_name",
-            ageOver13 = cbor.get("age_over_13")?.AsBoolean() to "age_over_13",
-            ageOver16 = cbor.get("age_over_16")?.AsBoolean() to "age_over_16",
-            ageOver18 = cbor.get("age_over_18")?.AsBoolean() to "age_over_18",
-            ageOver21 = cbor.get("age_over_21")?.AsBoolean() to "age_over_21",
-            ageOver60 = cbor.get("age_over_60")?.AsBoolean() to "age_over_60",
-            ageOver65 = cbor.get("age_over_65")?.AsBoolean() to "age_over_65",
-            ageOver68 = cbor.get("age_over_68")?.AsBoolean() to "age_over_68",
-            birthPlace = cbor.get("birth_place")?.AsBoolean() to "birth_place",
-            birthState = cbor.get("birth_state")?.AsBoolean() to "birth_state",
-            expiryDate = cbor.get("expiry_date")?.AsBoolean() to "expiry_date",
-            familyName = cbor.get("family_name")?.AsBoolean() to "family_name",
-            nationality = cbor.get("nationality")?.AsBoolean() to "nationality",
-            ageInYears = cbor.get("age_in_years")?.AsBoolean() to "age_in_years",
-            birthCountry = cbor.get("birth_country")?.AsBoolean() to "birth_country",
-            issuanceDate = cbor.get("issuance_date")?.AsBoolean() to "issuance_date",
-            residentCity = cbor.get("resident_city")?.AsBoolean() to "resident_city",
-            ageBirthYear = cbor.get("age_birth_year")?.AsBoolean() to "age_birth_year",
-            residentState = cbor.get("resident_state")?.AsBoolean() to "resident_state",
-            documentNumber = cbor.get("document_number")?.AsBoolean() to "document_number",
-            issuingCountry = cbor.get("issuing_country")?.AsBoolean() to "issuing_country",
-            residentStreet = cbor.get("resident_street")?.AsBoolean() to "resident_street",
-            givenNameBirth = cbor.get("given_name_birth")?.AsBoolean() to "given_name_birth",
-            residentAddress = cbor.get("resident_address")?.AsBoolean() to "resident_address",
-            residentCountry = cbor.get("resident_country")?.AsBoolean() to "resident_country",
-            familyNameBirth = cbor.get("family_name_birth")?.AsBoolean() to "family_name_birth",
-            issuingAuthority = cbor.get("issuing_authority")?.AsBoolean() to "issuing_authority",
+            gender = cbor.get("gender").toBoolOrFalse() to "gender",
+            portrait = cbor.get("portrait").toBoolOrFalse() to "portrait",
+            birthCity = cbor.get("birth_city").toBoolOrFalse() to "birth_city",
+            birthDate = cbor.get("birth_date").toBoolOrFalse() to "birth_date",
+            givenName = cbor.get("given_name").toBoolOrFalse() to "given_name",
+            ageOver13 = cbor.get("age_over_13").toBoolOrFalse() to "age_over_13",
+            ageOver16 = cbor.get("age_over_16").toBoolOrFalse() to "age_over_16",
+            ageOver18 = cbor.get("age_over_18").toBoolOrFalse() to "age_over_18",
+            ageOver21 = cbor.get("age_over_21").toBoolOrFalse() to "age_over_21",
+            ageOver60 = cbor.get("age_over_60").toBoolOrFalse() to "age_over_60",
+            ageOver65 = cbor.get("age_over_65").toBoolOrFalse() to "age_over_65",
+            ageOver68 = cbor.get("age_over_68").toBoolOrFalse() to "age_over_68",
+            birthPlace = cbor.get("birth_place").toBoolOrFalse() to "birth_place",
+            birthState = cbor.get("birth_state").toBoolOrFalse() to "birth_state",
+            expiryDate = cbor.get("expiry_date").toBoolOrFalse() to "expiry_date",
+            familyName = cbor.get("family_name").toBoolOrFalse() to "family_name",
+            nationality = cbor.get("nationality").toBoolOrFalse() to "nationality",
+            ageInYears = cbor.get("age_in_years").toBoolOrFalse() to "age_in_years",
+            birthCountry = cbor.get("birth_country").toBoolOrFalse() to "birth_country",
+            issuanceDate = cbor.get("issuance_date").toBoolOrFalse() to "issuance_date",
+            residentCity = cbor.get("resident_city").toBoolOrFalse() to "resident_city",
+            ageBirthYear = cbor.get("age_birth_year").toBoolOrFalse() to "age_birth_year",
+            residentState = cbor.get("resident_state").toBoolOrFalse() to "resident_state",
+            documentNumber = cbor.get("document_number").toBoolOrFalse() to "document_number",
+            issuingCountry = cbor.get("issuing_country").toBoolOrFalse() to "issuing_country",
+            residentStreet = cbor.get("resident_street").toBoolOrFalse() to "resident_street",
+            givenNameBirth = cbor.get("given_name_birth").toBoolOrFalse() to "given_name_birth",
+            residentAddress = cbor.get("resident_address").toBoolOrFalse() to "resident_address",
+            residentCountry = cbor.get("resident_country").toBoolOrFalse() to "resident_country",
+            familyNameBirth = cbor.get("family_name_birth").toBoolOrFalse() to "family_name_birth",
+            issuingAuthority = cbor.get("issuing_authority").toBoolOrFalse() to "issuing_authority",
             issuingJurisdiction = cbor.get("issuing_jurisdiction")
-                ?.AsBoolean() to "issuing_jurisdiction",
+                .toBoolOrFalse() to "issuing_jurisdiction",
             residentPostalCode = cbor.get("resident_postal_code")
-                ?.AsBoolean() to "resident_postal_code",
+                .toBoolOrFalse() to "resident_postal_code",
             administrativeNumber = cbor.get("administrative_number")
-                ?.AsBoolean() to "administrative_number",
+                .toBoolOrFalse() to "administrative_number",
             portraitCaptureDate = cbor.get("portrait_capture_date")
-                ?.AsBoolean() to "portrait_capture_date",
+                .toBoolOrFalse() to "portrait_capture_date",
             residentHouseNumber = cbor.get("resident_house_number")
-                ?.AsBoolean() to "resident_house_number"
+                .toBoolOrFalse() to "resident_house_number"
         )
     }
 }

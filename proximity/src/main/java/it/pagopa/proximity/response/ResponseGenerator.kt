@@ -30,8 +30,8 @@ import it.pagopa.proximity.request.RequiredFieldsEuPid
 import it.pagopa.proximity.request.RequiredFieldsMdl
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
-import java.io.File
 import kotlinx.io.files.Path
+import java.io.File
 
 class ResponseGenerator(
     private val context: Context,
@@ -133,9 +133,11 @@ class ResponseGenerator(
         }
         val nameSpaceName = disclosedDocument.nameSpaces.keys.first()
         val nameSpacedData = disclosedDocument.nameSpaces.values.first()
-        reqField.toArray().forEach { (value, cborValue) ->
-            nameSpacedData.keys.forEach {
-                if (it == cborValue)
+        val reqFieldsArray = reqField.toArray()
+        nameSpacedData.keys.forEach {
+            for (i in 0 until reqFieldsArray.size) {
+                val (value, cborValue) = reqFieldsArray[i]
+                if (it == cborValue) {
                     dataElements.add(
                         DocumentRequest.DataElement(
                             nameSpaceName,
@@ -144,6 +146,8 @@ class ResponseGenerator(
                             doNotSend = value != true
                         )
                     )
+                    break
+                }
             }
         }
         val request = DocumentRequest(dataElements)

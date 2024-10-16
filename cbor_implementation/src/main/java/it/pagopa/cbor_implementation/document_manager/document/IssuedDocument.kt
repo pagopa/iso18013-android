@@ -56,19 +56,6 @@ data class IssuedDocument(
             return map.toMap()
         }
 
-    fun getDocumentCborBytes(): ByteArray? {
-        val document = CBORObject.NewOrderedMap()
-        document.Add("docType", this.docType)
-        val documentsArray = CBORObject.NewArray()
-        documentsArray.Add(document)
-        document.Add("nameSpaces", CBORObject.FromObject(this.nameSpacedData.values))
-        val cborObject = CBORObject.NewOrderedMap()
-        cborObject.Add("status", 0)
-        cborObject.Add("version", "1.0")
-        cborObject.Add("documents", documentsArray)
-        return cborObject?.EncodeToBytes()
-    }
-
     internal companion object {
         @JvmSynthetic
         operator fun invoke(baseDocument: BaseDocument) = IssuedDocument(
