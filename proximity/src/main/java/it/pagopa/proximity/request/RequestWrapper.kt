@@ -35,7 +35,10 @@ data class RequestFromDevice(private val list: List<RequestWrapper>) : Parcelabl
 
 
 @Parcelize
-data class RequestWrapper(private val cborByte: ByteArray) : Parcelable {
+data class RequestWrapper(
+    private val cborByte: ByteArray,
+    val isAuthenticated: Boolean = false
+) : Parcelable {
     @IgnoredOnParcel
     var requiredFields: RequiredFields? = null
 

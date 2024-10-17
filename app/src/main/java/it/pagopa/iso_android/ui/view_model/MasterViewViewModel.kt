@@ -10,11 +10,13 @@ import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.cbor_implementation.document_manager.document.IssuedDocument
 import it.pagopa.iso_android.qr_code.QrCode
 import it.pagopa.iso_android.ui.AppDialog
+import it.pagopa.iso_android.ui.CborValuesImpl
 import it.pagopa.proximity.DocType
 import it.pagopa.proximity.ProximityLogger
 import it.pagopa.proximity.document.DisclosedDocument
 import it.pagopa.proximity.qr_code.QrEngagement
 import it.pagopa.proximity.qr_code.QrEngagementListener
+import it.pagopa.proximity.request.CborValues
 import it.pagopa.proximity.request.RequestFromDevice
 import it.pagopa.proximity.response.ResponseGenerator
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
@@ -43,7 +45,7 @@ class MasterViewViewModel(
     }
     private lateinit var request: RequestFromDevice
     var deviceConnected: DeviceRetrievalHelperWrapper? = null
-    fun getQrCodeBitmap(qrCodeSize: Int) {
+    fun getQrCodeBitmap(qrCodeSize: Int, cborValues: CborValuesImpl) {
         viewModelScope.launch(Dispatchers.IO) {
             runBlocking {
                 qrCodeBitmap.value = QrCode(
@@ -52,18 +54,36 @@ class MasterViewViewModel(
                         .getQrCodeString()
                 ).asBitmap(qrCodeSize)
             }
-            attachListenerAndObserve()
+            attachListenerAndObserve(cborValues)
         }
     }
 
-    private fun manageRequestFromDeviceUi(sessionsTranscript: ByteArray) {
+    private fun manageRequestFromDeviceUi(
+        cborValues: CborValues,
+        sessionsTranscript: ByteArray
+    ) {
         val sb = StringBuilder().apply {
-            append("You're going to share these info:\n\n")
+            append("You're going to share these info:\n")
         }
         this.request.getList().forEach {
+            ProximityLogger.i("CERT is valid:", "${it.isAuthenticated}")
+            val isMdl = it.requiredFields!!.docType == DocType.MDL
+            if (isMdl)
+                sb.append("\nDriving License:\n\n")
+            else
+                sb.append("\nEu Pid:\n\n")
             it.requiredFields?.toArray()?.forEach { (value, fieldName) ->
-                if (it.requiredFields!!.fieldIsRequired(value))
-                    sb.append("$fieldName;\n")
+                if (it.requiredFields!!.fieldIsRequired(value)) {
+                    val array = if (isMdl)
+                        cborValues.mdlCborValues
+                    else
+                        cborValues.euPidCborValues
+                    array
+                        .filter { (cborValue, _) -> cborValue == fieldName }
+                        .forEach { (_, appValue) ->
+                            sb.append("$appValue;\n")
+                        }
+                }
             }
         }
         this.dialogText = sb.toString()
@@ -151,7 +171,7 @@ class MasterViewViewModel(
         }
     }
 
-    private fun attachListenerAndObserve() {
+    private fun attachListenerAndObserve(cborValues: CborValues) {
         qrCodeEngagement.withListener(object : QrEngagementListener {
             override fun onConnecting() {}
             override fun onCommunicationError(msg: String) {}
@@ -170,7 +190,7 @@ class MasterViewViewModel(
             ) {
                 ProximityLogger.i("request", request.toString())
                 this@MasterViewViewModel.request = request
-                manageRequestFromDeviceUi(sessionsTranscript)
+                manageRequestFromDeviceUi(cborValues, sessionsTranscript)
             }
         })
     }

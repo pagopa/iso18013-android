@@ -10,10 +10,13 @@ import com.android.identity.android.mdoc.transport.DataTransport
 import com.android.identity.crypto.Crypto
 import com.android.identity.crypto.EcCurve
 import com.android.identity.crypto.EcPublicKey
+import com.android.identity.crypto.javaX509Certificates
 import com.android.identity.mdoc.request.DeviceRequestParser
 import com.android.identity.util.Constants
 import com.android.identity.util.Logger
 import it.pagopa.proximity.ProximityLogger
+import it.pagopa.proximity.document.ReaderAuth
+import it.pagopa.proximity.document.reader_auth.ReaderTrustStore
 import it.pagopa.proximity.request.RequestFromDevice
 import it.pagopa.proximity.request.RequestWrapper
 import it.pagopa.proximity.retrieval.DeviceRetrievalMethod
@@ -22,6 +25,7 @@ import it.pagopa.proximity.retrieval.transportOptions
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
+import java.security.cert.X509Certificate
 import java.util.concurrent.Executor
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -44,12 +48,18 @@ class QrEngagement private constructor(
         Logger.isDebugEnabled = ProximityLogger.enabled
     }
 
+    private var readerTrustStore: ReaderTrustStore? = null
+
     private lateinit var qrEngagement: QrEngagementHelper
     private lateinit var qrEngagementBuilder: QrEngagementHelper.Builder
     private var listener: QrEngagementListener? = null
     private var deviceRetrievalHelper: DeviceRetrievalHelperWrapper? = null
     private val eDevicePrivateKey by lazy {
         Crypto.createEcPrivateKey(EcCurve.P256)
+    }
+
+    fun withReaderTrustStore(certificates: List<X509Certificate>) = apply {
+        this.readerTrustStore = ReaderTrustStore.getDefault(certificates)
     }
 
     private fun checkQrEngagementInit(): Boolean {
@@ -116,7 +126,7 @@ class QrEngagement private constructor(
         override fun onEReaderKeyReceived(eReaderKey: EcPublicKey) {
             ProximityLogger.d(
                 this.javaClass.name,
-                "DeviceRetrievalHelper Listener (NFC): OnEReaderKeyReceived"
+                "DeviceRetrievalHelper Listener (QR): OnEReaderKeyReceived\n PEM: ${eReaderKey.toPem()}"
             )
         }
 
@@ -132,7 +142,14 @@ class QrEngagement private constructor(
             ).parse().docRequests
             val requestWrapperList = arrayListOf<RequestWrapper>()
             listRequested.forEachIndexed { j, each ->
-                requestWrapperList.add(RequestWrapper(each.itemsRequest).prepare())
+                getReaderAuthFromDocRequest(each).let {
+                    requestWrapperList.add(
+                        RequestWrapper(
+                            each.itemsRequest,
+                            it?.readerSignIsValid == true
+                        ).prepare()
+                    )
+                }
             }
             listener?.onNewDeviceRequest(
                 RequestFromDevice(requestWrapperList.toList()),
@@ -159,6 +176,34 @@ class QrEngagement private constructor(
 
     fun withListener(callback: QrEngagementListener) = apply {
         this.listener = callback
+    }
+
+    private fun getReaderAuthFromDocRequest(documentRequest: DeviceRequestParser.DocRequest): ReaderAuth? {
+        val readerAuth = documentRequest.readerAuth ?: return null
+        val readerCertificateChain = documentRequest.readerCertificateChain ?: return null
+        if (documentRequest.readerCertificateChain?.javaX509Certificates?.isEmpty() == true) return null
+        val trustStore = readerTrustStore ?: return null
+
+        val certChain =
+            trustStore.createCertificationTrustPath(readerCertificateChain.javaX509Certificates)
+                ?.takeIf { it.isNotEmpty() } ?: readerCertificateChain.javaX509Certificates
+
+        val readerCommonName = certChain.firstOrNull()
+            ?.subjectX500Principal
+            ?.name
+            ?.split(",")
+            ?.map { it.split("=", limit = 2) }
+            ?.firstOrNull { it.size == 2 && it[0] == "CN" }
+            ?.get(1)
+            ?.trim()
+            ?: ""
+        return ReaderAuth(
+            readerAuth,
+            documentRequest.readerAuthenticated,
+            readerCertificateChain.javaX509Certificates,
+            trustStore.validateCertificationTrustPath(readerCertificateChain.javaX509Certificates),
+            readerCommonName
+        )
     }
 
     /**
@@ -209,6 +254,7 @@ class QrEngagement private constructor(
         /**
          * Create an instance and configures the QR engagement.
          * First of all you must call [QrEngagement.configure] to build QrEngagementHelper.
+         * To accept just some certificates use [QrEngagement.withReaderTrustStore] method.
          * To create a QrCode use [QrEngagement.getQrCodeString] method.
          * To observe all events call [QrEngagement.withListener] method.
          * To close the connection call [QrEngagement.close] method.

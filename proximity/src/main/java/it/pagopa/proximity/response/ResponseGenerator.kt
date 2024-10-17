@@ -6,14 +6,12 @@ import com.android.identity.android.securearea.AndroidKeystoreSecureArea
 import com.android.identity.android.storage.AndroidStorageEngine
 import com.android.identity.credential.CredentialFactory
 import com.android.identity.crypto.Algorithm
-import com.android.identity.crypto.javaX509Certificates
 import com.android.identity.document.Document
 import com.android.identity.document.DocumentRequest
 import com.android.identity.document.DocumentStore
 import com.android.identity.document.NameSpacedData
 import com.android.identity.mdoc.credential.MdocCredential
 import com.android.identity.mdoc.mso.StaticAuthDataParser
-import com.android.identity.mdoc.request.DeviceRequestParser
 import com.android.identity.mdoc.response.DeviceResponseGenerator
 import com.android.identity.mdoc.response.DocumentGenerator
 import com.android.identity.mdoc.util.MdocUtil
@@ -24,8 +22,6 @@ import com.android.identity.util.Constants
 import it.pagopa.proximity.DocType
 import it.pagopa.proximity.ProximityLogger
 import it.pagopa.proximity.document.DisclosedDocument
-import it.pagopa.proximity.document.ReaderAuth
-import it.pagopa.proximity.document.reader_auth.ReaderTrustStore
 import it.pagopa.proximity.request.RequiredFieldsEuPid
 import it.pagopa.proximity.request.RequiredFieldsMdl
 import kotlinx.datetime.Clock
@@ -37,41 +33,11 @@ class ResponseGenerator(
     private val context: Context,
     private val sessionsTranscript: ByteArray
 ) {
-    private var readerTrustStore: ReaderTrustStore? = null
-
     private sealed interface AddDocumentToResponse {
         object Success : AddDocumentToResponse
         data class UserAuthRequired(
             val keyUnlockData: AndroidKeystoreKeyUnlockData
         ) : AddDocumentToResponse
-    }
-
-    private fun setReaderAuthResultToDocRequest(documentRequest: DeviceRequestParser.DocRequest): ReaderAuth? {
-        val trustStore = readerTrustStore ?: return null
-        val readerAuth = documentRequest.readerAuth ?: return null
-        val readerCertificateChain = documentRequest.readerCertificateChain ?: return null
-        if (documentRequest.readerCertificateChain?.javaX509Certificates?.isEmpty() == true) return null
-
-        val certChain =
-            trustStore.createCertificationTrustPath(readerCertificateChain.javaX509Certificates)
-                ?.takeIf { it.isNotEmpty() } ?: readerCertificateChain.javaX509Certificates
-
-        val readerCommonName = certChain.firstOrNull()
-            ?.subjectX500Principal
-            ?.name
-            ?.split(",")
-            ?.map { it.split("=", limit = 2) }
-            ?.firstOrNull { it.size == 2 && it[0] == "CN" }
-            ?.get(1)
-            ?.trim()
-            ?: ""
-        return ReaderAuth(
-            readerAuth,
-            documentRequest.readerAuthenticated,
-            readerCertificateChain.javaX509Certificates,
-            trustStore.validateCertificationTrustPath(readerCertificateChain.javaX509Certificates),
-            readerCommonName
-        )
     }
 
     /**

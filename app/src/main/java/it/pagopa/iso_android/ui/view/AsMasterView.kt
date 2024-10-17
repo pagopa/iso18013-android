@@ -23,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.BigText
+import it.pagopa.iso_android.ui.CborValuesImpl
 import it.pagopa.iso_android.ui.CenteredComposable
 import it.pagopa.iso_android.ui.GenericDialog
 import it.pagopa.iso_android.ui.LoaderDialog
@@ -58,7 +59,10 @@ fun MasterView(
     BackHandler(onBack = back)
     val qrCodeSize = with(LocalDensity.current) { 200.dp.toPx() }.roundToInt()
     LaunchedEffect(viewModel) {
-        viewModel.getQrCodeBitmap(qrCodeSize)
+        viewModel.getQrCodeBitmap(
+            qrCodeSize,
+            CborValuesImpl(context.resources)
+        )
         this.launch {
             viewModel.shouldGoBack.collectLatest {
                 if (it)
