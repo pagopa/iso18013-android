@@ -18,6 +18,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
@@ -25,29 +26,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 
-
 @Composable
-fun LoaderDialog(onDismiss: () -> Unit) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        DialogProperties(
-            dismissOnBackPress = false,
-            dismissOnClickOutside = false
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .wrapContentSize()
-                .background(
-                    MaterialTheme.colorScheme.background,
-                    shape = RoundedCornerShape(8.dp)
-                ),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+fun LoaderDialog(text: MutableState<String?>) {
+    if (text.value != null) {
+        Dialog(
+            onDismissRequest = { text.value = null },
+            DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            )
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.height(16.dp))
+            Column(
+                modifier = Modifier
+                    .wrapContentSize()
+                    .background(
+                        MaterialTheme.colorScheme.background,
+                        shape = RoundedCornerShape(8.dp)
+                    ),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
+                Spacer(modifier = Modifier.height(8.dp))
+                AnimateDottedText(
+                    text = text.value!!,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
         }
     }
 }
@@ -56,7 +63,8 @@ data class AppDialog(
     val title: String? = null,
     val image: Painter? = null,
     val description: String? = null,
-    val button: DialogButton
+    val button: DialogButton,
+    val secondButton: DialogButton? = null
 ) {
     data class DialogButton(
         val text: String,
@@ -112,10 +120,19 @@ fun GenericDialog(
                     textColor = MaterialTheme.colorScheme.onBackground
                 )
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = {
-                dialog.button.onClick.invoke()
-            }) {
-                Text(text = dialog.button.text)
+            if (dialog.secondButton != null) {
+                TwoButtonsInARow(
+                    leftBtnText = dialog.button.text,
+                    leftBtnAction = dialog.button.onClick,
+                    rightBtnText = dialog.secondButton.text,
+                    rightBtnAction = dialog.secondButton.onClick
+                )
+            } else {
+                Button(onClick = {
+                    dialog.button.onClick.invoke()
+                }) {
+                    Text(text = dialog.button.text)
+                }
             }
             Spacer(modifier = Modifier.height(16.dp))
         }

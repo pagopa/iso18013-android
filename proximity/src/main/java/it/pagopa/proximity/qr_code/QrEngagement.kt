@@ -12,6 +12,7 @@ import com.android.identity.crypto.EcCurve
 import com.android.identity.crypto.EcPublicKey
 import com.android.identity.mdoc.request.DeviceRequestParser
 import com.android.identity.util.Constants
+import com.android.identity.util.Logger
 import it.pagopa.proximity.ProximityLogger
 import it.pagopa.proximity.request.RequestFromDevice
 import it.pagopa.proximity.request.RequestWrapper
@@ -40,6 +41,7 @@ class QrEngagement private constructor(
             Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
             Security.insertProviderAt(BouncyCastleProvider(), 1)
         }
+        Logger.isDebugEnabled = ProximityLogger.enabled
     }
 
     private lateinit var qrEngagement: QrEngagementHelper

@@ -1,5 +1,12 @@
 package it.pagopa.iso_android.ui
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.VectorConverter
+import androidx.compose.animation.core.animateValue
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,7 +23,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import it.pagopa.iso_android.ui.theme.IsoAndroidPocTheme
 
 @Composable
@@ -121,4 +130,40 @@ fun TwoButtonsInARow(
             }
         }
     }
+}
+
+@Composable
+fun AnimateDottedText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = TextStyle.Default,
+    color: Color = MaterialTheme.colorScheme.onBackground,
+    cycleDuration: Int = 1000 // Milliseconds
+) {
+    // Create an infinite transition
+    val transition = rememberInfiniteTransition(label = "Dots Transition")
+
+    // Define the animated value for the number of visible dots
+    val visibleDotsCount = transition.animateValue(
+        initialValue = 0,
+        targetValue = 4,
+        typeConverter = Int.VectorConverter,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = cycleDuration,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "Visible Dots Count"
+    )
+
+    // Display the text with dynamically changing dots based on the animation
+    Text(
+        text = text + ".".repeat(visibleDotsCount.value),
+        color = color,
+        modifier = modifier,
+        fontSize = 18.sp,
+        style = style
+    )
 }

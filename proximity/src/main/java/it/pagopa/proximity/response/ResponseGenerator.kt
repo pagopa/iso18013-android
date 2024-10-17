@@ -74,17 +74,23 @@ class ResponseGenerator(
         )
     }
 
+    /**
+     * It creates a mdoc response in ByteArray format respect documents requested and disclosed
+     * @return[Pair]-> out <[ByteArray],[String]> with first element nullable,
+     * if ByteArray is created without Exceptions message back will be "created" else
+     * [Throwable.message] reached or empty string if this is null
+     * */
     fun createResponse(
         disclosedDocuments: Array<DisclosedDocument>
-    ): ByteArray? {
+    ): Pair<ByteArray?, String> {
         try {
             val deviceResponse = DeviceResponseGenerator(Constants.DEVICE_RESPONSE_STATUS_OK)
             disclosedDocuments.forEach { responseDocument ->
                 addDocumentToResponse(deviceResponse, responseDocument, sessionsTranscript)
             }
-            return deviceResponse.generate()
-        } catch (_: Exception) {
-            return null
+            return deviceResponse.generate() to "created"
+        } catch (e: Exception) {
+            return null to e.message.orEmpty()
         }
     }
 
@@ -137,7 +143,7 @@ class ResponseGenerator(
                             nameSpaceName,
                             it,
                             false,
-                            doNotSend = value != true
+                            doNotSend = value
                         )
                     )
                     break
@@ -192,7 +198,6 @@ class ResponseGenerator(
                 } ?: run {
                     candidate = credential
                 }
-
             }
         return candidate
     }

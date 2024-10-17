@@ -9,6 +9,7 @@ import it.pagopa.cbor_implementation.document_manager.DocumentManagerBuilder
 import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.cbor_implementation.document_manager.document.IssuedDocument
 import it.pagopa.iso_android.qr_code.QrCode
+import it.pagopa.iso_android.ui.AppDialog
 import it.pagopa.proximity.DocType
 import it.pagopa.proximity.ProximityLogger
 import it.pagopa.proximity.document.DisclosedDocument
@@ -18,13 +19,20 @@ import it.pagopa.proximity.request.RequestFromDevice
 import it.pagopa.proximity.response.ResponseGenerator
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class MasterViewViewModel(
     val qrCodeEngagement: QrEngagement
 ) : ViewModel() {
+    private val _shouldGoBack = MutableStateFlow(false)
+    val shouldGoBack = _shouldGoBack.asStateFlow()
+    val dialog = mutableStateOf<AppDialog?>(null)
+    val loader = mutableStateOf<String?>(null)
     val qrCodeBitmap = mutableStateOf<Bitmap?>(null)
+    var dialogText = ""
     val documentManager by lazy {
         DocumentManager.build(
             DocumentManagerBuilder(
@@ -33,6 +41,7 @@ class MasterViewViewModel(
                 .checkPublicKeyBeforeAdding(false)
         )
     }
+    private lateinit var request: RequestFromDevice
     var deviceConnected: DeviceRetrievalHelperWrapper? = null
     fun getQrCodeBitmap(qrCodeSize: Int) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -47,31 +56,47 @@ class MasterViewViewModel(
         }
     }
 
-    private fun attachListenerAndObserve() {
-        qrCodeEngagement.withListener(object : QrEngagementListener {
-            override fun onConnecting() {}
-            override fun onCommunicationError(msg: String) {}
-            override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {}
-            override fun onDeviceRetrievalHelperReady(deviceRetrievalHelper: DeviceRetrievalHelperWrapper) {
-                this@MasterViewViewModel.deviceConnected = deviceRetrievalHelper
+    private fun manageRequestFromDeviceUi(sessionsTranscript: ByteArray) {
+        val sb = StringBuilder().apply {
+            append("You're going to share these info:\n\n")
+        }
+        this.request.getList().forEach {
+            it.requiredFields?.toArray()?.forEach { (value, fieldName) ->
+                if (it.requiredFields!!.fieldIsRequired(value))
+                    sb.append("$fieldName;\n")
             }
+        }
+        this.dialogText = sb.toString()
+        dialog.value = AppDialog(
+            title = "Warning",
+            description = this.dialogText,
+            button = AppDialog.DialogButton(
+                "OK",
+                onClick = {
+                    this.dialog.value = null
+                    shareInfo(sessionsTranscript)
+                },
+            ),
+            secondButton = AppDialog.DialogButton(
+                "NO",
+                onClick = {
+                    this.dialog.value = null
+                    _shouldGoBack.value = true
+                },
+            )
+        )
+    }
 
-            override fun onNewDeviceRequest(
-                request: RequestFromDevice,
-                sessionsTranscript: ByteArray
-            ) {
-                ProximityLogger.i("request", request.toString())
-                val disclosedDocuments = ArrayList<DisclosedDocument>()
-                //TODO: this->val toSendArray = ArrayList<String>()
-                request.getList().forEach {
-                    val issuedDoc = if (it.requiredFields?.docType == DocType.MDL) {
-                        getMdl() as IssuedDocument
-                    } else
-                        getEuPid() as IssuedDocument
-                    /*it.requiredFields?.toArray()?.forEach { (value, cborValue) ->
-                        if (value == true)
-                            toSendArray.add(cborValue)
-                    }*/
+    private fun shareInfo(sessionsTranscript: ByteArray) {
+        this.loader.value = "Sending doc"
+        viewModelScope.launch(Dispatchers.IO) {
+            val disclosedDocuments = ArrayList<DisclosedDocument>()
+            this@MasterViewViewModel.request.getList().forEach {
+                val issuedDoc = if (it.requiredFields?.docType == DocType.MDL) {
+                    getMdl() as? IssuedDocument
+                } else
+                    getEuPid() as? IssuedDocument
+                issuedDoc?.let { issuedDoc ->
                     disclosedDocuments.add(
                         DisclosedDocument(
                             documentId = issuedDoc.id,
@@ -81,23 +106,71 @@ class MasterViewViewModel(
                         )
                     )
                 }
-                val responseToSend = ResponseGenerator(
+            }
+            if (disclosedDocuments.isNotEmpty()) {
+                val responseGenerator = ResponseGenerator(
                     context = qrCodeEngagement.context,
                     sessionsTranscript = sessionsTranscript
                 )
-                if (disclosedDocuments.isNotEmpty()) {
-                    responseToSend.createResponse(
-                        disclosedDocuments.toTypedArray()
-                    )?.let {
-                        qrCodeEngagement.sendResponse(it)
-                    } ?: run {
-                        ProximityLogger.e(
-                            "Sending resp",
-                            "found doc but fail to generate raw response"
+                val (responseToSend, message) = responseGenerator.createResponse(
+                    disclosedDocuments.toTypedArray()
+                )
+                responseToSend?.let {
+                    qrCodeEngagement.sendResponse(it)
+                    this@MasterViewViewModel.dialog.value = AppDialog(
+                        title = "Data",
+                        description = "Sent",
+                        button = AppDialog.DialogButton(
+                            "Perfect!!",
+                            onClick = {
+                                dialog.value = null
+                                _shouldGoBack.value = true
+                            }
                         )
-                    }
-                } else
-                    ProximityLogger.e("Sending resp", "no doc found")
+                    )
+                } ?: run {
+                    this@MasterViewViewModel.dialog.value = AppDialog(
+                        title = "Data",
+                        description = "Not Sent",
+                        button = AppDialog.DialogButton(
+                            "Ok",
+                            onClick = {
+                                dialog.value = null
+                                _shouldGoBack.value = true
+                            }
+                        )
+                    )
+                    ProximityLogger.e(
+                        "Sending resp",
+                        "found doc but fail to generate raw response: $message"
+                    )
+                }
+                this@MasterViewViewModel.loader.value = null
+            } else
+                ProximityLogger.e("Sending resp", "no doc found")
+        }
+    }
+
+    private fun attachListenerAndObserve() {
+        qrCodeEngagement.withListener(object : QrEngagementListener {
+            override fun onConnecting() {}
+            override fun onCommunicationError(msg: String) {}
+            override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {
+                ProximityLogger.i(this@MasterViewViewModel.javaClass.name, "onDeviceDisconnected")
+                this@MasterViewViewModel.loader.value = null
+            }
+
+            override fun onDeviceRetrievalHelperReady(deviceRetrievalHelper: DeviceRetrievalHelperWrapper) {
+                this@MasterViewViewModel.deviceConnected = deviceRetrievalHelper
+            }
+
+            override fun onNewDeviceRequest(
+                request: RequestFromDevice,
+                sessionsTranscript: ByteArray
+            ) {
+                ProximityLogger.i("request", request.toString())
+                this@MasterViewViewModel.request = request
+                manageRequestFromDeviceUi(sessionsTranscript)
             }
         })
     }

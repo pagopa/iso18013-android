@@ -47,6 +47,7 @@ import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.iso_android.R
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.GenericDialog
+import it.pagopa.iso_android.ui.LoaderDialog
 import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.SmallText
 import it.pagopa.iso_android.ui.model.Actions
@@ -135,6 +136,7 @@ fun DocumentStorageView(
     vm.appDialog.value?.let { appDialog ->
         GenericDialog(appDialog)
     }
+    LoaderDialog(vm.loader)
 }
 
 @Composable

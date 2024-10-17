@@ -5,7 +5,8 @@ import it.pagopa.proximity.DocType
 
 abstract class RequiredFields {
     abstract val docType: DocType
-    abstract fun toArray(): Array<Pair<Boolean?, String>>
+    abstract fun toArray(): Array<Pair<Boolean, String>>
+    fun fieldIsRequired(field: Boolean) = !field
 
     companion object {
         fun fromCbor(docType: DocType, cbor: CBORObject): RequiredFields {
