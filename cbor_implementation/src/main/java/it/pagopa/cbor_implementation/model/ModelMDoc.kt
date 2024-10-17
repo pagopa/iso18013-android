@@ -11,9 +11,6 @@ data class ModelMDoc(
     var status: Int?,
     var version: String?
 ) {
-    fun hasVersion() = this.version != null
-    fun hasStatus() = this.status != null
-
     companion object {
         fun fromCBORObject(
             model: CBORObject,
@@ -33,8 +30,6 @@ data class Document(
     var docType: String?,
     var issuerSigned: IssuerSigned?
 ) {
-    fun hasDocType() = this.docType != null
-
     @CheckResult
     fun verifyValidity(): Pair<Boolean, Exception?> {
         val needDataForMdl = listOf(
@@ -85,10 +80,7 @@ data class IssuerSigned(
     var nameSpaces: Map<String, List<DocumentX>>?,
     val rawValue: ByteArray? = null,
     val issuerAuth: ByteArray? = null
-) {
-    fun hasIssuerAuth() = this.issuerAuth != null
-}
-
+)
 /**
  * elementIdentifier->es.:Name
  * elementValue->es:John*/

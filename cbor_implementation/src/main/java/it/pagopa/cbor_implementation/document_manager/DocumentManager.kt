@@ -16,7 +16,9 @@ import com.android.identity.mdoc.mso.MobileSecurityObjectParser
 import com.android.identity.mdoc.mso.StaticAuthDataGenerator
 import com.android.identity.securearea.KeyPurpose
 import com.android.identity.securearea.SecureAreaRepository
+import com.android.identity.util.Logger
 import com.upokecenter.cbor.CBORObject
+import it.pagopa.cbor_implementation.CborLogger
 import it.pagopa.cbor_implementation.document_manager.algorithm.Algorithm
 import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.cbor_implementation.document_manager.document.DocumentId
@@ -36,6 +38,7 @@ import java.util.UUID
 class DocumentManager private constructor() : LibIso18013DAO {
     init {
         addBcIfNeeded()
+        Logger.isDebugEnabled = CborLogger.enabled
     }
 
     private lateinit var context: Context

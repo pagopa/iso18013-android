@@ -10,15 +10,24 @@ import com.android.identity.android.mdoc.transport.DataTransport
 import com.android.identity.crypto.Crypto
 import com.android.identity.crypto.EcCurve
 import com.android.identity.crypto.EcPublicKey
+import com.android.identity.crypto.javaX509Certificates
 import com.android.identity.mdoc.request.DeviceRequestParser
+import com.android.identity.util.Constants
+import com.android.identity.util.Logger
 import it.pagopa.proximity.ProximityLogger
+import it.pagopa.proximity.document.ReaderAuth
+import it.pagopa.proximity.document.reader_auth.ReaderTrustStore
+import it.pagopa.proximity.request.RequestFromDevice
+import it.pagopa.proximity.request.RequestWrapper
 import it.pagopa.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.proximity.retrieval.connectionMethods
 import it.pagopa.proximity.retrieval.transportOptions
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.security.Security
+import java.security.cert.X509Certificate
 import java.util.concurrent.Executor
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * To build use [QrEngagement.build] static method
@@ -36,7 +45,10 @@ class QrEngagement private constructor(
             Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
             Security.insertProviderAt(BouncyCastleProvider(), 1)
         }
+        Logger.isDebugEnabled = ProximityLogger.enabled
     }
+
+    private var readerTrustStore: ReaderTrustStore? = null
 
     private lateinit var qrEngagement: QrEngagementHelper
     private lateinit var qrEngagementBuilder: QrEngagementHelper.Builder
@@ -44,6 +56,10 @@ class QrEngagement private constructor(
     private var deviceRetrievalHelper: DeviceRetrievalHelperWrapper? = null
     private val eDevicePrivateKey by lazy {
         Crypto.createEcPrivateKey(EcCurve.P256)
+    }
+
+    fun withReaderTrustStore(certificates: List<X509Certificate>) = apply {
+        this.readerTrustStore = ReaderTrustStore.getDefault(certificates)
     }
 
     private fun checkQrEngagementInit(): Boolean {
@@ -104,11 +120,13 @@ class QrEngagement private constructor(
             listener?.onCommunicationError("$error")
         }
     }
+
+    @OptIn(ExperimentalEncodingApi::class)
     private val deviceRetrievalHelperListener = object : DeviceRetrievalHelper.Listener {
         override fun onEReaderKeyReceived(eReaderKey: EcPublicKey) {
             ProximityLogger.d(
                 this.javaClass.name,
-                "DeviceRetrievalHelper Listener (NFC): OnEReaderKeyReceived"
+                "DeviceRetrievalHelper Listener (QR): OnEReaderKeyReceived\n PEM: ${eReaderKey.toPem()}"
             )
         }
 
@@ -117,12 +135,26 @@ class QrEngagement private constructor(
                 this.javaClass.name,
                 "DeviceRetrievalHelper Listener (QR): OnDeviceRequest"
             )
+            val sessionTranscript = deviceRetrievalHelper!!.sessionTranscript()
             val listRequested: List<DeviceRequestParser.DocRequest> = DeviceRequestParser(
                 deviceRequestBytes,
-                deviceRetrievalHelper!!.sessionTranscript()
+                sessionTranscript
             ).parse().docRequests
-
-            listener?.onNewDeviceRequest(deviceRequestBytes)
+            val requestWrapperList = arrayListOf<RequestWrapper>()
+            listRequested.forEachIndexed { j, each ->
+                getReaderAuthFromDocRequest(each).let {
+                    requestWrapperList.add(
+                        RequestWrapper(
+                            each.itemsRequest,
+                            it?.readerSignIsValid == true
+                        ).prepare()
+                    )
+                }
+            }
+            listener?.onNewDeviceRequest(
+                RequestFromDevice(requestWrapperList.toList()),
+                sessionTranscript
+            )
         }
 
         override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {
@@ -146,6 +178,34 @@ class QrEngagement private constructor(
         this.listener = callback
     }
 
+    private fun getReaderAuthFromDocRequest(documentRequest: DeviceRequestParser.DocRequest): ReaderAuth? {
+        val readerAuth = documentRequest.readerAuth ?: return null
+        val readerCertificateChain = documentRequest.readerCertificateChain ?: return null
+        if (documentRequest.readerCertificateChain?.javaX509Certificates?.isEmpty() == true) return null
+        val trustStore = readerTrustStore ?: return null
+
+        val certChain =
+            trustStore.createCertificationTrustPath(readerCertificateChain.javaX509Certificates)
+                ?.takeIf { it.isNotEmpty() } ?: readerCertificateChain.javaX509Certificates
+
+        val readerCommonName = certChain.firstOrNull()
+            ?.subjectX500Principal
+            ?.name
+            ?.split(",")
+            ?.map { it.split("=", limit = 2) }
+            ?.firstOrNull { it.size == 2 && it[0] == "CN" }
+            ?.get(1)
+            ?.trim()
+            ?: ""
+        return ReaderAuth(
+            readerAuth,
+            documentRequest.readerAuthenticated,
+            readerCertificateChain.javaX509Certificates,
+            trustStore.validateCertificationTrustPath(readerCertificateChain.javaX509Certificates),
+            readerCommonName
+        )
+    }
+
     /**
      * Gives back QR code string for engagement
      */
@@ -155,8 +215,16 @@ class QrEngagement private constructor(
         return qrEngagement.deviceEngagementUriEncoded
     }
 
-    fun configure()=apply {
+    fun configure() = apply {
         qrEngagement = qrEngagementBuilder.build()
+    }
+
+    fun sendResponse(response: ByteArray) {
+        if (deviceRetrievalHelper == null) return
+        deviceRetrievalHelper!!.sendResponse(
+            response,
+            Constants.SESSION_DATA_STATUS_SESSION_TERMINATION
+        )
     }
 
     /**
@@ -166,6 +234,8 @@ class QrEngagement private constructor(
         if (!checkQrEngagementInit())
             return
         try {
+            if (deviceRetrievalHelper != null)
+                deviceRetrievalHelper!!.disconnect()
             qrEngagement.close()
         } catch (exception: RuntimeException) {
             ProximityLogger.e(this.javaClass.name, "Error closing QR engagement $exception")
@@ -182,10 +252,12 @@ class QrEngagement private constructor(
 
     companion object {
         /**
-         * Create an instance and configures the QR engagement
-         * To create a QrCode use [QrEngagement.getQrCodeString] method
-         * To observe all events call [QrEngagement.withListener] method
-         * To close the connection call [QrEngagement.close] method
+         * Create an instance and configures the QR engagement.
+         * First of all you must call [QrEngagement.configure] to build QrEngagementHelper.
+         * To accept just some certificates use [QrEngagement.withReaderTrustStore] method.
+         * To create a QrCode use [QrEngagement.getQrCodeString] method.
+         * To observe all events call [QrEngagement.withListener] method.
+         * To close the connection call [QrEngagement.close] method.
          */
         fun build(context: Context, retrievalMethods: List<DeviceRetrievalMethod>): QrEngagement {
             return QrEngagement(context).apply {

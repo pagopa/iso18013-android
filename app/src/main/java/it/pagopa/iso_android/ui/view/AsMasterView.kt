@@ -23,11 +23,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.BigText
+import it.pagopa.iso_android.ui.CborValuesImpl
 import it.pagopa.iso_android.ui.CenteredComposable
+import it.pagopa.iso_android.ui.GenericDialog
+import it.pagopa.iso_android.ui.LoaderDialog
 import it.pagopa.iso_android.ui.view_model.MasterViewViewModel
 import it.pagopa.iso_android.ui.view_model.viewModelWithQrEngagement
 import it.pagopa.proximity.bluetooth.BleRetrievalMethod
 import it.pagopa.proximity.qr_code.QrEngagement
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
@@ -47,10 +52,23 @@ fun MasterView(
             )
         )
     )
-    BackHandler(onBack = onBack)
+    val back = {
+        viewModel.qrCodeEngagement.close()
+        onBack.invoke()
+    }
+    BackHandler(onBack = back)
     val qrCodeSize = with(LocalDensity.current) { 200.dp.toPx() }.roundToInt()
     LaunchedEffect(viewModel) {
-        viewModel.getQrCodeBitmap(qrCodeSize)
+        viewModel.getQrCodeBitmap(
+            qrCodeSize,
+            CborValuesImpl(context.resources)
+        )
+        this.launch {
+            viewModel.shouldGoBack.collectLatest {
+                if (it)
+                    back.invoke()
+            }
+        }
     }
     Column(
         Modifier
@@ -80,6 +98,10 @@ fun MasterView(
             }
         }
     }
+    viewModel.dialog.value?.let {
+        GenericDialog(it)
+    }
+    LoaderDialog(viewModel.loader)
 }
 
 @Preview

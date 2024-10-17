@@ -24,6 +24,7 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 class DocumentStorageViewViewModel(
     private val documentManager: DocumentManager
 ) : ViewModel() {
+    val loader = mutableStateOf<String?>(null)
     val actions = Actions.entries.toTypedArray().map { ActionsManager(it) }
     var appDialog = mutableStateOf<AppDialog?>(null)
     var documents = arrayOf<Document>()
@@ -111,29 +112,34 @@ class DocumentStorageViewViewModel(
         )
     }
 
-    private fun createDocument(isMdl: Boolean): Document {
+    private fun createDocument(isMdl: Boolean){
         resetAllActions()
-        val back = documentManager.createDocument(
-            docType = if (isMdl) MDL_DOCTYPE else EU_PID_DOCTYPE,
-            documentName = "MDL",
-            forceStrongBox = false,
-            algorithm = Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA,
-            attestationChallenge = null
-        )
-        appDialogWithOkBtn(
-            title = "Doc created",
-            message = "id: ${back.id}"
-        )
-        return back
+        this.loader.value = "Creating"
+        viewModelScope.launch(Dispatchers.IO) {
+            val back = documentManager.createDocument(
+                docType = if (isMdl) MDL_DOCTYPE else EU_PID_DOCTYPE,
+                documentName = "MDL",
+                forceStrongBox = false,
+                algorithm = Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA,
+                attestationChallenge = null
+            )
+            appDialogWithOkBtn(
+                title = "Doc created",
+                message = "id: ${back.id}"
+            )
+            this@DocumentStorageViewViewModel.loader.value = null
+        }
     }
 
     private fun getAllDocuments(onOk: (Array<Document>) -> Unit, onEmptyArray: () -> Unit) {
+        this.loader.value = "Loading"
         viewModelScope.launch(Dispatchers.IO) {
             val docs = documentManager.getAllDocuments(null)
             if (docs.isEmpty())
                 onEmptyArray.invoke()
             else
                 onOk.invoke(docs)
+            this@DocumentStorageViewViewModel.loader.value = null
         }
     }
 
@@ -142,6 +148,7 @@ class DocumentStorageViewViewModel(
         onOk: (Array<Document>) -> Unit,
         onEmptyArray: () -> Unit
     ) {
+        this.loader.value = "Loading"
         viewModelScope.launch(Dispatchers.IO) {
             val docs = if (isMdl)
                 documentManager.getAllMdlDocuments(null)
@@ -151,40 +158,49 @@ class DocumentStorageViewViewModel(
                 onEmptyArray.invoke()
             else
                 onOk.invoke(docs)
+            this@DocumentStorageViewViewModel.loader.value = null
         }
     }
 
     fun deleteDocument(actionCaller: ActionsManager, id: DocumentId) {
-        try {
-            val back = documentManager.deleteDocument(id)
-            if (back)
-                documents = documents.filter { it.id != id }.toTypedArray()
-            if (documents.isEmpty()) actionCaller.reset()
-            appDialogWithOkBtn("doc", if (back) "eliminated" else "fail to eliminate")
-        } catch (e: DocumentWithIdentifierNotFound) {
-            appDialogWithOkBtn("Exception", e.message)
+        this.loader.value = "Deleting"
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val back = documentManager.deleteDocument(id)
+                if (back)
+                    documents = documents.filter { it.id != id }.toTypedArray()
+                if (documents.isEmpty()) actionCaller.reset()
+                appDialogWithOkBtn("doc", if (back) "eliminated" else "fail to eliminate")
+            } catch (e: DocumentWithIdentifierNotFound) {
+                appDialogWithOkBtn("Exception", e.message)
+            }
+            this@DocumentStorageViewViewModel.loader.value = null
         }
     }
 
     @OptIn(ExperimentalEncodingApi::class)
     fun storeDocument(doc: Document, onOk: () -> Unit) {
-        try {
-            val mDoc = MDoc(base64mockedMoreDocs)
-            mDoc.decodeMDoc(onComplete = { model ->
-                model.documents?.forEach { document ->
-                    if (document.docType == doc.docType) {
-                        document.issuerSigned?.rawValue?.let {
-                            val docId = documentManager.storeDocument(doc.id, it)
-                            appDialogWithOkBtn("Doc stored!!", "ID: $docId")
-                            onOk.invoke()
+        this.loader.value = "Storing"
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val mDoc = MDoc(base64mockedMoreDocs)
+                mDoc.decodeMDoc(onComplete = { model ->
+                    model.documents?.forEach { document ->
+                        if (document.docType == doc.docType) {
+                            document.issuerSigned?.rawValue?.let {
+                                val docId = documentManager.storeDocument(doc.id, it)
+                                appDialogWithOkBtn("Doc stored!!", "ID: $docId")
+                                onOk.invoke()
+                            }
                         }
                     }
-                }
-            }, onError = {
-                appDialogWithOkBtn("Exception", it.message.orEmpty())
-            })
-        } catch (e: LibIso18013DAOException) {
-            appDialogWithOkBtn("Exception", e.message.orEmpty())
+                }, onError = {
+                    appDialogWithOkBtn("Exception", it.message.orEmpty())
+                })
+            } catch (e: LibIso18013DAOException) {
+                appDialogWithOkBtn("Exception", e.message.orEmpty())
+            }
+            this@DocumentStorageViewViewModel.loader.value = null
         }
     }
 
@@ -192,12 +208,14 @@ class DocumentStorageViewViewModel(
         onOk: (Array<Document>) -> Unit,
         onEmptyArray: () -> Unit
     ) {
+        this.loader.value = "Loading"
         viewModelScope.launch(Dispatchers.IO) {
             val docs = documentManager.getAllDocuments(Document.State.ISSUED)
             if (docs.isEmpty())
                 onEmptyArray.invoke()
             else
                 onOk.invoke(docs)
+            this@DocumentStorageViewViewModel.loader.value = null
         }
     }
 }
