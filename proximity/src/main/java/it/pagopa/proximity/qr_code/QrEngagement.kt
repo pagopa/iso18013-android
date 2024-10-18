@@ -10,12 +10,10 @@ import com.android.identity.android.mdoc.transport.DataTransport
 import com.android.identity.crypto.Crypto
 import com.android.identity.crypto.EcCurve
 import com.android.identity.crypto.EcPublicKey
-import com.android.identity.crypto.javaX509Certificates
 import com.android.identity.mdoc.request.DeviceRequestParser
 import com.android.identity.util.Constants
 import com.android.identity.util.Logger
 import it.pagopa.proximity.ProximityLogger
-import it.pagopa.proximity.document.ReaderAuth
 import it.pagopa.proximity.document.reader_auth.ReaderTrustStore
 import it.pagopa.proximity.request.RequestFromDevice
 import it.pagopa.proximity.request.RequestWrapper
@@ -24,12 +22,7 @@ import it.pagopa.proximity.retrieval.connectionMethods
 import it.pagopa.proximity.retrieval.transportOptions
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import java.io.ByteArrayInputStream
-import java.io.InputStream
 import java.security.Security
-import java.security.cert.CertificateFactory
-import java.security.cert.X509Certificate
-import java.util.Base64
 import java.util.concurrent.Executor
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -62,39 +55,35 @@ class QrEngagement private constructor(
         Crypto.createEcPrivateKey(EcCurve.P256)
     }
 
+    @JvmName("setReaderTrustStorePrivate")
+    private fun <T> List<T>.setReaderTrustStore() {
+        readerTrustStore = this.toReaderTrustStore(context)
+    }
+
     /**
      * Use this if you have certificates into your **Raw Resource** folder
+     * @return [QrEngagement]
      */
     fun withReaderTrustStore(certificates: List<Int>) = apply {
-        certificates.map {
-            convertPemToX509Certificate(context.resources.openRawResource(it))
-        }.mapNotNull { it }.let {
-            this.readerTrustStore = ReaderTrustStore.getDefault(it)
-        }
+        certificates.setReaderTrustStore()
     }
 
     /**
      * Use this if you have certificates **As byte[]**
+     * @return [QrEngagement]
      */
     @JvmName("withReaderTrustStore1")
     fun withReaderTrustStore(certificates: List<ByteArray>) = apply {
-        certificates.map {
-            convertPemToX509Certificate(it)
-        }.mapNotNull { it }.let {
-            this.readerTrustStore = ReaderTrustStore.getDefault(it)
-        }
+        certificates.setReaderTrustStore()
     }
 
     /**
      * Use this if you have certificates **As String**
+     * @return [QrEngagement]
      */
     @JvmName("withReaderTrustStore2")
     fun withReaderTrustStore(certificates: List<String>) = apply {
-        certificates.map {
-            convertPemToX509Certificate(it)
-        }.mapNotNull { it }.let {
-            this.readerTrustStore = ReaderTrustStore.getDefault(it)
-        }
+        certificates.setReaderTrustStore()
     }
 
     private fun checkQrEngagementInit(): Boolean {
@@ -108,7 +97,6 @@ class QrEngagement private constructor(
     }
 
     private val qrEngagementListener = object : QrEngagementHelper.Listener {
-
         override fun onDeviceConnecting() {
             ProximityLogger.d(this.javaClass.name, "QR Engagement: Device Connecting")
             listener?.onConnecting()
@@ -124,24 +112,21 @@ class QrEngagement private constructor(
                 )
                 return
             }
-
             ProximityLogger.d(
                 this.javaClass.name,
                 "OnDeviceConnected via QR: qrEngagement=$qrEngagement"
             )
-
-            val builder = DeviceRetrievalHelper.Builder(
+            val deviceRetrievalHelperBuilt = DeviceRetrievalHelper.Builder(
                 context,
                 deviceRetrievalHelperListener,
                 context.mainExecutor(),
                 eDevicePrivateKey,
-            )
-            builder.useForwardEngagement(
+            ).useForwardEngagement(
                 transport,
                 qrEngagement.deviceEngagement,
                 qrEngagement.handover
-            )
-            deviceRetrievalHelper = DeviceRetrievalHelperWrapper(builder.build())
+            ).build()
+            deviceRetrievalHelper = DeviceRetrievalHelperWrapper(deviceRetrievalHelperBuilt)
             qrEngagement.close()
             listener?.onDeviceRetrievalHelperReady(
                 requireNotNull(
@@ -177,7 +162,7 @@ class QrEngagement private constructor(
             ).parse().docRequests
             val requestWrapperList = arrayListOf<RequestWrapper>()
             listRequested.forEachIndexed { j, each ->
-                getReaderAuthFromDocRequest(each).let {
+                (each toReaderAuthWith this@QrEngagement.readerTrustStore).let {
                     requestWrapperList.add(
                         RequestWrapper(
                             each.itemsRequest,
@@ -213,34 +198,6 @@ class QrEngagement private constructor(
         this.listener = callback
     }
 
-    private fun getReaderAuthFromDocRequest(documentRequest: DeviceRequestParser.DocRequest): ReaderAuth? {
-        val readerAuth = documentRequest.readerAuth ?: return null
-        val readerCertificateChain = documentRequest.readerCertificateChain ?: return null
-        if (documentRequest.readerCertificateChain?.javaX509Certificates?.isEmpty() == true) return null
-        val trustStore = readerTrustStore ?: return null
-
-        val certChain =
-            trustStore.createCertificationTrustPath(readerCertificateChain.javaX509Certificates)
-                ?.takeIf { it.isNotEmpty() } ?: readerCertificateChain.javaX509Certificates
-
-        val readerCommonName = certChain.firstOrNull()
-            ?.subjectX500Principal
-            ?.name
-            ?.split(",")
-            ?.map { it.split("=", limit = 2) }
-            ?.firstOrNull { it.size == 2 && it[0] == "CN" }
-            ?.get(1)
-            ?.trim()
-            ?: ""
-        return ReaderAuth(
-            readerAuth,
-            documentRequest.readerAuthenticated,
-            readerCertificateChain.javaX509Certificates,
-            trustStore.validateCertificationTrustPath(readerCertificateChain.javaX509Certificates),
-            readerCommonName
-        )
-    }
-
     /**
      * Gives back QR code string for engagement
      */
@@ -258,6 +215,9 @@ class QrEngagement private constructor(
         qrEngagement = qrEngagementBuilder.build()
     }
 
+    /**
+     * Use this method to send a generic error message
+     */
     fun sendErrorResponse() {
         if (deviceRetrievalHelper == null) return
         deviceRetrievalHelper!!.sendResponse(
@@ -265,6 +225,10 @@ class QrEngagement private constructor(
             Constants.SESSION_DATA_STATUS_ERROR_CBOR_DECODING
         )
     }
+
+    /**
+     * Use this method to send a generic error message
+     */
     fun sendErrorResponseNoData() {
         if (deviceRetrievalHelper == null) return
         deviceRetrievalHelper!!.sendResponse(
@@ -273,6 +237,10 @@ class QrEngagement private constructor(
         )
     }
 
+    /**
+     * Use this method to send a good retrieved response
+     * it does nothing if [DeviceRetrievalHelperWrapper] was lost
+     */
     fun sendResponse(response: ByteArray) {
         if (deviceRetrievalHelper == null) return
         deviceRetrievalHelper!!.sendResponse(
@@ -281,54 +249,6 @@ class QrEngagement private constructor(
         )
     }
 
-    private fun convertPemToX509Certificate(pemCertificateBytes: ByteArray): X509Certificate? {
-        return try {
-            convertPemToX509CertificateByteArray(pemCertificateBytes)
-        } catch (e: Exception) {
-            ProximityLogger.e(
-                "PemToX509",
-                "error ${e.message} while generating certificate from pemBytes"
-            )
-            null
-        }
-    }
-
-    private fun convertPemToX509CertificateByteArray(pemCertificateBytes: ByteArray): X509Certificate? {
-        val inputStream: InputStream = ByteArrayInputStream(pemCertificateBytes)
-        val certificateFactory = CertificateFactory.getInstance("X.509")
-        return certificateFactory.generateCertificate(inputStream) as? X509Certificate
-    }
-
-    private fun convertPemToX509Certificate(pemCertificate: String): X509Certificate? {
-        return try {
-            val cleanedPem = pemCertificate
-                .replace("-----BEGIN CERTIFICATE-----", "")
-                .replace("-----END CERTIFICATE-----", "")
-                .replace("\n", "")
-                .replace("\r", "")
-            val pemCertificateBytes = Base64.getDecoder().decode(cleanedPem)
-            convertPemToX509CertificateByteArray(pemCertificateBytes)
-        } catch (e: Exception) {
-            ProximityLogger.e(
-                "PemToX509",
-                "error ${e.message} while generating certificate from pemString: $pemCertificate"
-            )
-            null
-        }
-    }
-
-    private fun convertPemToX509Certificate(inputStream: InputStream): X509Certificate? {
-        return try {
-            val certificateFactory = CertificateFactory.getInstance("X.509")
-            certificateFactory.generateCertificate(inputStream) as? X509Certificate
-        } catch (e: Exception) {
-            ProximityLogger.e(
-                "PemToX509",
-                "error ${e.message} while generating certificate from inputStream"
-            )
-            null
-        }
-    }
 
     /**
      * Closes the connection with the mdoc verifier
