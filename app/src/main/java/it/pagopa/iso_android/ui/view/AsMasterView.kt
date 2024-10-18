@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import it.pagopa.iso_android.R
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.BigText
 import it.pagopa.iso_android.ui.CborValuesImpl
@@ -50,7 +51,7 @@ fun MasterView(
                     clearBleCache = true
                 )
             )
-        )
+        ).withReaderTrustStore(listOf(R.raw.eudi_pid_issuer_ut))
     )
     val back = {
         viewModel.qrCodeEngagement.close()

@@ -24,13 +24,17 @@ import it.pagopa.proximity.retrieval.connectionMethods
 import it.pagopa.proximity.retrieval.transportOptions
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.security.Security
+import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.util.Base64
 import java.util.concurrent.Executor
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
- * To build use [QrEngagement.build] static method
+ * To build use [QrEngagement.build] static method and ***then call [configure] method***
  * */
 class QrEngagement private constructor(
     val context: Context
@@ -58,8 +62,26 @@ class QrEngagement private constructor(
         Crypto.createEcPrivateKey(EcCurve.P256)
     }
 
-    fun withReaderTrustStore(certificates: List<X509Certificate>) = apply {
-        this.readerTrustStore = ReaderTrustStore.getDefault(certificates)
+    /**
+     * Use this if you have certificates into your **Raw Resource** folder
+     */
+    fun withReaderTrustStore(certificates: List<Int>) = apply {
+        certificates.map {
+            convertPemToX509Certificate(context.resources.openRawResource(it))
+        }.mapNotNull { it }.let {
+            this.readerTrustStore = ReaderTrustStore.getDefault(it)
+        }
+    }
+
+    /**
+     * Use this if you have certificates **As String**
+     */
+    fun withReaderTrustStore(certificates: List<String>) = apply {
+        certificates.map {
+            convertPemToX509Certificate(it)
+        }.mapNotNull { it }.let {
+            this.readerTrustStore = ReaderTrustStore.getDefault(it)
+        }
     }
 
     private fun checkQrEngagementInit(): Boolean {
@@ -215,6 +237,10 @@ class QrEngagement private constructor(
         return qrEngagement.deviceEngagementUriEncoded
     }
 
+    /**
+     * builds [QrEngagementHelper] by google
+     * @return [QrEngagement] instance created via [QrEngagement.build] static method
+     * */
     fun configure() = apply {
         qrEngagement = qrEngagementBuilder.build()
     }
@@ -225,6 +251,39 @@ class QrEngagement private constructor(
             response,
             Constants.SESSION_DATA_STATUS_SESSION_TERMINATION
         )
+    }
+
+    private fun convertPemToX509Certificate(pemCertificate: String): X509Certificate? {
+        return try {
+            val cleanedPem = pemCertificate
+                .replace("-----BEGIN CERTIFICATE-----", "")
+                .replace("-----END CERTIFICATE-----", "")
+                .replace("\n", "")
+                .replace("\r", "")
+            val decodedBytes = Base64.getDecoder().decode(cleanedPem)
+            val inputStream: InputStream = ByteArrayInputStream(decodedBytes)
+            val certificateFactory = CertificateFactory.getInstance("X.509")
+            certificateFactory.generateCertificate(inputStream) as? X509Certificate
+        } catch (e: Exception) {
+            ProximityLogger.e(
+                "PemToX509",
+                "error ${e.message} while generating certificate from pemString: $pemCertificate"
+            )
+            null
+        }
+    }
+
+    private fun convertPemToX509Certificate(inputStream: InputStream): X509Certificate? {
+        return try {
+            val certificateFactory = CertificateFactory.getInstance("X.509")
+            certificateFactory.generateCertificate(inputStream) as? X509Certificate
+        } catch (e: Exception) {
+            ProximityLogger.e(
+                "PemToX509",
+                "error ${e.message} while generating certificate from inputStream"
+            )
+            null
+        }
     }
 
     /**
