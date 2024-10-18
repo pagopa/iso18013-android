@@ -46,7 +46,6 @@ class QrEngagement private constructor(
     }
 
     private var readerTrustStore: ReaderTrustStore? = null
-
     private lateinit var qrEngagement: QrEngagementHelper
     private lateinit var qrEngagementBuilder: QrEngagementHelper.Builder
     private var listener: QrEngagementListener? = null
@@ -61,7 +60,9 @@ class QrEngagement private constructor(
     }
 
     /**
-     * Use this if you have certificates into your **Raw Resource** folder
+     * Use this if you have certificates into your **Raw Resource** folder.
+     * *You have still other two methods with [List] of [ByteArray] for raw certificates and [List] of [String] for pem*
+     * @param certificates a [List] of [Int] representing your raw resource
      * @return [QrEngagement]
      */
     fun withReaderTrustStore(certificates: List<Int>) = apply {
@@ -69,7 +70,9 @@ class QrEngagement private constructor(
     }
 
     /**
-     * Use this if you have certificates **As byte[]**
+     * Use this if you have certificates **As [ByteArray]**.
+     * *You have still other two methods with [List] of [Int] for raw resources and [List] of [String] for pem*
+     * @param certificates a [List] of [ByteArray] representing your raw certificates
      * @return [QrEngagement]
      */
     @JvmName("withReaderTrustStore1")
@@ -78,7 +81,9 @@ class QrEngagement private constructor(
     }
 
     /**
-     * Use this if you have certificates **As String**
+     * Use this if you have certificates **As [String]**.
+     * *You have still other two methods with [List] of [Int] for raw resources and [List] of [ByteArray] for raw certificates*
+     * @param certificates a [List] of [String] representing your pem certificates
      * @return [QrEngagement]
      */
     @JvmName("withReaderTrustStore2")
@@ -208,7 +213,7 @@ class QrEngagement private constructor(
     }
 
     /**
-     * builds [QrEngagementHelper] by google
+     * builds [QrEngagementHelper] by com.android.identity package
      * @return [QrEngagement] instance created via [QrEngagement.build] static method
      * */
     fun configure() = apply {
@@ -276,11 +281,11 @@ class QrEngagement private constructor(
     companion object {
         /**
          * Create an instance and configures the QR engagement.
-         * First of all you must call [QrEngagement.configure] to build QrEngagementHelper.
-         * To accept just some certificates use [QrEngagement.withReaderTrustStore] method.
-         * To create a QrCode use [QrEngagement.getQrCodeString] method.
-         * To observe all events call [QrEngagement.withListener] method.
-         * To close the connection call [QrEngagement.close] method.
+         * First of all you must call [configure] to build QrEngagementHelper.
+         * To accept just some certificates use [withReaderTrustStore] method.
+         * To create a QrCode use [getQrCodeString] method.
+         * To observe all events call [withListener] method.
+         * To close the connection call [close] method.
          */
         fun build(context: Context, retrievalMethods: List<DeviceRetrievalMethod>): QrEngagement {
             return QrEngagement(context).apply {
