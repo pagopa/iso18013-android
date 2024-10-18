@@ -74,8 +74,21 @@ class QrEngagement private constructor(
     }
 
     /**
+     * Use this if you have certificates **As byte[]**
+     */
+    @JvmName("withReaderTrustStore1")
+    fun withReaderTrustStore(certificates: List<ByteArray>) = apply {
+        certificates.map {
+            convertPemToX509Certificate(it)
+        }.mapNotNull { it }.let {
+            this.readerTrustStore = ReaderTrustStore.getDefault(it)
+        }
+    }
+
+    /**
      * Use this if you have certificates **As String**
      */
+    @JvmName("withReaderTrustStore2")
     fun withReaderTrustStore(certificates: List<String>) = apply {
         certificates.map {
             convertPemToX509Certificate(it)
@@ -245,12 +258,45 @@ class QrEngagement private constructor(
         qrEngagement = qrEngagementBuilder.build()
     }
 
+    fun sendErrorResponse() {
+        if (deviceRetrievalHelper == null) return
+        deviceRetrievalHelper!!.sendResponse(
+            null,
+            Constants.SESSION_DATA_STATUS_ERROR_CBOR_DECODING
+        )
+    }
+    fun sendErrorResponseNoData() {
+        if (deviceRetrievalHelper == null) return
+        deviceRetrievalHelper!!.sendResponse(
+            null,
+            Constants.DEVICE_RESPONSE_STATUS_GENERAL_ERROR
+        )
+    }
+
     fun sendResponse(response: ByteArray) {
         if (deviceRetrievalHelper == null) return
         deviceRetrievalHelper!!.sendResponse(
             response,
             Constants.SESSION_DATA_STATUS_SESSION_TERMINATION
         )
+    }
+
+    private fun convertPemToX509Certificate(pemCertificateBytes: ByteArray): X509Certificate? {
+        return try {
+            convertPemToX509CertificateByteArray(pemCertificateBytes)
+        } catch (e: Exception) {
+            ProximityLogger.e(
+                "PemToX509",
+                "error ${e.message} while generating certificate from pemBytes"
+            )
+            null
+        }
+    }
+
+    private fun convertPemToX509CertificateByteArray(pemCertificateBytes: ByteArray): X509Certificate? {
+        val inputStream: InputStream = ByteArrayInputStream(pemCertificateBytes)
+        val certificateFactory = CertificateFactory.getInstance("X.509")
+        return certificateFactory.generateCertificate(inputStream) as? X509Certificate
     }
 
     private fun convertPemToX509Certificate(pemCertificate: String): X509Certificate? {
@@ -260,10 +306,8 @@ class QrEngagement private constructor(
                 .replace("-----END CERTIFICATE-----", "")
                 .replace("\n", "")
                 .replace("\r", "")
-            val decodedBytes = Base64.getDecoder().decode(cleanedPem)
-            val inputStream: InputStream = ByteArrayInputStream(decodedBytes)
-            val certificateFactory = CertificateFactory.getInstance("X.509")
-            certificateFactory.generateCertificate(inputStream) as? X509Certificate
+            val pemCertificateBytes = Base64.getDecoder().decode(cleanedPem)
+            convertPemToX509CertificateByteArray(pemCertificateBytes)
         } catch (e: Exception) {
             ProximityLogger.e(
                 "PemToX509",

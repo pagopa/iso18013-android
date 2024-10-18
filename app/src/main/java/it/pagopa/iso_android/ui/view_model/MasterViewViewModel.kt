@@ -164,10 +164,15 @@ class MasterViewViewModel(
                         "Sending resp",
                         "found doc but fail to generate raw response: $message"
                     )
+                    qrCodeEngagement.sendErrorResponse()
                 }
                 this@MasterViewViewModel.loader.value = null
-            } else
+            } else {
                 ProximityLogger.e("Sending resp", "no doc found")
+                this@MasterViewViewModel.loader.value = null
+                _shouldGoBack.value = true
+                qrCodeEngagement.sendErrorResponseNoData()
+            }
         }
     }
 
