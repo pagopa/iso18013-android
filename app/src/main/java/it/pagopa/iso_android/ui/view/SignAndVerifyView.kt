@@ -25,13 +25,13 @@ import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.GenericDialog
 import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.view_model.SignAndVerifyViewViewModel
-import it.pagopa.iso_android.ui.view_model.viewModelWithCOSEManager
+import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
 
 @Composable
 fun SignAndVerifyView(onBack: () -> Unit) {
     val context = LocalContext.current
-    val vm = viewModelWithCOSEManager<SignAndVerifyViewViewModel>(
-        coseManager = COSEManager(context)
+    val vm = dependenciesInjectedViewModel<SignAndVerifyViewViewModel>(
+        COSEManager(context)
             .useEncryption(true)
             .enableUserAuth(false)
     )

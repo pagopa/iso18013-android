@@ -29,7 +29,7 @@ import it.pagopa.iso_android.ui.CenteredComposable
 import it.pagopa.iso_android.ui.GenericDialog
 import it.pagopa.iso_android.ui.LoaderDialog
 import it.pagopa.iso_android.ui.view_model.MasterViewViewModel
-import it.pagopa.iso_android.ui.view_model.viewModelWithQrEngagement
+import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
 import it.pagopa.proximity.bluetooth.BleRetrievalMethod
 import it.pagopa.proximity.qr_code.QrEngagement
 import kotlinx.coroutines.flow.collectLatest
@@ -41,7 +41,7 @@ fun MasterView(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val viewModel = viewModelWithQrEngagement<MasterViewViewModel>(
+    val viewModel = dependenciesInjectedViewModel<MasterViewViewModel>(
         QrEngagement.build(
             context = context,
             retrievalMethods = listOf(
@@ -51,7 +51,8 @@ fun MasterView(
                     clearBleCache = true
                 )
             )
-        ).withReaderTrustStore(listOf(R.raw.eudi_pid_issuer_ut))
+        ).withReaderTrustStore(listOf(R.raw.eudi_pid_issuer_ut)),
+        context.resources
     )
     val back = {
         viewModel.qrCodeEngagement.close()

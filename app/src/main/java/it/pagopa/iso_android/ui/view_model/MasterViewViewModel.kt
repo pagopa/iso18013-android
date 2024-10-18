@@ -1,5 +1,6 @@
 package it.pagopa.iso_android.ui.view_model
 
+import android.content.res.Resources
 import android.graphics.Bitmap
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -8,6 +9,7 @@ import it.pagopa.cbor_implementation.document_manager.DocumentManager
 import it.pagopa.cbor_implementation.document_manager.DocumentManagerBuilder
 import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.cbor_implementation.document_manager.document.IssuedDocument
+import it.pagopa.iso_android.R
 import it.pagopa.iso_android.qr_code.QrCode
 import it.pagopa.iso_android.ui.AppDialog
 import it.pagopa.iso_android.ui.CborValuesImpl
@@ -27,7 +29,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class MasterViewViewModel(
-    val qrCodeEngagement: QrEngagement
+    val qrCodeEngagement: QrEngagement,
+    private val resources: Resources
 ) : ViewModel() {
     private val _shouldGoBack = MutableStateFlow(false)
     val shouldGoBack = _shouldGoBack.asStateFlow()
@@ -63,15 +66,15 @@ class MasterViewViewModel(
         sessionsTranscript: ByteArray
     ) {
         val sb = StringBuilder().apply {
-            append("You're going to share these info:\n")
+            append("${resources.getString(R.string.share_info_title)}:\n")
         }
         this.request.getList().forEach {
             ProximityLogger.i("CERT is valid:", "${it.isAuthenticated}")
             val isMdl = it.requiredFields!!.docType == DocType.MDL
             if (isMdl)
-                sb.append("\nDriving License:\n\n")
+                sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
             else
-                sb.append("\nEu Pid:\n\n")
+                sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
             it.requiredFields?.toArray()?.forEach { (value, fieldName) ->
                 if (it.requiredFields!!.fieldIsRequired(value)) {
                     val array = if (isMdl)
@@ -88,17 +91,17 @@ class MasterViewViewModel(
         }
         this.dialogText = sb.toString()
         dialog.value = AppDialog(
-            title = "Warning",
+            title = resources.getString(R.string.warning),
             description = this.dialogText,
             button = AppDialog.DialogButton(
-                "OK",
+                resources.getString(R.string.ok),
                 onClick = {
                     this.dialog.value = null
                     shareInfo(sessionsTranscript)
                 },
             ),
             secondButton = AppDialog.DialogButton(
-                "NO",
+                resources.getString(R.string.no),
                 onClick = {
                     this.dialog.value = null
                     _shouldGoBack.value = true
@@ -108,7 +111,7 @@ class MasterViewViewModel(
     }
 
     private fun shareInfo(sessionsTranscript: ByteArray) {
-        this.loader.value = "Sending doc"
+        this.loader.value = resources.getString(R.string.sending_doc)
         viewModelScope.launch(Dispatchers.IO) {
             val disclosedDocuments = ArrayList<DisclosedDocument>()
             this@MasterViewViewModel.request.getList().forEach {
@@ -138,10 +141,10 @@ class MasterViewViewModel(
                 responseToSend?.let {
                     qrCodeEngagement.sendResponse(it)
                     this@MasterViewViewModel.dialog.value = AppDialog(
-                        title = "Data",
-                        description = "Sent",
+                        title = resources.getString(R.string.data),
+                        description = resources.getString(R.string.sent),
                         button = AppDialog.DialogButton(
-                            "Perfect!!",
+                            "${resources.getString(R.string.perfect)}!!",
                             onClick = {
                                 dialog.value = null
                                 _shouldGoBack.value = true
@@ -149,17 +152,7 @@ class MasterViewViewModel(
                         )
                     )
                 } ?: run {
-                    this@MasterViewViewModel.dialog.value = AppDialog(
-                        title = "Data",
-                        description = "Not Sent",
-                        button = AppDialog.DialogButton(
-                            "Ok",
-                            onClick = {
-                                dialog.value = null
-                                _shouldGoBack.value = true
-                            }
-                        )
-                    )
+                    dialogFailure()
                     ProximityLogger.e(
                         "Sending resp",
                         "found doc but fail to generate raw response: $message"
@@ -169,11 +162,25 @@ class MasterViewViewModel(
                 this@MasterViewViewModel.loader.value = null
             } else {
                 ProximityLogger.e("Sending resp", "no doc found")
+                dialogFailure()
                 this@MasterViewViewModel.loader.value = null
-                _shouldGoBack.value = true
                 qrCodeEngagement.sendErrorResponseNoData()
             }
         }
+    }
+
+    private fun dialogFailure() {
+        this@MasterViewViewModel.dialog.value = AppDialog(
+            title = resources.getString(R.string.data),
+            description = resources.getString(R.string.not_sent),
+            button = AppDialog.DialogButton(
+                resources.getString(R.string.ok),
+                onClick = {
+                    dialog.value = null
+                    _shouldGoBack.value = true
+                }
+            )
+        )
     }
 
     private fun attachListenerAndObserve(cborValues: CborValues) {

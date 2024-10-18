@@ -52,7 +52,7 @@ import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.SmallText
 import it.pagopa.iso_android.ui.model.Actions
 import it.pagopa.iso_android.ui.view_model.DocumentStorageViewViewModel
-import it.pagopa.iso_android.ui.view_model.viewModelWithDocManager
+import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
 
 @Composable
 fun DocumentStorageView(
@@ -60,8 +60,8 @@ fun DocumentStorageView(
 ) {
     BackHandler(onBack = onBack)
     val context = LocalContext.current
-    val vm = viewModelWithDocManager<DocumentStorageViewViewModel>(
-        dm = DocumentManager.build(
+    val vm = dependenciesInjectedViewModel<DocumentStorageViewViewModel>(
+        DocumentManager.build(
             DocumentManagerBuilder(
                 context = context
             ).enableUserAuth(false)

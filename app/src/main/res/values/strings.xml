@@ -54,4 +54,14 @@
     <string name="unDistinguishingSignResource">Un distinguishing sign</string>
     <string name="givenNameNationalCharacterResource">Given name national character</string>
     <string name="familyNameNationalCharacterResource">Family name national character</string>
+    <string name="share_info_title">You\'re going to share these info</string>
+    <string name="driving_license">Driving license</string>
+    <string name="eu_pid">Eu Pid</string>
+    <string name="ok">OK</string>
+    <string name="no">No</string>
+    <string name="data">Data</string>
+    <string name="sent">Sent</string>
+    <string name="not_sent">Not Sent</string>
+    <string name="perfect">Perfect</string>
+    <string name="sending_doc">Sending doc</string>
 </resources>
