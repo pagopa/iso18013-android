@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -47,10 +48,14 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun MainActivity?.MainApp() {
+private fun MainActivity?.MainApp(showMenuPreview: MutableState<Boolean>? = null) {
     IsoAndroidPocTheme {
         var topBarImage = remember { mutableStateOf<ImageVector>(Icons.Default.Menu) }
-        var showMenu = remember { mutableStateOf(false) }
+        val showMenu = showMenuPreview?.let {
+            remember { it }
+        } ?: run {
+            mutableStateOf(false)
+        }
         val navController = rememberNavController()
         Scaffold(modifier = Modifier.fillMaxSize(),
             topBar = {
@@ -96,4 +101,12 @@ private fun MainActivity?.MainApp() {
 @Composable
 fun MainAppPreview() {
     null.MainApp()
+}
+
+
+@ThemePreviews
+@Composable
+fun MainAppPreviewWithMenu() {
+    val showMenu = remember { mutableStateOf(true) }
+    null.MainApp(showMenu)
 }
