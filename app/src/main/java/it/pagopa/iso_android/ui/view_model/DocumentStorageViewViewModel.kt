@@ -22,7 +22,7 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 
 
 class DocumentStorageViewViewModel(
-    private val documentManager: DocumentManager
+    private val documentManager: DocumentManager?
 ) : ViewModel() {
     val loader = mutableStateOf<String?>(null)
     val actions = Actions.entries.toTypedArray().map { ActionsManager(it) }
@@ -112,11 +112,11 @@ class DocumentStorageViewViewModel(
         )
     }
 
-    private fun createDocument(isMdl: Boolean){
+    private fun createDocument(isMdl: Boolean) {
         resetAllActions()
         this.loader.value = "Creating"
         viewModelScope.launch(Dispatchers.IO) {
-            val back = documentManager.createDocument(
+            val back = documentManager?.createDocument(
                 docType = if (isMdl) MDL_DOCTYPE else EU_PID_DOCTYPE,
                 documentName = "MDL",
                 forceStrongBox = false,
@@ -125,7 +125,7 @@ class DocumentStorageViewViewModel(
             )
             appDialogWithOkBtn(
                 title = "Doc created",
-                message = "id: ${back.id}"
+                message = "id: ${back?.id}"
             )
             this@DocumentStorageViewViewModel.loader.value = null
         }
@@ -134,8 +134,8 @@ class DocumentStorageViewViewModel(
     private fun getAllDocuments(onOk: (Array<Document>) -> Unit, onEmptyArray: () -> Unit) {
         this.loader.value = "Loading"
         viewModelScope.launch(Dispatchers.IO) {
-            val docs = documentManager.getAllDocuments(null)
-            if (docs.isEmpty())
+            val docs = documentManager?.getAllDocuments(null)
+            if (docs.isNullOrEmpty())
                 onEmptyArray.invoke()
             else
                 onOk.invoke(docs)
@@ -151,10 +151,10 @@ class DocumentStorageViewViewModel(
         this.loader.value = "Loading"
         viewModelScope.launch(Dispatchers.IO) {
             val docs = if (isMdl)
-                documentManager.getAllMdlDocuments(null)
+                documentManager?.getAllMdlDocuments(null)
             else
-                documentManager.getAllEuPidDocuments(null)
-            if (docs.isEmpty())
+                documentManager?.getAllEuPidDocuments(null)
+            if (docs.isNullOrEmpty())
                 onEmptyArray.invoke()
             else
                 onOk.invoke(docs)
@@ -166,11 +166,11 @@ class DocumentStorageViewViewModel(
         this.loader.value = "Deleting"
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val back = documentManager.deleteDocument(id)
-                if (back)
+                val back = documentManager?.deleteDocument(id)
+                if (back == true)
                     documents = documents.filter { it.id != id }.toTypedArray()
                 if (documents.isEmpty()) actionCaller.reset()
-                appDialogWithOkBtn("doc", if (back) "eliminated" else "fail to eliminate")
+                appDialogWithOkBtn("doc", if (back == true) "eliminated" else "fail to eliminate")
             } catch (e: DocumentWithIdentifierNotFound) {
                 appDialogWithOkBtn("Exception", e.message)
             }
@@ -188,7 +188,7 @@ class DocumentStorageViewViewModel(
                     model.documents?.forEach { document ->
                         if (document.docType == doc.docType) {
                             document.issuerSigned?.rawValue?.let {
-                                val docId = documentManager.storeDocument(doc.id, it)
+                                val docId = documentManager?.storeDocument(doc.id, it)
                                 appDialogWithOkBtn("Doc stored!!", "ID: $docId")
                                 onOk.invoke()
                             }
@@ -210,8 +210,8 @@ class DocumentStorageViewViewModel(
     ) {
         this.loader.value = "Loading"
         viewModelScope.launch(Dispatchers.IO) {
-            val docs = documentManager.getAllDocuments(Document.State.ISSUED)
-            if (docs.isEmpty())
+            val docs = documentManager?.getAllDocuments(Document.State.ISSUED)
+            if (docs.isNullOrEmpty())
                 onEmptyArray.invoke()
             else
                 onOk.invoke(docs)

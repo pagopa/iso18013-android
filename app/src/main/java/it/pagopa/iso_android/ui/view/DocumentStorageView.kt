@@ -37,12 +37,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import it.pagopa.cbor_implementation.document_manager.DocumentManager
-import it.pagopa.cbor_implementation.document_manager.DocumentManagerBuilder
 import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.iso_android.R
 import it.pagopa.iso_android.ui.BasePreview
@@ -51,23 +47,15 @@ import it.pagopa.iso_android.ui.LoaderDialog
 import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.SmallText
 import it.pagopa.iso_android.ui.model.Actions
+import it.pagopa.iso_android.ui.preview.ThemePreviews
 import it.pagopa.iso_android.ui.view_model.DocumentStorageViewViewModel
-import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
 
 @Composable
 fun DocumentStorageView(
+    vm: DocumentStorageViewViewModel?,
     onBack: () -> Unit
 ) {
     BackHandler(onBack = onBack)
-    val context = LocalContext.current
-    val vm = dependenciesInjectedViewModel<DocumentStorageViewViewModel>(
-        DocumentManager.build(
-            DocumentManagerBuilder(
-                context = context
-            ).enableUserAuth(false)
-                .checkPublicKeyBeforeAdding(false)
-        )
-    )
     Box(
         Modifier
             .fillMaxSize()
@@ -79,7 +67,7 @@ fun DocumentStorageView(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            vm.actions.forEachIndexed { i, each ->
+            vm?.actions?.forEachIndexed { i, each ->
                 if (i != vm.actions.size - 1)
                     Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = {
@@ -133,10 +121,12 @@ fun DocumentStorageView(
             }
         }
     }
-    vm.appDialog.value?.let { appDialog ->
+    vm?.appDialog?.value?.let { appDialog ->
         GenericDialog(appDialog)
     }
-    LoaderDialog(vm.loader)
+    vm?.let {
+        LoaderDialog(it.loader)
+    }
 }
 
 @Composable
@@ -191,10 +181,13 @@ private fun RowScope.OneItem(
     )
 }
 
-@Preview
+@ThemePreviews
 @Composable
 fun DocStoragePreview() {
     BasePreview {
-        DocumentStorageView { }
+        DocumentStorageView(
+            vm = DocumentStorageViewViewModel(null),
+            onBack = {}
+        )
     }
 }

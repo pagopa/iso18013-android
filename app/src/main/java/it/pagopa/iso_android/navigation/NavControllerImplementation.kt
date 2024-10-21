@@ -11,23 +11,37 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import it.pagopa.cbor_implementation.cose.COSEManager
+import it.pagopa.cbor_implementation.document_manager.DocumentManager
+import it.pagopa.cbor_implementation.document_manager.DocumentManagerBuilder
 import it.pagopa.iso_android.MainActivity
+import it.pagopa.iso_android.R
 import it.pagopa.iso_android.ui.view.CborView
 import it.pagopa.iso_android.ui.view.DocumentStorageView
 import it.pagopa.iso_android.ui.view.HomeView
 import it.pagopa.iso_android.ui.view.MasterView
 import it.pagopa.iso_android.ui.view.SignAndVerifyView
 import it.pagopa.iso_android.ui.view.SlaveView
+import it.pagopa.iso_android.ui.view_model.CborViewViewModel
+import it.pagopa.iso_android.ui.view_model.DocumentStorageViewViewModel
+import it.pagopa.iso_android.ui.view_model.MasterViewViewModel
+import it.pagopa.iso_android.ui.view_model.SignAndVerifyViewViewModel
+import it.pagopa.iso_android.ui.view_model.SlaveViewViewModel
+import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
+import it.pagopa.proximity.bluetooth.BleRetrievalMethod
+import it.pagopa.proximity.qr_code.QrEngagement
 
 private const val AnimDurationMillis = 700
 
 @Composable
-fun MainActivity.IsoAndroidPocNavHost(
+fun MainActivity?.IsoAndroidPocNavHost(
     navController: NavHostController,
     showMenu: MutableState<Boolean>,
     innerPadding: PaddingValues,
@@ -51,7 +65,7 @@ fun MainActivity.IsoAndroidPocNavHost(
             topBarImage.value = Icons.Default.Menu
             HomeView(onBack = {
                 backLogic(showMenu) {
-                    this@IsoAndroidPocNavHost.finishAndRemoveTask()
+                    this@IsoAndroidPocNavHost?.finishAndRemoveTask()
                 }
             }, onNavigate = { destination ->
                 navController.navigateIfDifferent(destination)
@@ -59,7 +73,21 @@ fun MainActivity.IsoAndroidPocNavHost(
         }
         customAnimatedComposable<HomeDestination.Master> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
-            MasterView(onBack = {
+            val context = LocalContext.current
+            val viewModel = dependenciesInjectedViewModel<MasterViewViewModel>(
+                QrEngagement.build(
+                    context = context,
+                    retrievalMethods = listOf(
+                        BleRetrievalMethod(
+                            peripheralServerMode = true,
+                            centralClientMode = false,
+                            clearBleCache = true
+                        )
+                    )
+                ).withReaderTrustStore(listOf(R.raw.eudi_pid_issuer_ut)),
+                context.resources
+            )
+            MasterView(viewModel = viewModel, onBack = {
                 backLogic(showMenu) {
                     navController.popBackStack()
                 }
@@ -67,7 +95,8 @@ fun MainActivity.IsoAndroidPocNavHost(
         }
         customAnimatedComposable<HomeDestination.Slave> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
-            SlaveView(onBack = {
+            val vm = viewModel<SlaveViewViewModel>()
+            SlaveView(vm = vm, onBack = {
                 backLogic(showMenu) {
                     navController.popBackStack()
                 }
@@ -75,7 +104,8 @@ fun MainActivity.IsoAndroidPocNavHost(
         }
         customAnimatedComposable<HomeDestination.ReadDocument> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
-            CborView(onBack = {
+            val vm = viewModel<CborViewViewModel>()
+            CborView(vm = vm, onBack = {
                 backLogic(showMenu) {
                     navController.popToHome()
                 }
@@ -83,7 +113,13 @@ fun MainActivity.IsoAndroidPocNavHost(
         }
         customAnimatedComposable<HomeDestination.SignAndVerify> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
-            SignAndVerifyView(onBack = {
+            val context = LocalContext.current
+            val vm = dependenciesInjectedViewModel<SignAndVerifyViewViewModel>(
+                COSEManager(context)
+                    .useEncryption(true)
+                    .enableUserAuth(false)
+            )
+            SignAndVerifyView(vm = vm, onBack = {
                 backLogic(showMenu) {
                     navController.popToHome()
                 }
@@ -91,7 +127,16 @@ fun MainActivity.IsoAndroidPocNavHost(
         }
         customAnimatedComposable<HomeDestination.DocumentStorage> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
-            DocumentStorageView(onBack = {
+            val context = LocalContext.current
+            val vm = dependenciesInjectedViewModel<DocumentStorageViewViewModel>(
+                DocumentManager.build(
+                    DocumentManagerBuilder(
+                        context = context
+                    ).enableUserAuth(false)
+                        .checkPublicKeyBeforeAdding(false)
+                )
+            )
+            DocumentStorageView(vm = vm, onBack = {
                 backLogic(showMenu) {
                     navController.popToHome()
                 }

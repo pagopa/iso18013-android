@@ -12,7 +12,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.lifecycle.viewmodel.compose.viewModel
 import it.pagopa.iso_android.R
 import it.pagopa.iso_android.camerax.CameraView
 import it.pagopa.iso_android.ui.AppDialog
@@ -22,11 +21,11 @@ import kotlinx.coroutines.flow.asStateFlow
 
 @Composable
 fun SlaveView(
+    vm: SlaveViewViewModel,
     onBack: () -> Unit
 ) {
     BackHandler(onBack = onBack)
     val dialogVisible = remember { mutableStateOf(false) }
-    val vm = viewModel<SlaveViewViewModel>()
     val qrCodeString = vm.qrCodeString.asStateFlow().collectAsState().value
     Box(
         modifier = Modifier

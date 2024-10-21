@@ -1,6 +1,5 @@
 package it.pagopa.iso_android.ui.view
 
-import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -20,20 +19,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.BigText
+import it.pagopa.iso_android.ui.preview.ThemePreviews
 import it.pagopa.iso_android.ui.view_model.CborViewViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
 fun CborView(
+    vm: CborViewViewModel,
     onBack: () -> Unit
 ) {
-    val vm = viewModel<CborViewViewModel>()
     BackHandler(onBack = onBack)
     LaunchedEffect(
         key1 = vm.cborText,
@@ -91,22 +90,12 @@ fun CborView(
     }
 }
 
-
-@Preview
+@ThemePreviews
 @Composable
 fun CborViewView() {
     BasePreview {
-        CborView(onBack = {
-
-        })
-    }
-}
-
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
-@Composable
-fun CborViewViewNight() {
-    BasePreview {
-        CborView(onBack = {
+        val viewModel = viewModel<CborViewViewModel>()
+        CborView(vm = viewModel, onBack = {
 
         })
     }

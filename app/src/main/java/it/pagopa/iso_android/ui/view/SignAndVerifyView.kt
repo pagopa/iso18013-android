@@ -17,24 +17,19 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import it.pagopa.cbor_implementation.cose.COSEManager
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.GenericDialog
+import it.pagopa.iso_android.ui.LoaderDialog
 import it.pagopa.iso_android.ui.MediumText
+import it.pagopa.iso_android.ui.preview.ThemePreviews
 import it.pagopa.iso_android.ui.view_model.SignAndVerifyViewViewModel
-import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
 
 @Composable
-fun SignAndVerifyView(onBack: () -> Unit) {
-    val context = LocalContext.current
-    val vm = dependenciesInjectedViewModel<SignAndVerifyViewViewModel>(
-        COSEManager(context)
-            .useEncryption(true)
-            .enableUserAuth(false)
-    )
+fun SignAndVerifyView(
+    vm: SignAndVerifyViewViewModel?,
+    onBack: () -> Unit
+) {
     BackHandler(onBack = onBack)
     Column(
         modifier = Modifier
@@ -52,13 +47,13 @@ fun SignAndVerifyView(onBack: () -> Unit) {
         TextField(
             modifier = Modifier
                 .wrapContentHeight(),
-            value = vm.stringToSign.value,
+            value = vm?.stringToSign?.value.orEmpty(),
             onValueChange = {
-                vm.stringToSign.value = it
+                vm?.stringToSign?.value = it
             }
         )
         Button(onClick = {
-            vm.sign(vm.stringToSign.value)
+            vm?.sign(vm.stringToSign.value)
         }) {
             Text(text = "sign it")
         }
@@ -70,9 +65,9 @@ fun SignAndVerifyView(onBack: () -> Unit) {
         TextField(
             modifier = Modifier
                 .wrapContentHeight(),
-            value = vm.stringToCheck.value,
+            value = vm?.stringToCheck?.value.orEmpty(),
             onValueChange = {
-                vm.stringToCheck.value = it
+                vm?.stringToCheck?.value = it
             }
         )
         Spacer(Modifier.height(16.dp))
@@ -84,34 +79,38 @@ fun SignAndVerifyView(onBack: () -> Unit) {
         TextField(
             modifier = Modifier
                 .wrapContentHeight(),
-            value = vm.publicKey.value,
+            value = vm?.publicKey?.value.orEmpty(),
             onValueChange = {
-                vm.publicKey.value = it
+                vm?.publicKey?.value = it
             }
         )
         Spacer(Modifier.height(16.dp))
         Button(onClick = {
-            vm.verify()
+            vm?.verify()
         }) {
             Text(text = "check it all")
         }
         Spacer(Modifier.height(8.dp))
         MediumText(
             modifier = Modifier.wrapContentSize(),
-            text = "is valid: ${vm.isValidString.value}",// text is valid or not
+            text = "is valid: ${vm?.isValidString?.value}",// text is valid or not
             color = MaterialTheme.colorScheme.onBackground
         )
         Spacer(Modifier.height(16.dp))
     }
-    if (vm.appDialog.value != null)
-        GenericDialog(vm.appDialog.value!!)
+    vm?.appDialog?.value?.let {
+        GenericDialog(it)
+    }
+    vm?.let {
+        LoaderDialog(it.loader)
+    }
 }
 
-@Preview
+@ThemePreviews
 @Composable
 fun SignAndVerifyViewPreview() {
     BasePreview {
-        SignAndVerifyView {
+        SignAndVerifyView(vm = null) {
 
         }
     }

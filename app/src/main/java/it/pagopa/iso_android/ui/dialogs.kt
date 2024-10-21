@@ -28,7 +28,7 @@ import androidx.compose.ui.window.DialogProperties
 
 @Composable
 fun LoaderDialog(text: MutableState<String?>) {
-    if (text.value != null) {
+    text.value?.let { loaderText ->
         Dialog(
             onDismissRequest = { text.value = null },
             DialogProperties(
@@ -50,7 +50,7 @@ fun LoaderDialog(text: MutableState<String?>) {
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.secondary)
                 Spacer(modifier = Modifier.height(8.dp))
                 AnimateDottedText(
-                    text = text.value!!,
+                    text = loaderText,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))

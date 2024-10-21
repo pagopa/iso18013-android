@@ -155,7 +155,11 @@ class MasterViewViewModel(
                     override fun onError(message: String) {
                         this@MasterViewViewModel.loader.value = null
                         dialogFailure(message)
-                        qrCodeEngagement.sendErrorResponse()
+                        val isNoDocFound = message == "no doc found"
+                        if (isNoDocFound)
+                            qrCodeEngagement.sendErrorResponse()
+                        else
+                            qrCodeEngagement.sendErrorResponseNoData()
                     }
                 }
             )

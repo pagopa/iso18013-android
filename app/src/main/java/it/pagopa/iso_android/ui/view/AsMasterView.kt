@@ -1,6 +1,5 @@
 package it.pagopa.iso_android.ui.view
 
-import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -19,41 +18,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import it.pagopa.iso_android.R
+import androidx.lifecycle.viewmodel.compose.viewModel
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.BigText
 import it.pagopa.iso_android.ui.CborValuesImpl
 import it.pagopa.iso_android.ui.CenteredComposable
 import it.pagopa.iso_android.ui.GenericDialog
 import it.pagopa.iso_android.ui.LoaderDialog
+import it.pagopa.iso_android.ui.preview.ThemePreviews
 import it.pagopa.iso_android.ui.view_model.MasterViewViewModel
-import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
-import it.pagopa.proximity.bluetooth.BleRetrievalMethod
-import it.pagopa.proximity.qr_code.QrEngagement
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
 fun MasterView(
+    viewModel: MasterViewViewModel,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val viewModel = dependenciesInjectedViewModel<MasterViewViewModel>(
-        QrEngagement.build(
-            context = context,
-            retrievalMethods = listOf(
-                BleRetrievalMethod(
-                    peripheralServerMode = true,
-                    centralClientMode = false,
-                    clearBleCache = true
-                )
-            )
-        ).withReaderTrustStore(listOf(R.raw.eudi_pid_issuer_ut)),
-        context.resources
-    )
     val back = {
         viewModel.qrCodeEngagement.close()
         onBack.invoke()
@@ -106,18 +90,10 @@ fun MasterView(
     LoaderDialog(viewModel.loader)
 }
 
-@Preview
+@ThemePreviews
 @Composable
 fun MasterViewPreview() {
     BasePreview {
-        MasterView(onBack = {})
-    }
-}
-
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
-@Composable
-fun MasterViewPreviewNight() {
-    BasePreview {
-        MasterView(onBack = {})
+        MasterView(viewModel = viewModel<MasterViewViewModel>(), onBack = {})
     }
 }

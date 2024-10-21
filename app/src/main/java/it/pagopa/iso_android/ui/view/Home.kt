@@ -1,7 +1,6 @@
 package it.pagopa.iso_android.ui.view
 
 import android.Manifest
-import android.content.res.Configuration
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -21,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import it.pagopa.iso_android.navigation.HomeDestination
 import it.pagopa.iso_android.ui.AppDialog
@@ -32,6 +30,7 @@ import it.pagopa.iso_android.ui.GenericDialog
 import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.SmallText
 import it.pagopa.iso_android.ui.TwoButtonsInARow
+import it.pagopa.iso_android.ui.preview.ThemePreviews
 
 @Composable
 fun HomeView(
@@ -120,21 +119,9 @@ fun HomeView(
         GenericDialog(dialog.value!!)
 }
 
-@Preview
+@ThemePreviews
 @Composable
 fun PreviewHomeView() {
-    BasePreview {
-        HomeView(onBack = {
-
-        }, onNavigate = {
-
-        })
-    }
-}
-
-@Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
-@Composable
-fun PreviewHomeViewNight() {
     BasePreview {
         HomeView(onBack = {
 
