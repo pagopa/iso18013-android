@@ -60,11 +60,13 @@ class SignAndVerifyViewViewModel(
 
     @OptIn(ExperimentalEncodingApi::class)
     fun sign(what: String) {
+        isValidString.value = ""
         if (what.isEmpty()) return
         loader.value = "Signing"
         viewModelScope.launch(Dispatchers.IO) {
+            val data = hexStringToByteArray(what.toHexString())
             when (val result = coseManager.signWithCOSE(
-                data = what.toByteArray(),
+                data = data,
                 strongBox = true,
                 attestationChallenge = null,
                 alg = Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA,
@@ -78,12 +80,30 @@ class SignAndVerifyViewViewModel(
                     val publicKey = Base64.encode(result.publicKey)
                     this@SignAndVerifyViewViewModel.stringToCheck.value = dataSigned
                     this@SignAndVerifyViewViewModel.publicKey.value = publicKey
+                    CborLogger.i("HexStringReconverted", data.toString(Charsets.UTF_8))
                     CborLogger.i("dataSigned", dataSigned)
                     CborLogger.i("publicKey", publicKey)
                 }
             }
             loader.value = null
         }
+    }
+
+    private fun String.toHexString(): String {
+        return this.toByteArray(Charsets.UTF_8).joinToString("") { "%02x".format(it) }
+    }
+
+    // to decode ByteArray.toString(Charsets.UTF_8)
+    private fun hexStringToByteArray(s: String): ByteArray {
+        val len = s.length
+        val data = ByteArray(len / 2)
+        var i = 0
+        while (i < len - 1) {
+            data[i / 2] =
+                ((Character.digit(s[i], 16) shl 4) + Character.digit(s[i + 1], 16)).toByte()
+            i += 2
+        }
+        return data
     }
 
     private fun verify(what: ByteArray, pubKey: ByteArray) = coseManager.verifySign1(
