@@ -59,9 +59,10 @@
     <string name="eu_pid">Eu Pid</string>
     <string name="ok">OK</string>
     <string name="no">No</string>
+    <string name="data_not_sent">Data not sent</string>
     <string name="data">Data</string>
     <string name="sent">Sent</string>
-    <string name="not_sent">Not Sent</string>
     <string name="perfect">Perfect</string>
     <string name="sending_doc">Sending doc</string>
+    <string name="no_doc_found">No document found</string>
 </resources>

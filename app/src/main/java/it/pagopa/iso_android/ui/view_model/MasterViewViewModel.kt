@@ -130,49 +130,49 @@ class MasterViewViewModel(
                     )
                 }
             }
-            if (disclosedDocuments.isNotEmpty()) {
-                val responseGenerator = ResponseGenerator(
-                    context = qrCodeEngagement.context,
-                    sessionsTranscript = sessionsTranscript
-                )
-                val (responseToSend, message) = responseGenerator.createResponse(
-                    disclosedDocuments.toTypedArray()
-                )
-                responseToSend?.let {
-                    qrCodeEngagement.sendResponse(it)
-                    this@MasterViewViewModel.dialog.value = AppDialog(
-                        title = resources.getString(R.string.data),
-                        description = resources.getString(R.string.sent),
-                        button = AppDialog.DialogButton(
-                            "${resources.getString(R.string.perfect)}!!",
-                            onClick = {
-                                dialog.value = null
-                                _shouldGoBack.value = true
-                            }
+            ResponseGenerator(
+                context = qrCodeEngagement.context,
+                sessionsTranscript = sessionsTranscript
+            ).createResponse(
+                disclosedDocuments.toTypedArray(),
+                object : ResponseGenerator.Response {
+                    override fun onResponseGenerated(response: ByteArray) {
+                        this@MasterViewViewModel.loader.value = null
+                        qrCodeEngagement.sendResponse(response)
+                        this@MasterViewViewModel.dialog.value = AppDialog(
+                            title = resources.getString(R.string.data),
+                            description = resources.getString(R.string.sent),
+                            button = AppDialog.DialogButton(
+                                "${resources.getString(R.string.perfect)}!!",
+                                onClick = {
+                                    dialog.value = null
+                                    _shouldGoBack.value = true
+                                }
+                            )
                         )
-                    )
-                } ?: run {
-                    dialogFailure()
-                    ProximityLogger.e(
-                        "Sending resp",
-                        "found doc but fail to generate raw response: $message"
-                    )
-                    qrCodeEngagement.sendErrorResponse()
+                    }
+
+                    override fun onError(message: String) {
+                        this@MasterViewViewModel.loader.value = null
+                        dialogFailure(message)
+                        qrCodeEngagement.sendErrorResponse()
+                    }
                 }
-                this@MasterViewViewModel.loader.value = null
-            } else {
-                ProximityLogger.e("Sending resp", "no doc found")
-                dialogFailure()
-                this@MasterViewViewModel.loader.value = null
-                qrCodeEngagement.sendErrorResponseNoData()
-            }
+            )
         }
     }
 
-    private fun dialogFailure() {
+    private fun dialogFailure(message: String) {
+        val isNoDocFound = message == "no doc found"
         this@MasterViewViewModel.dialog.value = AppDialog(
-            title = resources.getString(R.string.data),
-            description = resources.getString(R.string.not_sent),
+            title = if (isNoDocFound)
+                resources.getString(R.string.warning)
+            else
+                resources.getString(R.string.data_not_sent),
+            description = if (isNoDocFound)
+                resources.getString(R.string.no_doc_found)
+            else
+                message,
             button = AppDialog.DialogButton(
                 resources.getString(R.string.ok),
                 onClick = {

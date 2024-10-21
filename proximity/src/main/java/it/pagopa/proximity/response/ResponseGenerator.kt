@@ -40,13 +40,51 @@ class ResponseGenerator(
         ) : AddDocumentToResponse
     }
 
+    interface Response {
+        /**@param [response] [ByteArray] generated for response*/
+        fun onResponseGenerated(response: ByteArray)
+
+        /**@param [message] [String] for error reached*/
+        fun onError(message: String)
+    }
+
+    /**
+     * It creates a mdoc response in ByteArray format respect documents requested and disclosed
+     * @return[Response.onResponseGenerated] if ByteArray is created without Exceptions, else
+     * [Response.onError] if disclosedDocumentsArray is Empty with "no doc found" message or if an
+     * [Exception] was reached with [Throwable.message].
+     */
+    @JvmName("createResponseWithCallback")
+    fun createResponse(
+        disclosedDocuments: Array<DisclosedDocument>,
+        response: Response
+    ) {
+        if (disclosedDocuments.isNotEmpty()) {
+            val (responseToSend, message) = this.createResponse(
+                disclosedDocuments
+            )
+            responseToSend?.let {
+                response.onResponseGenerated(it)
+            } ?: run {
+                response.onError(message)
+                ProximityLogger.e(
+                    "Sending resp",
+                    "found doc but fail to generate raw response: $message"
+                )
+            }
+        } else {
+            ProximityLogger.e("Sending resp", "no doc found")
+            response.onError("no doc found")
+        }
+    }
+
     /**
      * It creates a mdoc response in ByteArray format respect documents requested and disclosed
      * @return[Pair]-> out <[ByteArray],[String]> with first element nullable,
      * if ByteArray is created without Exceptions message back will be "created" else
      * [Throwable.message] reached or empty string if this is null
-     * */
-    fun createResponse(
+     */
+    private fun createResponse(
         disclosedDocuments: Array<DisclosedDocument>
     ): Pair<ByteArray?, String> {
         try {
