@@ -64,7 +64,7 @@ class SignAndVerifyViewViewModel(
         if (what.isEmpty()) return
         loader.value = "Signing"
         viewModelScope.launch(Dispatchers.IO) {
-            val data = hexStringToByteArray(what.toHexString())
+            val data = what.toByteArray()
             when (val result = coseManager.signWithCOSE(
                 data = data,
                 strongBox = true,
@@ -87,23 +87,6 @@ class SignAndVerifyViewViewModel(
             }
             loader.value = null
         }
-    }
-
-    private fun String.toHexString(): String {
-        return this.toByteArray(Charsets.UTF_8).joinToString("") { "%02x".format(it) }
-    }
-
-    // to decode ByteArray.toString(Charsets.UTF_8)
-    private fun hexStringToByteArray(s: String): ByteArray {
-        val len = s.length
-        val data = ByteArray(len / 2)
-        var i = 0
-        while (i < len - 1) {
-            data[i / 2] =
-                ((Character.digit(s[i], 16) shl 4) + Character.digit(s[i + 1], 16)).toByte()
-            i += 2
-        }
-        return data
     }
 
     private fun verify(what: ByteArray, pubKey: ByteArray) = coseManager.verifySign1(
