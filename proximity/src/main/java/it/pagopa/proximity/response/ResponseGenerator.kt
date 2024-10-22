@@ -141,13 +141,14 @@ class ResponseGenerator(
         nameSpacedData.keys.forEach {
             for (i in 0 until reqFieldsArray.size) {
                 val (value, cborValue) = reqFieldsArray[i]
+                val doNotSend = value || disclosedDocument.doNotSendArray.contains(cborValue)
                 if (it == cborValue) {
                     dataElements.add(
                         DocumentRequest.DataElement(
                             nameSpaceName,
                             it,
                             false,
-                            doNotSend = value
+                            doNotSend = doNotSend
                         )
                     )
                     break
