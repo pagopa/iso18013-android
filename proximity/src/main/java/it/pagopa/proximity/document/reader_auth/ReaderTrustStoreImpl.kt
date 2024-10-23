@@ -1,6 +1,5 @@
 package it.pagopa.proximity.document.reader_auth
 
-import android.util.Log
 import it.pagopa.proximity.ProximityLogger
 import it.pagopa.proximity.document.profile.ProfileValidation
 import it.pagopa.proximity.document.reader_auth.crl.CertificateCRLValidation
@@ -81,15 +80,22 @@ internal class ReaderTrustStoreImpl(
                 if (profileValidationResult) return true
             } catch (e: Exception) {
                 when (e) {
-                    is InvalidAlgorithmParameterException -> Log.d(
+                    is InvalidAlgorithmParameterException -> ProximityLogger.d(
                         this.tag,
-                        "INVALID_ALGORITHM_PARAMETER",
-                        e,
+                        "INVALID_ALGORITHM_PARAMETER: $e"
                     )
 
-                    is NoSuchAlgorithmException -> ProximityLogger.d(this.tag, "NO_SUCH_ALGORITHM: $e")
+                    is NoSuchAlgorithmException -> ProximityLogger.d(
+                        this.tag,
+                        "NO_SUCH_ALGORITHM: $e"
+                    )
+
                     is CertificateException -> ProximityLogger.d(this.tag, "CERTIFICATE_ERROR: $e")
-                    is CertPathValidatorException -> ProximityLogger.d(this.tag, "CERTIFICATE_PATH_ERROR: $e")
+                    is CertPathValidatorException -> ProximityLogger.d(
+                        this.tag,
+                        "CERTIFICATE_PATH_ERROR: $e"
+                    )
+
                     is CertificateCRLValidationException -> ProximityLogger.d(
                         this.tag,
                         "CERTIFICATE_REVOKED: $e"
