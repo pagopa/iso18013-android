@@ -9,6 +9,22 @@ android {
     namespace = "it.pagopa.iso_android"
     compileSdk = 35
 
+    signingConfigs {
+        create("app-debug") {
+            keyAlias = "key0"
+            keyPassword = "d1g1touch"
+            storeFile = file("../certificate.keystore")
+            storePassword = "d1g1touch"
+        }
+
+        create("app-release") {
+            keyAlias = "key0"
+            keyPassword = "d1g1touch"
+            storeFile = file("../certificate.keystore")
+            storePassword = "d1g1touch"
+        }
+    }
+
     defaultConfig {
         applicationId = "it.pagopa.iso_android"
         minSdk = 26
