@@ -54,7 +54,7 @@ fun HomeView(
     val bleLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissionsMap ->
-        val granted = permissionsMap.map {
+        val granted = permissionsMap.filter {
             it.value == true
         }
         if (granted.size == permissionsMap.size)

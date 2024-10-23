@@ -1,5 +1,6 @@
 package it.pagopa.iso_android.ui.view_model
 
+import android.util.Base64
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -12,8 +13,6 @@ import it.pagopa.iso_android.ui.AppDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.UUID
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 class SignAndVerifyViewViewModel(
     private val coseManager: COSEManager
@@ -25,7 +24,6 @@ class SignAndVerifyViewViewModel(
     var appDialog = mutableStateOf<AppDialog?>(null)
     var isValidString = mutableStateOf("")
 
-    @OptIn(ExperimentalEncodingApi::class)
     fun verify() {
         loader.value = "Verifying"
         viewModelScope.launch(Dispatchers.IO) {
@@ -44,8 +42,8 @@ class SignAndVerifyViewViewModel(
             msg.append("value to verify the signature")
             if (!breakIt) {
                 try {
-                    val dataSigned = Base64.decode(str)
-                    val publicKey = Base64.decode(pubKey)
+                    val dataSigned = Base64.decode(str, Base64.DEFAULT or Base64.NO_WRAP)
+                    val publicKey = Base64.decode(pubKey, Base64.DEFAULT or Base64.NO_WRAP)
                     isValidString.value = verify(dataSigned, publicKey).toString()
                 } catch (e: Exception) {
                     CborLogger.e("verify", e.toString())
@@ -58,7 +56,6 @@ class SignAndVerifyViewViewModel(
         }
     }
 
-    @OptIn(ExperimentalEncodingApi::class)
     fun sign(what: String) {
         isValidString.value = ""
         if (what.isEmpty()) return
@@ -76,8 +73,8 @@ class SignAndVerifyViewViewModel(
                 is SignWithCOSEResult.UserAuthRequired -> failureAppDialog("user auth req.")
                 is SignWithCOSEResult.Success -> {
                     successAppDialog()
-                    val dataSigned = Base64.encode(result.signature)
-                    val publicKey = Base64.encode(result.publicKey)
+                    val dataSigned = Base64.encodeToString(result.signature, Base64.DEFAULT or Base64.NO_WRAP)
+                    val publicKey = Base64.encodeToString(result.publicKey, Base64.DEFAULT or Base64.NO_WRAP)
                     this@SignAndVerifyViewViewModel.stringToCheck.value = dataSigned
                     this@SignAndVerifyViewViewModel.publicKey.value = publicKey
                     CborLogger.i("HexStringReconverted", data.toString(Charsets.UTF_8))
