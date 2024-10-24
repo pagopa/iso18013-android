@@ -127,7 +127,7 @@ class ResponseGenerator(
         disclosedDocument: DisclosedDocument,
         transcript: ByteArray
     ): AddDocumentToResponse {
-        if (!DocType.isAcceptedDocType(DocType.fromString(disclosedDocument.docType)))
+        if (!DocType(disclosedDocument.docType).isAccepted)
             throw IllegalStateException("Doc type is not of kind ${DocType.EU_PID.value} || ${DocType.MDL.value}")
         val dataElements = ArrayList<DocumentRequest.DataElement>()
         val reqField = if (disclosedDocument.docType == DocType.EU_PID.value) {

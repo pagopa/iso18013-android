@@ -8,16 +8,13 @@ enum class DocType(
     EU_PID("eu.europa.ec.eudi.pid.1", "eu.europa.ec.eudi.pid.1"),
     ANY_OTHER("", "");
 
-    companion object {
-        fun isAcceptedDocType(docType: DocType?): Boolean {
-            return docType == MDL || docType == EU_PID
-        }
+    val isAccepted get() = this == MDL || this == EU_PID
 
-        fun fromString(string: String?): DocType? {
+    companion object {
+        operator fun invoke(string: String?): DocType {
             return when (string) {
                 MDL.value -> MDL
                 EU_PID.value -> EU_PID
-                null -> null
                 else -> ANY_OTHER
             }
         }

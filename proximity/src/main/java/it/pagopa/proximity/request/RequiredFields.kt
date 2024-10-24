@@ -9,11 +9,12 @@ abstract class RequiredFields {
     fun fieldIsRequired(field: Boolean) = !field
 
     companion object {
-        fun fromCbor(docType: DocType, cbor: CBORObject): RequiredFields {
-            return if (docType == DocType.EU_PID)
-                RequiredFieldsEuPid.fromCbor(cbor)
-            else
-                RequiredFieldsMdl.fromCbor(cbor)
-        }
+        internal operator fun invoke(
+            docType: DocType,
+            cbor: CBORObject
+        ): RequiredFields = if (docType == DocType.EU_PID)
+            RequiredFieldsEuPid.fromCbor(cbor)
+        else
+            RequiredFieldsMdl.fromCbor(cbor)
     }
 }

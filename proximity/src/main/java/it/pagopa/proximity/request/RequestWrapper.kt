@@ -45,11 +45,11 @@ data class RequestWrapper(
     fun prepare() = apply {
         val cbor = CBORObject.DecodeFromBytes(cborByte)
         var docTypeCbor = cbor.get("docType")?.AsString()
-        val docType = DocType.fromString(docTypeCbor)
-        val namespaces = cbor.get("nameSpaces")
-        if (DocType.isAcceptedDocType(docType)) {
-            val fields = namespaces.get(docType!!.nameSpacesValue)
-            this.requiredFields = RequiredFields.fromCbor(docType, fields)
+        val docType = DocType(docTypeCbor)
+        if (docType.isAccepted) {
+            cbor.get("nameSpaces")?.get(docType.nameSpacesValue)?.let { cbor ->
+                this.requiredFields = RequiredFields(docType, cbor)
+            }
         }
     }
 
