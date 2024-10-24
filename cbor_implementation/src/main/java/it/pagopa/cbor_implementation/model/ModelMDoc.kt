@@ -85,9 +85,9 @@ data class IssuerSigned(
  * elementIdentifier->es.:Name
  * elementValue->es:John*/
 data class DocumentX(
-    val digestID: Int,
-    val random: ByteArray,
-    val elementIdentifier: String,
+    val digestID: Int?,
+    val random: ByteArray?,
+    val elementIdentifier: String?,
     val elementValue: Any?
 )
 

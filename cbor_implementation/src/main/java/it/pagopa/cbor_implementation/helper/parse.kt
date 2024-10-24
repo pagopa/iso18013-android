@@ -39,10 +39,10 @@ internal fun CBORObject.toModelMDoc(): ModelMDoc {
     fun oneDocument(doc: CBORObject): Document {
         val issuerSigned = doc.get("issuerSigned")
         return Document(
-            docType = doc.get("docType").AsString(),
+            docType = doc.get("docType")?.AsString(),
             issuerSigned = IssuerSigned(
-                nameSpaces = issuerSigned.get("nameSpaces").keys
-                    .let { keys ->
+                nameSpaces = issuerSigned.get("nameSpaces")?.keys
+                    ?.let { keys ->
                         val mNameSpaces =
                             mutableMapOf<String, List<DocumentX>>()
                         keys
@@ -50,26 +50,24 @@ internal fun CBORObject.toModelMDoc(): ModelMDoc {
                             .forEach { key ->
                                 val mList = mutableListOf<DocumentX>()
                                 issuerSigned.get("nameSpaces")
-                                    .get(key).values.forEach {
+                                    ?.get(key)?.values?.forEach {
                                         val value =
                                             CBORObject.DecodeFromBytes(it.GetByteString())
                                         mList.add(
                                             DocumentX(
                                                 digestID = value.get("digestID")
-                                                    .AsInt32(),
+                                                    ?.AsInt32(),
                                                 random = value.get("random")
-                                                    .GetByteString(),
+                                                    ?.GetByteString(),
                                                 elementIdentifier = value.get("elementIdentifier")
-                                                    .AsString(),
+                                                    ?.AsString(),
                                                 elementValue = value.get("elementValue")
-                                                    .parse()
+                                                    ?.parse()
                                             )
                                         )
                                     }
-
                                 mNameSpaces[key.AsString()] = mList
                             }
-
                         mNameSpaces
                     },
                 rawValue = issuerSigned.EncodeToBytes(),
