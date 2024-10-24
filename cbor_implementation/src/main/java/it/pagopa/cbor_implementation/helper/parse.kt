@@ -73,7 +73,7 @@ internal fun CBORObject.toModelMDoc(): ModelMDoc {
                         mNameSpaces
                     },
                 rawValue = issuerSigned.EncodeToBytes(),
-                issuerAuth = issuerSigned.get("issuerAuth").EncodeToBytes()
+                issuerAuth = issuerSigned.get("issuerAuth")?.EncodeToBytes()
             )
         )
     }
