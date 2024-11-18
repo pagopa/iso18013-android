@@ -8,11 +8,9 @@ import androidx.lifecycle.viewModelScope
 import it.pagopa.cbor_implementation.CborLogger
 import it.pagopa.cbor_implementation.cose.COSEManager
 import it.pagopa.cbor_implementation.cose.SignWithCOSEResult
-import it.pagopa.cbor_implementation.document_manager.algorithm.Algorithm
 import it.pagopa.iso_android.ui.AppDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.UUID
 
 class SignAndVerifyViewViewModel(
     private val coseManager: COSEManager
@@ -64,13 +62,9 @@ class SignAndVerifyViewViewModel(
             val data = what.toByteArray()
             when (val result = coseManager.signWithCOSE(
                 data = data,
-                strongBox = true,
-                attestationChallenge = null,
-                alg = Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA,
-                alias = UUID.randomUUID().toString()
+                alias = "pagoPA"
             )) {
                 is SignWithCOSEResult.Failure -> failureAppDialog(result.msg)
-                is SignWithCOSEResult.UserAuthRequired -> failureAppDialog("user auth req.")
                 is SignWithCOSEResult.Success -> {
                     successAppDialog()
                     val dataSigned = Base64.encodeToString(result.signature, Base64.DEFAULT or Base64.NO_WRAP)

@@ -97,11 +97,15 @@ fun MainActivity?.IsoAndroidPocNavHost(
             val context = LocalContext.current
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val vm = dependenciesInjectedViewModel<SlaveViewViewModel>(
-                QrEngagement.build(context,listOf(BleRetrievalMethod(
-                    peripheralServerMode = true,
-                    centralClientMode = true,
-                    clearBleCache = true
-                ))).configure()
+                QrEngagement.build(
+                    context, listOf(
+                        BleRetrievalMethod(
+                            peripheralServerMode = true,
+                            centralClientMode = true,
+                            clearBleCache = true
+                        )
+                    )
+                ).configure()
             )
             SlaveView(vm = vm, onBack = {
                 backLogic(showMenu) {
@@ -120,11 +124,8 @@ fun MainActivity?.IsoAndroidPocNavHost(
         }
         customAnimatedComposable<HomeDestination.SignAndVerify> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
-            val context = LocalContext.current
             val vm = dependenciesInjectedViewModel<SignAndVerifyViewViewModel>(
-                COSEManager(context)
-                    .useEncryption(true)
-                    .enableUserAuth(false)
+                COSEManager()
             )
             SignAndVerifyView(vm = vm, onBack = {
                 backLogic(showMenu) {

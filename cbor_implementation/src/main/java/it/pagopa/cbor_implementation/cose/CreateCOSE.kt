@@ -2,79 +2,72 @@ package it.pagopa.cbor_implementation.cose
 
 import COSE.AlgorithmID.ECDSA_256
 import COSE.Sign1Message
-import android.content.Context
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import androidx.annotation.CheckResult
-import com.android.identity.android.securearea.AndroidKeystoreKeyUnlockData
-import com.android.identity.android.securearea.AndroidKeystoreSecureArea
-import com.android.identity.securearea.CreateKeySettings
-import com.android.identity.securearea.KeyLockedException
-import com.android.identity.storage.StorageEngine
 import com.upokecenter.cbor.CBORObject
-import it.pagopa.cbor_implementation.CborLogger
-import it.pagopa.cbor_implementation.document_manager.SignedWithAuthKeyResult
-import it.pagopa.cbor_implementation.document_manager.algorithm.Algorithm
-import it.pagopa.cbor_implementation.document_manager.document.UnsignedDocument
-import it.pagopa.cbor_implementation.helper.toBytes
-import java.lang.IllegalArgumentException
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+import java.security.KeyPairGenerator
+import java.security.KeyStore
+import java.security.PrivateKey
+import java.security.PublicKey
+import java.security.Signature
+import java.security.spec.ECGenParameterSpec
 import COSE.HeaderKeys.Algorithm as BaseAlgorithm
 
 internal class CreateCOSE private constructor() {
-    private lateinit var storageEngine: StorageEngine
-    private lateinit var keySettings: CreateKeySettings
-    private var alg = Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA
-    private var alias = "pagoPaAlias"
-    fun withAlias(alias: String) = apply {
-        this.alias = alias
-    }
-
-    fun withAlg(alg: Algorithm.SupportedAlgorithms) = apply {
-        this.alg = alg
-    }
-
-    @OptIn(ExperimentalEncodingApi::class)
-    private fun ByteArray.signWithCOSE(context: Context): SignWithCOSEResult {
-        val softwareSecureArea = AndroidKeystoreSecureArea(context, storageEngine)
-        val keyExists = try {
-            softwareSecureArea.getKeyInfo(alias)
-            true
-        } catch (_: IllegalArgumentException) {
+    private var alias = ""
+    private fun keyExists(): Boolean {
+        return try {
+            val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            keyStore.containsAlias(alias)
+        } catch (_: Exception) {
             false
         }
-        val algorithm = Algorithm(alg).getCryptoAlgorithm()
-        val keyUnlockData = AndroidKeystoreKeyUnlockData(alias)
-        if (!keyExists)
-            softwareSecureArea.createKey(alias, keySettings)
-        val publicKey = softwareSecureArea.getKeyInfo(alias).publicKey
-        return try {
-            softwareSecureArea.sign(
-                alias = alias,
-                signatureAlgorithm = algorithm,
-                dataToSign = this,
-                keyUnlockData = keyUnlockData
-            ).let {
-                CborLogger.i("signature before", Base64.encode(it.toCoseEncoded()))
-                SignWithCOSEResult.Success(it.toCoseEncoded(), publicKey.toBytes())
-            }
-        } catch (e: Exception) {
-            when (e) {
-                is KeyLockedException -> SignWithCOSEResult.UserAuthRequired(
-                    keyUnlockData.getCryptoObjectForSigning(algorithm)
-                )
+    }
 
-                else -> SignWithCOSEResult.Failure(e.toString())
-            }
+    private fun generateKey() {
+        val keyPairGenerator =
+            KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore")
+        val keyGenParameterSpec = KeyGenParameterSpec.Builder(
+            alias,
+            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+        ).setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+            .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
+            .build()
+        keyPairGenerator.initialize(keyGenParameterSpec)
+        keyPairGenerator.generateKeyPair()
+    }
+
+    private fun getPrivateKeyAndPublicKey(): Pair<PrivateKey, PublicKey>? {
+        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        val entry = keyStore.getEntry(alias, null) as? KeyStore.PrivateKeyEntry ?: return null
+        return entry.privateKey to entry.certificate.publicKey
+    }
+
+    private fun signData(data: ByteArray, privateKey: PrivateKey): ByteArray? {
+        return try {
+            val signature = Signature.getInstance("SHA256withECDSA")
+            signature.initSign(privateKey)
+            signature.update(data)
+            signature.sign()
+        } catch (_: Exception) {
+            null
         }
     }
 
-    @OptIn(ExperimentalEncodingApi::class)
+    private fun ByteArray.signWithCOSE(): SignWithCOSEResult {
+        if (!keyExists())
+            generateKey()
+        val pair = getPrivateKeyAndPublicKey()
+        if (pair == null) return SignWithCOSEResult.Failure("key not found")
+        val (private, public) = pair
+        val signature = signData(this, private)
+        if (signature == null) return SignWithCOSEResult.Failure("Fail to sign")
+        return SignWithCOSEResult.Success(signature, public.encoded)
+    }
+
     @CheckResult
-    fun sign(context: Context, data: ByteArray): SignWithCOSEResult {
-        if (!this::storageEngine.isInitialized)
-            throw IllegalStateException("StorageEngine not initialized correctly with with method")
-        if (!this::keySettings.isInitialized)
-            throw IllegalStateException("CreateKeySettings not initialized correctly with with method")
+    fun sign(data: ByteArray): SignWithCOSEResult {
         val msg = Sign1Message(false, true)
         val protectedAttr: CBORObject =
             msg.protectedAttributes.Add(BaseAlgorithm.AsCBOR(), ECDSA_256.AsCBOR())
@@ -85,14 +78,8 @@ internal class CreateCOSE private constructor() {
         array.Add(byteArrayOf())
         array.Add(data)
         val dataToSign = array.EncodeToBytes()
-        CborLogger.i("dataToSign", Base64.encode(dataToSign))
-        CborLogger.i("dataToSign length", dataToSign.size.toString())
-        return when (val result = dataToSign.signWithCOSE(context)) {
+        return when (val result = dataToSign.signWithCOSE()) {
             is SignWithCOSEResult.Failure -> SignWithCOSEResult.Failure(result.msg)
-            is SignWithCOSEResult.UserAuthRequired -> SignWithCOSEResult.UserAuthRequired(
-                result.cryptoObject
-            )
-
             is SignWithCOSEResult.Success -> {
                 SignWithCOSEResult.Success(
                     CBORObject.NewArray().apply {
@@ -109,53 +96,8 @@ internal class CreateCOSE private constructor() {
 
 
     companion object {
-        fun with(
-            storageEngine: StorageEngine,
-            keySettings: CreateKeySettings
-        ) = CreateCOSE().apply {
-            this.storageEngine = storageEngine
-            this.keySettings = keySettings
-        }
-
-        @OptIn(ExperimentalEncodingApi::class)
-        @CheckResult
-        fun signWithDocumentKey(
-            data: ByteArray,
-            unsignedDocument: UnsignedDocument,
-            alg: Algorithm.SupportedAlgorithms = Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA
-        ): SignedWithAuthKeyResult {
-            val msg = Sign1Message(false, true)
-            val protectedAttr: CBORObject =
-                msg.protectedAttributes.Add(BaseAlgorithm.AsCBOR(), ECDSA_256.AsCBOR())
-            val unprotectedAttributes = msg.unprotectedAttributes
-            val array = CBORObject.NewArray()
-            array.Add("Signature1")
-            array.Add(protectedAttr.EncodeToBytes())
-            array.Add(byteArrayOf())
-            array.Add(data)
-            val dataToSign = array.EncodeToBytes()
-            CborLogger.i("dataToSign", Base64.encode(dataToSign))
-            CborLogger.i("dataToSign length", dataToSign.size.toString())
-            return when (val result = unsignedDocument.signWithAuthKeyCOSE(data, alg)) {
-                is SignedWithAuthKeyResult.Failure -> SignedWithAuthKeyResult.Failure(
-                    UnsupportedOperationException("Failed to sign")
-                )
-
-                is SignedWithAuthKeyResult.UserAuthRequired -> SignedWithAuthKeyResult.UserAuthRequired(
-                    result.cryptoObject
-                )
-
-                is SignedWithAuthKeyResult.Success -> {
-                    SignedWithAuthKeyResult.Success(
-                        CBORObject.NewArray().apply {
-                            this.Add(protectedAttr.EncodeToBytes())
-                            this.Add(unprotectedAttributes.EncodeToBytes())
-                            this.Add(data)
-                            this.Add(result.signature)
-                        }.EncodeToBytes()
-                    )
-                }
-            }
+        fun build(alias: String) = CreateCOSE().apply {
+            this.alias = alias
         }
     }
 }
