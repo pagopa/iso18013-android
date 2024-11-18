@@ -44,7 +44,7 @@ data class RequestWrapper(
 
     fun prepare() = apply {
         val cbor = CBORObject.DecodeFromBytes(cborByte)
-        var docTypeCbor = cbor.get("docType")?.AsString()
+        val docTypeCbor = cbor.get("docType")?.AsString()
         val docType = DocType(docTypeCbor)
         if (docType.isAccepted) {
             cbor.get("nameSpaces")?.get(docType.nameSpacesValue)?.let { cbor ->

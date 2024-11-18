@@ -1,8 +1,10 @@
 package it.pagopa.proximity.qr_code
 
 import android.content.Context
+import android.net.Uri
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
+import android.util.Base64
 import androidx.core.content.ContextCompat
 import com.android.identity.android.mdoc.deviceretrieval.DeviceRetrievalHelper
 import com.android.identity.android.mdoc.engagement.QrEngagementHelper
@@ -10,6 +12,7 @@ import com.android.identity.android.mdoc.transport.DataTransport
 import com.android.identity.crypto.Crypto
 import com.android.identity.crypto.EcCurve
 import com.android.identity.crypto.EcPublicKey
+import com.android.identity.mdoc.engagement.EngagementParser
 import com.android.identity.mdoc.request.DeviceRequestParser
 import com.android.identity.util.Constants
 import com.android.identity.util.Logger
@@ -45,6 +48,7 @@ class QrEngagement private constructor(
         Logger.isDebugEnabled = ProximityLogger.enabled
     }
 
+    private var retrievalMethods: List<DeviceRetrievalMethod> = listOf()
     private var readerTrustStore: ReaderTrustStore? = null
     private lateinit var qrEngagement: QrEngagementHelper
     private lateinit var qrEngagementBuilder: QrEngagementHelper.Builder
@@ -165,6 +169,9 @@ class QrEngagement private constructor(
                 deviceRequestBytes,
                 sessionTranscript
             ).parse().docRequests
+            val b64 =
+                Base64.encodeToString(deviceRequestBytes, Base64.URL_SAFE or Base64.NO_PADDING)
+            ProximityLogger.i("DEVICE REQUEST", b64)
             val requestWrapperList = arrayListOf<RequestWrapper>()
             listRequested.forEachIndexed { j, each ->
                 (each toReaderAuthWith this@QrEngagement.readerTrustStore).let {
@@ -218,6 +225,40 @@ class QrEngagement private constructor(
      * */
     fun configure() = apply {
         qrEngagement = qrEngagementBuilder.build()
+    }
+
+    fun connect(mDocString: String) {
+        val uri = Uri.parse(mDocString)
+        if (!uri.scheme.equals("mdoc"))
+            throw IllegalArgumentException("mdoc string must contain mdoc:")
+        val ba = Base64.decode(
+            uri.encodedSchemeSpecificPart,
+            Base64.URL_SAFE or Base64.NO_PADDING
+        )
+        val engagement = EngagementParser(ba).parse()
+        if (engagement.connectionMethods.isEmpty())
+            throw IllegalArgumentException("No connection methods in engagement")
+        ProximityLogger.i("connectionMethods", engagement.connectionMethods.toString())
+        // For now, just pick the first transport
+        val connectionMethod = engagement.connectionMethods[0]
+        ProximityLogger.d(this.javaClass.name, "Using connection method $connectionMethod")
+        val transport = DataTransport.fromConnectionMethod(
+            context,
+            connectionMethod,
+            DataTransport.Role.MDOC,
+            this.retrievalMethods.transportOptions
+        )
+        val deviceRetrievalHelper = DeviceRetrievalHelper.Builder(
+            context,
+            deviceRetrievalHelperListener,
+            context.mainExecutor(),
+            eDevicePrivateKey
+        ).useReverseEngagement(
+            transport,
+            ba,
+            engagement.originInfos
+        ).build()
+        listener?.onDeviceRetrievalHelperReady(DeviceRetrievalHelperWrapper(deviceRetrievalHelper))
     }
 
     /**
@@ -289,6 +330,7 @@ class QrEngagement private constructor(
          */
         fun build(context: Context, retrievalMethods: List<DeviceRetrievalMethod>): QrEngagement {
             return QrEngagement(context).apply {
+                this.retrievalMethods = retrievalMethods
                 qrEngagementBuilder = QrEngagementHelper.Builder(
                     context,
                     eDevicePrivateKey.publicKey,

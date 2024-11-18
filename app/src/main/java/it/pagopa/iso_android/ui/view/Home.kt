@@ -38,27 +38,16 @@ fun HomeView(
     onNavigate: (destination: HomeDestination) -> Unit
 ) {
     val context = LocalContext.current
+    var whereToGo = remember { mutableStateOf<HomeDestination>(HomeDestination.Master) }
     val dialog = remember { mutableStateOf<AppDialog?>(null) }
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted)
-            onNavigate.invoke(HomeDestination.Slave)
-        else
-            Toast.makeText(
-                context,
-                "Ho bisogno del permesso alla fotocamera per procedere..",
-                Toast.LENGTH_LONG
-            ).show()
-    }
-    val bleLauncher = rememberLauncherForActivityResult(
+    val manyPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissionsMap ->
         val granted = permissionsMap.filter {
             it.value == true
         }
         if (granted.size == permissionsMap.size)
-            onNavigate.invoke(HomeDestination.Master)
+            onNavigate.invoke(whereToGo.value)
         else
             Toast.makeText(
                 context,
@@ -101,8 +90,9 @@ fun HomeView(
             )
         }
         TwoButtonsInARow(leftBtnText = "do as Master", leftBtnAction = {
+            whereToGo.value = HomeDestination.Master
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-                bleLauncher.launch(
+                manyPermissionLauncher.launch(
                     arrayOf(
                         Manifest.permission.BLUETOOTH_CONNECT,
                         Manifest.permission.BLUETOOTH_ADVERTISE
@@ -111,7 +101,17 @@ fun HomeView(
             else
                 onNavigate.invoke(HomeDestination.Master)
         }, rightBtnText = "do as Slave", rightBtnAction = {
-            launcher.launch(Manifest.permission.CAMERA)
+            whereToGo.value = HomeDestination.Slave
+            val permissionList = arrayListOf(
+                Manifest.permission.CAMERA,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                permissionList.add(Manifest.permission.BLUETOOTH_CONNECT)
+                permissionList.add(Manifest.permission.BLUETOOTH_ADVERTISE)
+                permissionList.add(Manifest.permission.BLUETOOTH_SCAN)
+            }
+            manyPermissionLauncher.launch(permissionList.toTypedArray())
         })
         Spacer(Modifier.height(16.dp))
     }

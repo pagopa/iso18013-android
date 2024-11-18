@@ -140,8 +140,8 @@ class ResponseGenerator(
         val reqFieldsArray = reqField.toArray()
         nameSpacedData.keys.forEach {
             for (i in 0 until reqFieldsArray.size) {
-                val (value, cborValue) = reqFieldsArray[i]
-                val doNotSend = value || disclosedDocument.doNotSendArray.contains(cborValue)
+                val (_, cborValue) = reqFieldsArray[i]
+                val doNotSend = disclosedDocument.doNotSendArray.contains(cborValue)
                 if (it == cborValue) {
                     dataElements.add(
                         DocumentRequest.DataElement(

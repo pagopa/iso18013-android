@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import it.pagopa.iso_android.base64mockedMoreDocsNoIssuerAuth
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.BigText
 import it.pagopa.iso_android.ui.preview.ThemePreviews
@@ -68,24 +69,21 @@ fun CborView(
                 }
                 TextField(
                     modifier = Modifier
-                        .wrapContentHeight()
-                        .padding(bottom = 16.dp),
+                        .wrapContentHeight(),
                     value = vm.cborText,
                     onValueChange = {
                         vm.cborText = it.trim()
                         scope.launch {
                             delay(500L)
                             listState.scrollToItem(
-                                if (vm.listToShow?.isNotEmpty() == true) 1 else 0
+                                if (vm.model != null || vm.errorToShow != null) 1 else 0
                             )
                         }
                     }
                 )
             }
-            vm.listToShow
-                ?.forEach {
-                    vm.mapToLazyColumnItem(map = it, lazyColumnScope = this)
-                }
+            vm.modelToList(this)
+            vm.errorToShowToComposable(this)
         }
     }
 }
@@ -95,7 +93,9 @@ fun CborView(
 fun CborViewView() {
     BasePreview {
         val viewModel = viewModel<CborViewViewModel>()
-        CborView(vm = viewModel, onBack = {
+        CborView(vm = viewModel.apply {
+            cborText = base64mockedMoreDocsNoIssuerAuth
+        }, onBack = {
 
         })
     }

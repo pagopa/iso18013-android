@@ -2,14 +2,10 @@ package it.pagopa.iso_android.ui.view_model
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -19,110 +15,151 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import it.pagopa.cbor_implementation.impl.MDoc
-import it.pagopa.cbor_implementation.model.DocumentX
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
+import it.pagopa.cbor_implementation.model.DocType
+import it.pagopa.iso_android.ui.BigText
+import it.pagopa.iso_android.ui.MediumText
+import it.pagopa.iso_android.ui.model.DocsModel
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.Base64
 
 class CborViewViewModel : ViewModel() {
     var cborText by mutableStateOf("")
-    var listToShow by mutableStateOf<List<Map<String, List<DocumentX>>?>?>(null)
+    var model by mutableStateOf<DocsModel?>(null)
+    var errorToShow by mutableStateOf<Pair<String, String>?>(null)
     fun decodeMDoc() {
         val mDoc = MDoc(this.cborText)
         mDoc.decodeMDoc(
-            onComplete = { list ->
-                this.listToShow = list.documents?.map {
-                    it.issuerSigned?.nameSpaces
-                }
+            onComplete = { model ->
+                val json = JSONObject(model.toJson())
+                this@CborViewViewModel.model = DocsModel.fromJson(json)
+                this@CborViewViewModel.errorToShow = null
             },
             onError = { ex ->
-                this.listToShow = listOf(
-                    mapOf(
-                        "Error" to listOf(
-                            DocumentX(
-                                digestID = 0,
-                                random = ByteArray(0),
-                                elementIdentifier = "Exception:",
-                                elementValue = ex
-                            )
-                        )
-                    )
-                )
+                this@CborViewViewModel.model = null
+                this@CborViewViewModel.errorToShow = "Exception" to ex.message.orEmpty()
             }
         )
     }
 
-    fun mapToLazyColumnItem(
-        map: Map<String, List<DocumentX?>>?,
+    fun modelToList(
         lazyColumnScope: LazyListScope
     ) {
-        map?.keys?.forEach { key ->
-            lazyColumnScope.lazyColumnItem(map, key)
+        this.model?.let { model ->
+            model.docList?.forEach { doc ->
+                doc.docType?.let { lazyColumnScope.title(it) }
+                doc.issuerSigned?.nameSpaces?.let { nameSpaces ->
+                    val array = JSONArray(nameSpaces)
+                    if (array.length() > 0) {
+                        array.optJSONObject(0)?.optString(DocType(doc.docType).nameSpacesValue)
+                            ?.let { nameSpacesArrayString ->
+                                val nameSpacesArray = JSONArray(nameSpacesArrayString)
+                                for (i in 0 until nameSpacesArray.length()) {
+                                    nameSpacesArray.optJSONObject(i)?.let { currentJson ->
+                                        currentJson.keys().forEach { key ->
+                                            if (key == "portrait" || key == "signature_usual_mark") {
+                                                val bArray: ByteArray? =
+                                                    when (currentJson.get(key)) {
+                                                        is ByteArray -> currentJson.get(key) as ByteArray
+                                                        is String -> Base64.getDecoder()
+                                                            .decode(currentJson.get(key) as String)
+
+                                                        else -> null
+                                                    }
+                                                bArray?.let {
+                                                    lazyColumnScope.lazyColumnItem(
+                                                        key,
+                                                        bArray
+                                                    )
+                                                }
+                                            } else {
+                                                if (key != "random" && key != "digestID") {
+                                                    lazyColumnScope.lazyColumnItem(
+                                                        key,
+                                                        currentJson.get(key)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                    }
+                }
+            }
+        }
+    }
+
+    fun errorToShowToComposable(lazyColumnScope: LazyListScope) {
+        errorToShow?.let {
+            lazyColumnScope.lazyColumnItem(it.first, it.second)
+        }
+    }
+
+    private fun LazyListScope.title(title: String) {
+        item {
+            HorizontalDivider(
+                Modifier
+                    .padding(top = 16.dp)
+            )
+            BigText(
+                modifier = Modifier
+                    .padding(top = 16.dp),
+                text = "$title:",
+                color = Color.Black
+            )
         }
     }
 
     private fun LazyListScope.lazyColumnItem(
-        map: Map<String, List<DocumentX?>>,
-        key: String
+        key: String,
+        value: Any
     ) {
         item {
-            Text(
+            MediumText(
                 modifier = Modifier
                     .padding(top = 16.dp),
-                text = key,
+                text = "$key:",
                 color = Color.Black
             )
         }
-        items(
-            items = map[key].orEmpty(),
-            itemContent = { item ->
-                item?.ElementDecoded()
-            }
-        )
-    }
-
-    @OptIn(ExperimentalEncodingApi::class)
-    @Composable
-    private fun DocumentX.ElementDecoded() {
-        val item = this
-        Column(
-            modifier = Modifier
-                .padding(top = 16.dp)
-                .fillMaxWidth()
-                .background(Color.LightGray)
-                .padding(8.dp),
-        ) {
-            Text(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                text = "${item.elementIdentifier} (${item.elementValue?.javaClass?.name})"
-            )
-
-            if (item.elementIdentifier == "portrait" || item.elementIdentifier == "signature_usual_mark") {
-                val bArray: ByteArray? = when (item.elementValue) {
-                    is ByteArray -> item.elementValue as ByteArray
-                    is String -> Base64.decode(item.elementValue as String)
-                    else -> null
+        if (key == "driving_privileges") {
+            val array = JSONArray(value.toString())
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                obj.keys().forEach {
+                    item {
+                        MediumText(
+                            modifier = Modifier
+                                .padding(top = 8.dp),
+                            text = "$it: ${obj.get(it)}",
+                            color = Color.Black
+                        )
+                    }
                 }
-                bArray?.let {
+            }
+        } else {
+            item {
+                if (value is ByteArray) {
                     Image(
                         modifier = Modifier
                             .padding(top = 16.dp)
                             .fillMaxWidth(),
                         bitmap = BitmapFactory.decodeByteArray(
-                            it,
+                            value,
                             0,
-                            it.size
+                            value.size
                         ).asImageBitmap(),
                         contentDescription = null
                     )
+                } else {
+                    MediumText(
+                        modifier = Modifier
+                            .padding(top = 16.dp),
+                        text = value.toString(),
+                        color = Color.Black
+                    )
                 }
-            } else {
-                Text(
-                    modifier = Modifier
-                        .padding(top = 16.dp)
-                        .fillMaxWidth(),
-                    text = item.elementValue.toString()
-                )
             }
         }
     }

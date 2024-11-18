@@ -5,12 +5,23 @@ import com.upokecenter.cbor.CBORObject
 import it.pagopa.cbor_implementation.exception.DocTypeNotValid
 import it.pagopa.cbor_implementation.exception.MandatoryFieldNotFound
 import it.pagopa.cbor_implementation.helper.toModelMDoc
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.Base64
 
 data class ModelMDoc(
     var documents: List<Document>?,
     var status: Int?,
     var version: String?
 ) {
+    fun toJson(): String {
+        return JSONObject().apply {
+            put("documents", this@ModelMDoc.documents?.map { it.toJson() })
+            put("status", status)
+            put("version", version)
+        }.toString()
+    }
+
     companion object {
         fun fromCBORObject(
             model: CBORObject,
@@ -30,6 +41,13 @@ data class Document(
     var docType: String?,
     var issuerSigned: IssuerSigned?
 ) {
+    fun toJson(): JSONObject {
+        return JSONObject().apply {
+            put("docType", docType)
+            put("issuerSigned", issuerSigned?.toJson())
+        }
+    }
+
     @CheckResult
     fun verifyValidity(): Pair<Boolean, Exception?> {
         val needDataForMdl = listOf(
@@ -80,7 +98,21 @@ data class IssuerSigned(
     var nameSpaces: Map<String, List<DocumentX>>?,
     val rawValue: ByteArray? = null,
     val issuerAuth: ByteArray? = null
-)
+) {
+    fun toJson() = JSONObject().apply {
+        put("issuerAuth", issuerAuth?.let {
+            Base64.getUrlEncoder().encodeToString(issuerAuth)
+        })
+        put("nameSpaces", JSONArray().apply {
+            nameSpaces?.forEach {
+                this.put(JSONObject().apply {
+                    this.put(it.key, it.value.map { it.toJson() })
+                })
+            }
+        })
+    }
+}
+
 /**
  * elementIdentifier->es.:Name
  * elementValue->es:John*/
@@ -89,6 +121,15 @@ data class DocumentX(
     val random: ByteArray?,
     val elementIdentifier: String?,
     val elementValue: Any?
-)
+) {
+    fun toJson() = JSONObject().apply {
+        put("digestID", digestID)
+        put("random", random?.let {
+            Base64.getUrlEncoder().encodeToString(random)
+        })
+        if (elementIdentifier != null)
+            put(elementIdentifier, elementValue)
+    }
+}
 
 

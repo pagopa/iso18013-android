@@ -75,18 +75,16 @@ class MasterViewViewModel(
                 sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
             else
                 sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
-            it.requiredFields?.toArray()?.forEach { (value, fieldName) ->
-                if (it.requiredFields!!.fieldIsRequired(value)) {
-                    val array = if (isMdl)
-                        cborValues.mdlCborValues
-                    else
-                        cborValues.euPidCborValues
-                    array
-                        .filter { (cborValue, _) -> cborValue == fieldName }
-                        .forEach { (_, appValue) ->
-                            sb.append("$appValue;\n")
-                        }
-                }
+            it.requiredFields?.toArray()?.forEach { (_, fieldName) ->
+                val array = if (isMdl)
+                    cborValues.mdlCborValues
+                else
+                    cborValues.euPidCborValues
+                array
+                    .filter { (cborValue, _) -> cborValue == fieldName }
+                    .forEach { (_, appValue) ->
+                        sb.append("$appValue;\n")
+                    }
             }
         }
         this.dialogText = sb.toString()

@@ -56,7 +56,7 @@ dependencies {
     implementation(libs.bouncy.castle.pkix)
     implementation(libs.bouncy.castle.prov)
     implementation(libs.kotlinx.datetime)
-
+    testImplementation(libs.json)
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     androidTestImplementation(libs.androidx.junit)

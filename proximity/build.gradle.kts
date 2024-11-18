@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.bouncy.castle.prov)
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
+    testImplementation(libs.json)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

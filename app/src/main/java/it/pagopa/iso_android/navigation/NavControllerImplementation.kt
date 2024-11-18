@@ -94,8 +94,15 @@ fun MainActivity?.IsoAndroidPocNavHost(
             })
         }
         customAnimatedComposable<HomeDestination.Slave> {
+            val context = LocalContext.current
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
-            val vm = viewModel<SlaveViewViewModel>()
+            val vm = dependenciesInjectedViewModel<SlaveViewViewModel>(
+                QrEngagement.build(context,listOf(BleRetrievalMethod(
+                    peripheralServerMode = true,
+                    centralClientMode = true,
+                    clearBleCache = true
+                ))).configure()
+            )
             SlaveView(vm = vm, onBack = {
                 backLogic(showMenu) {
                     navController.popBackStack()

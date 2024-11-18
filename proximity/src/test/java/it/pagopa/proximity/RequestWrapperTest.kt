@@ -23,7 +23,7 @@ class RequestWrapperTest {
         assert(req.requiredFields != null)
         assert(req.requiredFields!!.docType == DocType.EU_PID)
         val requiredFields = req.requiredFields!! as RequiredFieldsEuPid
-        requiredFields.toArray().forEach {(value, _)->
+        requiredFields.toArray().forEach { (value, _) ->
             assert(value == false)
         }
         assert(requiredFields.gender.first == false)
@@ -62,6 +62,14 @@ class RequestWrapperTest {
         assert(requiredFields.administrativeNumber.first == false)
         assert(requiredFields.portraitCaptureDate.first == false)
         assert(requiredFields.residentHouseNumber.first == false)
+        val json = requiredFields.toJson()
+        println(json)
+        assert(
+            json
+                .getJSONObject("nameSpaces")
+                .getJSONObject("gender")
+                .getBoolean("requested") == true
+        )
     }
 
     @Test
@@ -71,7 +79,7 @@ class RequestWrapperTest {
         assert(req.requiredFields != null)
         assert(req.requiredFields!!.docType == DocType.MDL)
         val requiredFields = req.requiredFields!! as RequiredFieldsMdl
-        requiredFields.toArray().forEach {(value, _)->
+        requiredFields.toArray().forEach { (value, _) ->
             assert(value == false)
         }
         assert(requiredFields.portrait.first == false)
@@ -96,6 +104,12 @@ class RequestWrapperTest {
         assert(requiredFields.residentPostalCode.first == false)
         assert(requiredFields.administrativeNumber.first == false)
         assert(requiredFields.portraitCaptureDate.first == false)
+        val json = requiredFields.toJson()
+        println(json)
+        val portraitValue = json.getJSONObject("nameSpaces").getJSONObject("portrait")
+        assert(
+            portraitValue.getBoolean("requested") == true && portraitValue.getBoolean("intentToRetain") == false
+        )
     }
 
     @OptIn(ExperimentalEncodingApi::class)
