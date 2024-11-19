@@ -4,6 +4,7 @@ import androidx.annotation.CheckResult
 import com.upokecenter.cbor.CBORObject
 import it.pagopa.cbor_implementation.exception.DocTypeNotValid
 import it.pagopa.cbor_implementation.exception.MandatoryFieldNotFound
+import it.pagopa.cbor_implementation.helper.oneDocument
 import it.pagopa.cbor_implementation.helper.toModelMDoc
 import org.json.JSONArray
 import org.json.JSONObject
@@ -23,6 +24,13 @@ data class ModelMDoc(
     }
 
     companion object {
+        fun fromByteArray(
+            model: ByteArray
+        ): ModelMDoc {
+            val cbor = CBORObject.DecodeFromBytes(model)
+            return cbor.toModelMDoc()
+        }
+
         fun fromCBORObject(
             model: CBORObject,
             onComplete: (ModelMDoc) -> Unit,
@@ -39,13 +47,12 @@ data class ModelMDoc(
 
 data class Document(
     var docType: String?,
-    var issuerSigned: IssuerSigned?
+    var issuerSigned: IssuerSigned?,
+    val rawValue: ByteArray
 ) {
-    fun toJson(): JSONObject {
-        return JSONObject().apply {
-            put("docType", docType)
-            put("issuerSigned", issuerSigned?.toJson())
-        }
+    fun toJson() = JSONObject().apply {
+        put("docType", docType)
+        put("issuerSigned", issuerSigned?.toJson())
     }
 
     @CheckResult
@@ -91,6 +98,15 @@ data class Document(
             true to null
         else
             false to MandatoryFieldNotFound(list)
+    }
+
+    companion object {
+        fun fromByteArray(
+            model: ByteArray
+        ): Document {
+            val cbor = CBORObject.DecodeFromBytes(model)
+            return cbor.oneDocument()
+        }
     }
 }
 

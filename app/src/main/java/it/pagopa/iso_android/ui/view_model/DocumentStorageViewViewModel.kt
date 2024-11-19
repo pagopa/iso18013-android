@@ -3,13 +3,11 @@ package it.pagopa.iso_android.ui.view_model
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import it.pagopa.cbor_implementation.document_manager.DocumentManager
+import it.pagopa.cbor_implementation.document_manager.DocManager
 import it.pagopa.cbor_implementation.document_manager.DocumentWithIdentifierNotFound
-import it.pagopa.cbor_implementation.document_manager.LibIso18013DAOException
-import it.pagopa.cbor_implementation.document_manager.algorithm.Algorithm
-import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.cbor_implementation.document_manager.document.DocumentId
 import it.pagopa.cbor_implementation.impl.MDoc
+import it.pagopa.cbor_implementation.model.Document
 import it.pagopa.cbor_implementation.model.EU_PID_DOCTYPE
 import it.pagopa.cbor_implementation.model.MDL_DOCTYPE
 import it.pagopa.iso_android.base64mockedMoreDocs
@@ -18,16 +16,16 @@ import it.pagopa.iso_android.ui.model.Actions
 import it.pagopa.iso_android.ui.model.ActionsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 
 class DocumentStorageViewViewModel(
-    private val documentManager: DocumentManager?
+    private val libDao: DocManager?
 ) : ViewModel() {
     val loader = mutableStateOf<String?>(null)
     val actions = Actions.entries.toTypedArray().map { ActionsManager(it) }
     var appDialog = mutableStateOf<AppDialog?>(null)
     var documents = arrayOf<Document>()
+    var docListId: List<String> = listOf()
 
     private fun resetAllActions() {
         this@DocumentStorageViewViewModel.actions.forEach {
@@ -64,10 +62,15 @@ class DocumentStorageViewViewModel(
         when (action.action) {
             Actions.CREATE_DOC -> createDocument(isMdl = true)
             Actions.CREATE_EU_PID_DOC -> createDocument(isMdl = false)
+            Actions.DELETE_ALL -> deleteAllDocs()
             Actions.GET_ALL_DOCS -> {
                 if (action.isShowingList()) resetAll() else {
                     getAllDocuments(onOk = { docs ->
-                        this.documents = docs
+                        val list= ArrayList<String>()
+                        docs.forEach {
+                            list.add(it.docType!!)
+                        }
+                        this.docListId = list
                         action.showListAndResetOthers()
                     }, onEmptyArray = {
                         resetAll()
@@ -87,19 +90,11 @@ class DocumentStorageViewViewModel(
                     getTypedDocs(isMdl = false)
                 }
             }
-
-            Actions.GET_ALL_STORED_DOCS -> {
-                if (action.isShowingList()) resetAll() else {
-                    getAllStoredDocuments(onOk = { docs ->
-                        this.documents = docs
-                        action.showListAndResetOthers()
-                    }, onEmptyArray = {
-                        resetAll()
-                        appDialogWithOkBtn("Empty", "No doc found")
-                    })
-                }
-            }
         }
+    }
+
+    private fun deleteAllDocs() {
+        libDao?.removeAllDocuments()
     }
 
     private fun appDialogWithOkBtn(title: String, message: String) {
@@ -116,29 +111,41 @@ class DocumentStorageViewViewModel(
         resetAllActions()
         this.loader.value = "Creating"
         viewModelScope.launch(Dispatchers.IO) {
-            val back = documentManager?.createDocument(
-                docType = if (isMdl) MDL_DOCTYPE else EU_PID_DOCTYPE,
-                documentName = "MDL",
-                forceStrongBox = false,
-                algorithm = Algorithm.SupportedAlgorithms.SHA256_WITH_ECD_SA,
-                attestationChallenge = null
-            )
-            appDialogWithOkBtn(
-                title = "Doc created",
-                message = "id: ${back?.id}"
-            )
+            try {
+                val mDoc = MDoc(base64mockedMoreDocs)
+                mDoc.decodeMDoc(onComplete = { model ->
+                    model.documents?.forEach { document ->
+                        if (isMdl) {
+                            if (document.docType == MDL_DOCTYPE)
+                                libDao?.createDocument(document.docType!!, document.rawValue)
+                        } else {
+                            if (document.docType == EU_PID_DOCTYPE)
+                                libDao?.createDocument(document.docType!!, document.rawValue)
+                        }
+                    }
+                }, onError = {
+                    appDialogWithOkBtn("Exception", it.message.orEmpty())
+                })
+                appDialogWithOkBtn(
+                    title = "Doc created",
+                    message = "type: ${if (isMdl) MDL_DOCTYPE else EU_PID_DOCTYPE}"
+                )
+            } catch (e: Exception) {
+                appDialogWithOkBtn("Exception", e.message.orEmpty())
+            }
             this@DocumentStorageViewViewModel.loader.value = null
         }
     }
 
-    private fun getAllDocuments(onOk: (Array<Document>) -> Unit, onEmptyArray: () -> Unit) {
+    private fun getAllDocuments(onOk: (List<Document>) -> Unit, onEmptyArray: () -> Unit) {
         this.loader.value = "Loading"
         viewModelScope.launch(Dispatchers.IO) {
-            val docs = documentManager?.getAllDocuments(null)
-            if (docs.isNullOrEmpty())
+            val list = libDao?.gelAllDocuments()
+            if (list.isNullOrEmpty())
                 onEmptyArray.invoke()
             else
-                onOk.invoke(docs)
+                onOk.invoke(list)
+            this@DocumentStorageViewViewModel.loader.value = null
             this@DocumentStorageViewViewModel.loader.value = null
         }
     }
@@ -151,70 +158,30 @@ class DocumentStorageViewViewModel(
         this.loader.value = "Loading"
         viewModelScope.launch(Dispatchers.IO) {
             val docs = if (isMdl)
-                documentManager?.getAllMdlDocuments(null)
+                libDao?.gelAllMdlDocuments()
             else
-                documentManager?.getAllEuPidDocuments(null)
+                libDao?.gelAllEuPidDocuments()
             if (docs.isNullOrEmpty())
                 onEmptyArray.invoke()
             else
-                onOk.invoke(docs)
+                onOk.invoke(docs.toTypedArray())
             this@DocumentStorageViewViewModel.loader.value = null
         }
     }
 
-    fun deleteDocument(actionCaller: ActionsManager, id: DocumentId) {
+    fun deleteDocument(actionCaller: ActionsManager, id: DocumentId?) {
+        if (id == null) return
         this.loader.value = "Deleting"
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val back = documentManager?.deleteDocument(id)
+                val back = libDao?.deleteDocument(id)
                 if (back == true)
-                    documents = documents.filter { it.id != id }.toTypedArray()
+                    documents = documents.filter { it.docType != id }.toTypedArray()
                 if (documents.isEmpty()) actionCaller.reset()
                 appDialogWithOkBtn("doc", if (back == true) "eliminated" else "fail to eliminate")
             } catch (e: DocumentWithIdentifierNotFound) {
                 appDialogWithOkBtn("Exception", e.message)
             }
-            this@DocumentStorageViewViewModel.loader.value = null
-        }
-    }
-
-    @OptIn(ExperimentalEncodingApi::class)
-    fun storeDocument(doc: Document, onOk: () -> Unit) {
-        this.loader.value = "Storing"
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val mDoc = MDoc(base64mockedMoreDocs)
-                mDoc.decodeMDoc(onComplete = { model ->
-                    model.documents?.forEach { document ->
-                        if (document.docType == doc.docType) {
-                            document.issuerSigned?.rawValue?.let {
-                                val docId = documentManager?.storeDocument(doc.id, it)
-                                appDialogWithOkBtn("Doc stored!!", "ID: $docId")
-                                onOk.invoke()
-                            }
-                        }
-                    }
-                }, onError = {
-                    appDialogWithOkBtn("Exception", it.message.orEmpty())
-                })
-            } catch (e: LibIso18013DAOException) {
-                appDialogWithOkBtn("Exception", e.message.orEmpty())
-            }
-            this@DocumentStorageViewViewModel.loader.value = null
-        }
-    }
-
-    private fun getAllStoredDocuments(
-        onOk: (Array<Document>) -> Unit,
-        onEmptyArray: () -> Unit
-    ) {
-        this.loader.value = "Loading"
-        viewModelScope.launch(Dispatchers.IO) {
-            val docs = documentManager?.getAllDocuments(Document.State.ISSUED)
-            if (docs.isNullOrEmpty())
-                onEmptyArray.invoke()
-            else
-                onOk.invoke(docs)
             this@DocumentStorageViewViewModel.loader.value = null
         }
     }

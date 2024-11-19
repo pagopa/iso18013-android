@@ -88,6 +88,7 @@ data class RequiredFieldsEuPid(
     )
 
     override fun toJson() = JSONObject().apply {
+        put("docType",docType.value)
         put("nameSpaces", JSONObject().apply {
             this.addPairJson(gender)
             this.addPairJson(portrait)

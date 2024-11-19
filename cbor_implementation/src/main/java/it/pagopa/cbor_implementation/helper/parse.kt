@@ -34,51 +34,54 @@ internal fun CBORObject.parse(): Any? {
     }
 }
 
+internal fun CBORObject.oneDocument(): Document {
+    val issuerSigned = this.get("issuerSigned")
+    return Document(
+        docType = this.get("docType")?.AsString(),
+        issuerSigned = IssuerSigned(
+            nameSpaces = issuerSigned.get("nameSpaces")?.keys
+                ?.let { keys ->
+                    val mNameSpaces =
+                        mutableMapOf<String, List<DocumentX>>()
+                    keys
+                        .distinct()
+                        .forEach { key ->
+                            val mList = mutableListOf<DocumentX>()
+                            issuerSigned.get("nameSpaces")
+                                ?.get(key)?.values?.forEach {
+                                    val value =
+                                        CBORObject.DecodeFromBytes(it.GetByteString())
+                                    mList.add(
+                                        DocumentX(
+                                            digestID = value.get("digestID")
+                                                ?.AsInt32(),
+                                            random = value.get("random")
+                                                ?.GetByteString(),
+                                            elementIdentifier = value.get("elementIdentifier")
+                                                ?.AsString(),
+                                            elementValue = value.get("elementValue")
+                                                ?.parse()
+                                        )
+                                    )
+                                }
+                            mNameSpaces[key.AsString()] = mList
+                        }
+                    mNameSpaces
+                },
+            rawValue = issuerSigned?.EncodeToBytes(),
+            issuerAuth = issuerSigned?.get("issuerAuth")?.EncodeToBytes(),
+        ),
+        rawValue = this.EncodeToBytes()
+    )
+}
+
 internal fun CBORObject.toModelMDoc(): ModelMDoc {
     fun isSingleDoc(): Boolean = this.get("docType") != null
-    fun oneDocument(doc: CBORObject): Document {
-        val issuerSigned = doc.get("issuerSigned")
-        return Document(
-            docType = doc.get("docType")?.AsString(),
-            issuerSigned = IssuerSigned(
-                nameSpaces = issuerSigned.get("nameSpaces")?.keys
-                    ?.let { keys ->
-                        val mNameSpaces =
-                            mutableMapOf<String, List<DocumentX>>()
-                        keys
-                            .distinct()
-                            .forEach { key ->
-                                val mList = mutableListOf<DocumentX>()
-                                issuerSigned.get("nameSpaces")
-                                    ?.get(key)?.values?.forEach {
-                                        val value =
-                                            CBORObject.DecodeFromBytes(it.GetByteString())
-                                        mList.add(
-                                            DocumentX(
-                                                digestID = value.get("digestID")
-                                                    ?.AsInt32(),
-                                                random = value.get("random")
-                                                    ?.GetByteString(),
-                                                elementIdentifier = value.get("elementIdentifier")
-                                                    ?.AsString(),
-                                                elementValue = value.get("elementValue")
-                                                    ?.parse()
-                                            )
-                                        )
-                                    }
-                                mNameSpaces[key.AsString()] = mList
-                            }
-                        mNameSpaces
-                    },
-                rawValue = issuerSigned?.EncodeToBytes(),
-                issuerAuth = issuerSigned?.get("issuerAuth")?.EncodeToBytes()
-            )
-        )
-    }
+
     return if (isSingleDoc()) {
         ModelMDoc(
             documents = listOf(
-                oneDocument(this)
+                this.oneDocument()
             ),
             status = null,
             version = null
@@ -89,7 +92,7 @@ internal fun CBORObject.toModelMDoc(): ModelMDoc {
             status = this.get("status")?.AsInt32(),
             documents = this.get("documents")?.values
                 ?.map { doc ->
-                    oneDocument(doc)
+                    doc.oneDocument()
                 }
         )
     }

@@ -30,5 +30,5 @@ enum class Actions(val description: String) {
     GET_ALL_DOCS("Get All docs"),
     GET_ALL_MDL_DOCS("Get ALL Mdl Docs"),
     GET_ALL_EU_PID_DOCS("Get all eu pid docs"),
-    GET_ALL_STORED_DOCS("get all stored docs")
+    DELETE_ALL("Delete all docs")
 }

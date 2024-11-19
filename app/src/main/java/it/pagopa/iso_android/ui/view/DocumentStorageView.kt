@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Button
@@ -31,22 +30,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import it.pagopa.cbor_implementation.document_manager.document.Document
 import it.pagopa.iso_android.R
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.GenericDialog
 import it.pagopa.iso_android.ui.LoaderDialog
 import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.SmallText
-import it.pagopa.iso_android.ui.model.Actions
 import it.pagopa.iso_android.ui.preview.ThemePreviews
 import it.pagopa.iso_android.ui.view_model.DocumentStorageViewViewModel
 
@@ -95,25 +90,16 @@ fun DocumentStorageView(
                             .border(2.dp, color = MaterialTheme.colorScheme.primary)
                     ) {
                         vm.documents.forEach { document ->
-                            val docState = mutableStateOf(document.state)
                             SmallText(
                                 modifier = Modifier
                                     .wrapContentSize()
                                     .padding(horizontal = 8.dp, vertical = 4.dp),
-                                text = "Type: ${document.docType}\n id: ${document.id}",
+                                text = "Type: ${document.docType}\n id: ${document.docType}",
                                 color = MaterialTheme.colorScheme.primary
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.primary)
-                            if (each.action != Actions.GET_ALL_STORED_DOCS) {
-                                ItemDoc(documentState = docState, isDelete = false) {
-                                    if (document.state == Document.State.UNSIGNED)
-                                        vm.storeDocument(document, onOk = {
-                                            docState.value = Document.State.ISSUED
-                                        })
-                                }
-                            }
-                            ItemDoc(documentState = docState, isDelete = true) {
-                                vm.deleteDocument(each, document.id)
+                            ItemDoc(isDelete = true) {
+                                vm.deleteDocument(each, document.docType)
                             }
                         }
                     }
@@ -131,7 +117,6 @@ fun DocumentStorageView(
 
 @Composable
 fun ItemDoc(
-    documentState: MutableState<Document.State>,
     isDelete: Boolean,
     onClick: () -> Unit
 ) {
@@ -141,14 +126,13 @@ fun ItemDoc(
             .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        this.OneItem(documentState, isDelete, onClick)
+        this.OneItem(isDelete, onClick)
     }
     HorizontalDivider(color = MaterialTheme.colorScheme.primary)
 }
 
 @Composable
 private fun RowScope.OneItem(
-    documentState: MutableState<Document.State>,
     isDelete: Boolean,
     onClick: () -> Unit
 ) {
@@ -172,8 +156,6 @@ private fun RowScope.OneItem(
             .widthIn(0.dp, 56.dp)
             .clickable(onClick = onClick),
         imageVector = if (isDelete) Icons.Default.Delete
-        else if (documentState.value == Document.State.ISSUED)
-            Icons.Default.CheckCircle
         else
             Icons.Default.Lock,
         tint = if (isDelete) Color.Red else MaterialTheme.colorScheme.primary,

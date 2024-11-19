@@ -80,6 +80,7 @@ data class RequiredFieldsMdl(
     )
 
     override fun toJson() = JSONObject().apply {
+        put("docType", docType.value)
         put("nameSpaces", JSONObject().apply {
             this.addPairJson(height)
             this.addPairJson(weight)

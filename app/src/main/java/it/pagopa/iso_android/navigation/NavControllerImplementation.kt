@@ -19,8 +19,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import it.pagopa.cbor_implementation.cose.COSEManager
-import it.pagopa.cbor_implementation.document_manager.DocumentManager
-import it.pagopa.cbor_implementation.document_manager.DocumentManagerBuilder
+import it.pagopa.cbor_implementation.document_manager.DocManager
 import it.pagopa.iso_android.MainActivity
 import it.pagopa.iso_android.R
 import it.pagopa.iso_android.ui.view.CborView
@@ -137,11 +136,11 @@ fun MainActivity?.IsoAndroidPocNavHost(
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val context = LocalContext.current
             val vm = dependenciesInjectedViewModel<DocumentStorageViewViewModel>(
-                DocumentManager.build(
-                    DocumentManagerBuilder(
-                        context = context
-                    ).enableUserAuth(false)
-                        .checkPublicKeyBeforeAdding(false)
+                DocManager.getInstance(
+                    context = context,
+                    storageDirectory = context.noBackupFilesDir,
+                    prefix = "SECURE_STORAGE",
+                    alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
                 )
             )
             DocumentStorageView(vm = vm, onBack = {
