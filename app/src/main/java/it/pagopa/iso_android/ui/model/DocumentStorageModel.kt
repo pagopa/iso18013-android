@@ -10,7 +10,7 @@ data class ActionsManager(
     val hasList: MutableState<Boolean> = mutableStateOf(false)
 ) : Serializable {
     fun couldShowList(): Boolean {
-        return this.action != Actions.CREATE_DOC && this.action != Actions.CREATE_EU_PID_DOC
+        return this.action != Actions.CREATE_DOC && this.action != Actions.CREATE_EU_PID_DOC && this.action != Actions.DELETE_ALL
     }
 
     fun reset() {

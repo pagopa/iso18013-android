@@ -25,7 +25,6 @@ class DocumentStorageViewViewModel(
     val actions = Actions.entries.toTypedArray().map { ActionsManager(it) }
     var appDialog = mutableStateOf<AppDialog?>(null)
     var documents = arrayOf<Document>()
-    var docListId: List<String> = listOf()
 
     private fun resetAllActions() {
         this@DocumentStorageViewViewModel.actions.forEach {
@@ -66,11 +65,7 @@ class DocumentStorageViewViewModel(
             Actions.GET_ALL_DOCS -> {
                 if (action.isShowingList()) resetAll() else {
                     getAllDocuments(onOk = { docs ->
-                        val list= ArrayList<String>()
-                        docs.forEach {
-                            list.add(it.docType!!)
-                        }
-                        this.docListId = list
+                        this.documents = docs.toTypedArray()
                         action.showListAndResetOthers()
                     }, onEmptyArray = {
                         resetAll()
@@ -94,7 +89,12 @@ class DocumentStorageViewViewModel(
     }
 
     private fun deleteAllDocs() {
-        libDao?.removeAllDocuments()
+        this.loader.value = "DELETING.."
+        viewModelScope.launch(Dispatchers.IO) {
+            libDao?.removeAllDocuments()
+            appDialogWithOkBtn("Exception", "DELETED")
+            this@DocumentStorageViewViewModel.loader.value = null
+        }
     }
 
     private fun appDialogWithOkBtn(title: String, message: String) {
