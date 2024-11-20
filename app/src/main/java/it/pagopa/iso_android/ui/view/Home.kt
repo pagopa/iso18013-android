@@ -31,6 +31,7 @@ import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.SmallText
 import it.pagopa.iso_android.ui.TwoButtonsInARow
 import it.pagopa.iso_android.ui.preview.ThemePreviews
+import it.pagopa.proximity.bluetooth.BluetoothUtils
 
 @Composable
 fun HomeView(
@@ -91,15 +92,19 @@ fun HomeView(
         }
         TwoButtonsInARow(leftBtnText = "do as Master", leftBtnAction = {
             whereToGo.value = HomeDestination.Master
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-                manyPermissionLauncher.launch(
-                    arrayOf(
-                        Manifest.permission.BLUETOOTH_CONNECT,
-                        Manifest.permission.BLUETOOTH_ADVERTISE
+            if (!BluetoothUtils.isBluetoothEnabled(context))
+                Toast.makeText(context, "Prima accendi il bluetooth", Toast.LENGTH_LONG).show()
+            else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                    manyPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.BLUETOOTH_CONNECT,
+                            Manifest.permission.BLUETOOTH_ADVERTISE
+                        )
                     )
-                )
-            else
-                onNavigate.invoke(HomeDestination.Master)
+                else
+                    onNavigate.invoke(HomeDestination.Master)
+            }
         }, rightBtnText = "do as Slave", rightBtnAction = {
             whereToGo.value = HomeDestination.Slave
             val permissionList = arrayListOf(

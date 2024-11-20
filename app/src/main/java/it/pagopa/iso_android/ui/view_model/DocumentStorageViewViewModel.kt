@@ -92,7 +92,7 @@ class DocumentStorageViewViewModel(
         this.loader.value = "DELETING.."
         viewModelScope.launch(Dispatchers.IO) {
             libDao?.removeAllDocuments()
-            appDialogWithOkBtn("Exception", "DELETED")
+            appDialogWithOkBtn("Documents", "DELETED")
             this@DocumentStorageViewViewModel.loader.value = null
         }
     }

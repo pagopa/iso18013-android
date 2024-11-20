@@ -67,7 +67,7 @@ internal class CreateCOSE private constructor() {
     }
 
     @CheckResult
-    fun sign(data: ByteArray): SignWithCOSEResult {
+    fun sign(data: ByteArray, isDetached: Boolean): SignWithCOSEResult {
         val msg = Sign1Message(false, true)
         val protectedAttr: CBORObject =
             msg.protectedAttributes.Add(BaseAlgorithm.AsCBOR(), ECDSA_256.AsCBOR())
@@ -85,7 +85,7 @@ internal class CreateCOSE private constructor() {
                     CBORObject.NewArray().apply {
                         this.Add(protectedAttr.EncodeToBytes())
                         this.Add(unprotectedAttributes.EncodeToBytes())
-                        this.Add(data)
+                        this.Add(if (isDetached) null else data)
                         this.Add(result.signature)
                     }.EncodeToBytes(),
                     result.publicKey
@@ -93,7 +93,6 @@ internal class CreateCOSE private constructor() {
             }
         }
     }
-
 
     companion object {
         fun build(alias: String) = CreateCOSE().apply {

@@ -11,6 +11,7 @@ enum class DocType(
     val isAccepted get() = this == MDL || this == EU_PID
 
     companion object {
+        @JvmSynthetic
         operator fun invoke(string: String?): DocType {
             return when (string) {
                 MDL.value -> MDL

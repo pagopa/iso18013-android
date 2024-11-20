@@ -1,45 +1,33 @@
 package it.pagopa.proximity.response
 
-import android.content.Context
-import com.android.identity.android.securearea.AndroidKeystoreKeyUnlockData
-import com.android.identity.android.securearea.AndroidKeystoreSecureArea
-import com.android.identity.android.storage.AndroidStorageEngine
-import com.android.identity.credential.CredentialFactory
-import com.android.identity.crypto.Algorithm
-import com.android.identity.document.Document
+import android.util.Base64
+import com.android.identity.cbor.Bstr
+import com.android.identity.cbor.Cbor
+import com.android.identity.cbor.CborArray
+import com.android.identity.cbor.CborMap
+import com.android.identity.cbor.DataItem
+import com.android.identity.cbor.RawCbor
+import com.android.identity.cbor.Tagged
 import com.android.identity.document.DocumentRequest
-import com.android.identity.document.DocumentStore
 import com.android.identity.document.NameSpacedData
-import com.android.identity.mdoc.credential.MdocCredential
 import com.android.identity.mdoc.mso.StaticAuthDataParser
 import com.android.identity.mdoc.response.DeviceResponseGenerator
-import com.android.identity.mdoc.response.DocumentGenerator
 import com.android.identity.mdoc.util.MdocUtil
-import com.android.identity.securearea.KeyLockedException
-import com.android.identity.securearea.SecureAreaRepository
-import com.android.identity.storage.StorageEngine
 import com.android.identity.util.Constants
-import it.pagopa.proximity.DocType
+import it.pagopa.cbor_implementation.cose.COSEManager
+import it.pagopa.cbor_implementation.cose.SignWithCOSEResult
 import it.pagopa.proximity.ProximityLogger
-import it.pagopa.proximity.document.DisclosedDocument
-import it.pagopa.proximity.request.RequiredFieldsEuPid
-import it.pagopa.proximity.request.RequiredFieldsMdl
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
-import kotlinx.io.files.Path
-import java.io.File
+import it.pagopa.proximity.request.DocRequested
+import org.json.JSONObject
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.forEach
+import kotlin.collections.iterator
+import it.pagopa.cbor_implementation.model.Document as DocumentModel
 
 class ResponseGenerator(
-    private val context: Context,
     private val sessionsTranscript: ByteArray
 ) {
-    private sealed interface AddDocumentToResponse {
-        object Success : AddDocumentToResponse
-        data class UserAuthRequired(
-            val keyUnlockData: AndroidKeystoreKeyUnlockData
-        ) : AddDocumentToResponse
-    }
-
     interface Response {
         /**@param [response] [ByteArray] generated for response*/
         fun onResponseGenerated(response: ByteArray)
@@ -56,25 +44,21 @@ class ResponseGenerator(
      */
     @JvmName("createResponseWithCallback")
     fun createResponse(
-        disclosedDocuments: Array<DisclosedDocument>,
+        documents: Array<DocRequested>,
+        fieldRequestedAndAccepted: String,
         response: Response
     ) {
-        if (disclosedDocuments.isNotEmpty()) {
-            val (responseToSend, message) = this.createResponse(
-                disclosedDocuments
+        val (responseToSend, message) = this.createResponse(
+            documents, fieldRequestedAndAccepted
+        )
+        responseToSend?.let {
+            response.onResponseGenerated(it)
+        } ?: run {
+            response.onError(message)
+            ProximityLogger.e(
+                "Sending resp",
+                "found doc but fail to generate raw response: $message"
             )
-            responseToSend?.let {
-                response.onResponseGenerated(it)
-            } ?: run {
-                response.onError(message)
-                ProximityLogger.e(
-                    "Sending resp",
-                    "found doc but fail to generate raw response: $message"
-                )
-            }
-        } else {
-            ProximityLogger.e("Sending resp", "no doc found")
-            response.onError("no doc found")
         }
     }
 
@@ -84,13 +68,33 @@ class ResponseGenerator(
      * if ByteArray is created without Exceptions message back will be "created" else
      * [Throwable.message] reached or empty string if this is null
      */
+    @JvmName("createResponseWithBase64")
     private fun createResponse(
-        disclosedDocuments: Array<DisclosedDocument>
+        documents: Array<DocRequested>,
+        fieldRequestedAndAccepted: String
     ): Pair<ByteArray?, String> {
         try {
             val deviceResponse = DeviceResponseGenerator(Constants.DEVICE_RESPONSE_STATUS_OK)
-            disclosedDocuments.forEach { responseDocument ->
-                addDocumentToResponse(deviceResponse, responseDocument, sessionsTranscript)
+            val fieldsRequested = JSONObject(fieldRequestedAndAccepted)
+            fieldsRequested.keys().forEach { key ->
+                documents.filter {
+                    val bytes = Base64.decode(it.content, Base64.DEFAULT)
+                    val doc = DocumentModel.fromByteArray(bytes)
+                    doc.docType == key
+                }.map {
+                    val bytes = Base64.decode(it.content, Base64.DEFAULT)
+                    DocumentModel.fromByteArray(bytes) to it.alias
+                }.forEach { (doc, alias) ->
+                    addDocToResponse(
+                        responseGenerator = deviceResponse,
+                        document = doc,
+                        fieldsRequested = fieldsRequested,
+                        key = key,
+                        transcript = sessionsTranscript,
+                        alias = alias,
+                        docType = doc.docType!!
+                    )
+                }
             }
             return deviceResponse.generate() to "created"
         } catch (e: Exception) {
@@ -98,112 +102,138 @@ class ResponseGenerator(
         }
     }
 
-    internal val storageEngine: StorageEngine by lazy {
-        val path = Path(File(context.noBackupFilesDir.path, "pagopa-identity.bin").path)
-        AndroidStorageEngine.Builder(context, path)
-            .setUseEncryption(true)
-            .build()
-    }
-    internal val androidSecureArea: AndroidKeystoreSecureArea by lazy {
-        AndroidKeystoreSecureArea(context, storageEngine)
-    }
-    private val secureAreaRepository: SecureAreaRepository by lazy {
-        SecureAreaRepository().apply {
-            addImplementation(androidSecureArea)
-        }
-    }
-
-    private val credentialFactory: CredentialFactory by lazy {
-        CredentialFactory().apply {
-            addCredentialImplementation(MdocCredential::class) { document, dataItem ->
-                MdocCredential(document, dataItem)
-            }
-        }
-    }
-
-    @Throws(IllegalStateException::class)
-    private fun addDocumentToResponse(
-        responseGenerator: DeviceResponseGenerator,
-        disclosedDocument: DisclosedDocument,
-        transcript: ByteArray
-    ): AddDocumentToResponse {
-        if (!DocType(disclosedDocument.docType).isAccepted)
-            throw IllegalStateException("Doc type is not of kind ${DocType.EU_PID.value} || ${DocType.MDL.value}")
-        val dataElements = ArrayList<DocumentRequest.DataElement>()
-        val reqField = if (disclosedDocument.docType == DocType.EU_PID.value) {
-            disclosedDocument.requestedFields as RequiredFieldsEuPid
-        } else {
-            disclosedDocument.requestedFields as RequiredFieldsMdl
-        }
-        val nameSpaceName = disclosedDocument.nameSpaces.keys.first()
-        val nameSpacedData = disclosedDocument.nameSpaces.values.first()
-        val reqFieldsArray = reqField.toArray()
-        nameSpacedData.keys.forEach {
-            for (i in 0 until reqFieldsArray.size) {
-                val (_, cborValue) = reqFieldsArray[i]
-                val doNotSend = disclosedDocument.doNotSendArray.contains(cborValue)
-                if (it == cborValue) {
-                    dataElements.add(
-                        DocumentRequest.DataElement(
+    private fun setDeviceNamespaces(
+        sessionTranscript: ByteArray,
+        alias: String, docType: String
+    ): DataItem {
+        val dataElements = NameSpacedData.Builder().build()
+        val mapBuilder = CborMap.builder()
+        for (nameSpaceName in dataElements.nameSpaceNames) {
+            val nsBuilder = mapBuilder.putMap(nameSpaceName)
+            for (dataElementName in dataElements.getDataElementNames(
+                nameSpaceName
+            )) {
+                nsBuilder.put(
+                    dataElementName,
+                    RawCbor(
+                        dataElements.getDataElement(
                             nameSpaceName,
-                            it,
-                            false,
-                            doNotSend = doNotSend
+                            dataElementName
                         )
                     )
-                    break
-                }
+                )
             }
         }
-        val request = DocumentRequest(dataElements)
-        val documentStore =
-            DocumentStore(storageEngine, secureAreaRepository, credentialFactory)
-        val document = documentStore.lookupDocument(disclosedDocument.documentId)
-            ?: throw IllegalStateException("Document not found")
-        val credential = document.findCredential(Clock.System.now())
-            ?: throw IllegalStateException("No credential available")
-        val staticAuthData = StaticAuthDataParser(credential.issuerProvidedData).parse()
-        val mergedIssuerNamespaces = MdocUtil.mergeIssuerNamesSpaces(
-            request, document.applicationData.getNameSpacedData("nameSpacedData"), staticAuthData
+        mapBuilder.end()
+        val encodedDeviceNameSpaces = Cbor.encode(mapBuilder.end().build())
+        val deviceAuthentication = Cbor.encode(
+            CborArray.builder()
+                .add("DeviceAuthentication")
+                .add(RawCbor(sessionTranscript))
+                .add(docType)
+                .addTaggedEncodedCbor(encodedDeviceNameSpaces)
+                .end()
+                .build()
         )
-        val keyUnlockData = AndroidKeystoreKeyUnlockData(credential.alias)
-        try {
-            val generator =
-                DocumentGenerator(disclosedDocument.docType, staticAuthData.issuerAuth, transcript)
-                    .setIssuerNamespaces(mergedIssuerNamespaces)
-            generator.setDeviceNamespacesSignature(
-                NameSpacedData.Builder().build(),
-                credential.secureArea,
-                credential.alias,
-                keyUnlockData,
-                Algorithm.ES256
-            )
-            val data = generator.generate()
-            responseGenerator.addDocument(data)
-        } catch (lockedException: KeyLockedException) {
-            ProximityLogger.e(this.javaClass.name, "error: $lockedException")
-            return AddDocumentToResponse.UserAuthRequired(keyUnlockData)
+        val deviceAuthenticationBytes = Cbor.encode(
+            Tagged(24, Bstr(deviceAuthentication))
+        )
+        var encodedDeviceSignature: ByteArray
+        when (val result = COSEManager().signWithCOSE(
+            data = deviceAuthenticationBytes,
+            alias = alias,
+            isDetached = true
+        )) {
+            is SignWithCOSEResult.Success -> encodedDeviceSignature = result.signature
+            else -> throw IllegalArgumentException("Fail to sign Sign1 message")
         }
-        return AddDocumentToResponse.Success
+        val deviceAuthType = "deviceSignature"
+        val deviceAuthDataItem = Cbor.decode(encodedDeviceSignature)
+        return CborMap.builder()
+            .putTaggedEncodedCbor("nameSpaces", encodedDeviceNameSpaces)
+            .putMap("deviceAuth")
+            .put(deviceAuthType, deviceAuthDataItem)
+            .end()
+            .end()
+            .build()
     }
 
-    private fun Document.findCredential(
-        now: Instant
-    ): MdocCredential? {
-        var candidate: MdocCredential? = null
-        certifiedCredentials
-            .filterIsInstance<MdocCredential>()
-            .filter { now >= it.validFrom && now <= it.validUntil }
-            .forEach { credential ->
-                // If we already have a candidate, prefer this one if its usage count is lower
-                candidate?.let { candidateCredential ->
-                    if (credential.usageCount < candidateCredential.usageCount) {
-                        candidate = credential
+    private fun addDocToResponse(
+        responseGenerator: DeviceResponseGenerator,
+        document: DocumentModel,
+        fieldsRequested: JSONObject,
+        key: String,
+        transcript: ByteArray,
+        alias: String,
+        docType: String
+    ) {
+        val dataElements = ArrayList<DocumentRequest.DataElement>()
+        val json = fieldsRequested.optJSONObject(key)
+        json?.keys()?.forEach { nameSpaceValue ->
+            document.issuerSigned?.nameSpaces?.keys?.forEach { nameSpaceKey ->
+                val isRequested = json.optBoolean(nameSpaceValue) == true
+                if (isRequested) {
+                    document.issuerSigned?.nameSpaces?.get(nameSpaceKey)?.filter {
+                        it.elementIdentifier == nameSpaceValue
+                    }?.forEach {
+                        dataElements.add(
+                            DocumentRequest.DataElement(
+                                nameSpaceKey,
+                                it.elementIdentifier!!,
+                                false
+                            )
+                        )
                     }
-                } ?: run {
-                    candidate = credential
                 }
             }
-        return candidate
+        }
+        val deviceSigned = setDeviceNamespaces(
+            transcript,
+            alias,
+            docType
+        )
+        val staticAuthData = StaticAuthDataParser(document.issuerSigned!!.rawValue!!).parse()
+        val request = DocumentRequest(dataElements)
+        val issuerNamespaces = MdocUtil.mergeIssuerNamesSpaces(
+            request,
+            NameSpacedData.fromDataItem(nameSpacedData(document.issuerSigned!!.nameSpacedData)),
+            staticAuthData
+        )
+        val issuerSignedMapBuilder = CborMap.builder()
+        val insOuter = CborMap.builder()
+        for (ns in issuerNamespaces.keys) {
+            val insInner = insOuter.putArray(ns)
+            for (encodedIssuerSignedItemBytes in issuerNamespaces[ns]!!) {
+                insInner.add(RawCbor(encodedIssuerSignedItemBytes))
+            }
+            insInner.end()
+        }
+        insOuter.end()
+        issuerSignedMapBuilder.put("nameSpaces", insOuter.end().build())
+        issuerSignedMapBuilder.put("issuerAuth", RawCbor(document.issuerSigned!!.issuerAuth!!))
+        val issuerSigned = issuerSignedMapBuilder.end().build()
+        val mapBuilder = CborMap.builder().apply {
+            put("docType", docType)
+            put("issuerSigned", issuerSigned)
+            put("deviceSigned", deviceSigned)
+        }
+        responseGenerator.addDocument(Cbor.encode(mapBuilder.end().build()))
+    }
+
+    private fun nameSpacedData(map: Map<String, Map<String, ByteArray>>): DataItem {
+        CborMap.builder().run {
+            for (namespaceName in map.keys) {
+                val innerMapBuilder = putMap(namespaceName)
+                val namespace = map[namespaceName]!!
+                for ((dataElementName, dataElementValue) in namespace) {
+                    innerMapBuilder.putTagged(
+                        dataElementName,
+                        Tagged.ENCODED_CBOR,
+                        Bstr(dataElementValue)
+                    )
+                }
+            }
+            return end().build()
+        }
     }
 }

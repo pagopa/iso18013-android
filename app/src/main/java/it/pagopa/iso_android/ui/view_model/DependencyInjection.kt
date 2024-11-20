@@ -1,5 +1,6 @@
 package it.pagopa.iso_android.ui.view_model
 
+import android.content.res.Resources
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -22,7 +23,15 @@ class DependencyInjectedVm<out VM : ViewModel>(
             if (paramSize != dependencies.size)
                 throw IllegalArgumentException("Array not filled completely or too much")
             it.parameterTypes.forEachIndexed { i, each ->
-                if (dependencies[i]!!.javaClass == each)
+                var isResourcesClass = false
+                try {
+                    dependencies[i]!!.javaClass.getDeclaredConstructor().newInstance() as Resources
+                    isResourcesClass = true
+                } catch (_: Exception) {
+                }
+                if (isResourcesClass)
+                    cntOk--
+                else if (dependencies[i]!!.javaClass == each)
                     cntOk--
             }
             cntOk == 0

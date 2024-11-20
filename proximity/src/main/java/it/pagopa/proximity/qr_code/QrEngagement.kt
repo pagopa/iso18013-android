@@ -18,13 +18,14 @@ import com.android.identity.util.Constants
 import com.android.identity.util.Logger
 import it.pagopa.proximity.ProximityLogger
 import it.pagopa.proximity.document.reader_auth.ReaderTrustStore
-import it.pagopa.proximity.request.RequestFromDevice
 import it.pagopa.proximity.request.RequestWrapper
 import it.pagopa.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.proximity.retrieval.connectionMethods
 import it.pagopa.proximity.retrieval.transportOptions
+import it.pagopa.proximity.toRequest
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.json.JSONObject
 import java.security.Security
 import java.util.concurrent.Executor
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -172,19 +173,23 @@ class QrEngagement private constructor(
             val b64 =
                 Base64.encodeToString(deviceRequestBytes, Base64.URL_SAFE or Base64.NO_PADDING)
             ProximityLogger.i("DEVICE REQUEST", b64)
-            val requestWrapperList = arrayListOf<RequestWrapper>()
+            val requestWrapperList = arrayListOf<JSONObject?>()
             listRequested.forEachIndexed { j, each ->
                 (each toReaderAuthWith this@QrEngagement.readerTrustStore).let {
                     requestWrapperList.add(
                         RequestWrapper(
                             each.itemsRequest,
                             it?.readerSignIsValid == true
-                        ).prepare()
+                        ).prepare().toJson()
                     )
                 }
             }
+            val jsonToSend = requestWrapperList.toTypedArray().toRequest()
             listener?.onNewDeviceRequest(
-                RequestFromDevice(requestWrapperList.toList()),
+                if (jsonToSend.keys().asSequence().toMutableList().isEmpty())
+                    null
+                else
+                    jsonToSend.toString(),
                 sessionTranscript
             )
         }

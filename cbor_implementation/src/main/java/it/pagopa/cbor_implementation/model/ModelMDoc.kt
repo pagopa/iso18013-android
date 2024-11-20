@@ -113,17 +113,16 @@ data class Document(
 data class IssuerSigned(
     var nameSpaces: Map<String, List<DocumentX>>?,
     val rawValue: ByteArray? = null,
+    val nameSpacedData: Map<String, Map<String, ByteArray>>,
     val issuerAuth: ByteArray? = null
 ) {
     fun toJson() = JSONObject().apply {
         put("issuerAuth", issuerAuth?.let {
             Base64.getUrlEncoder().encodeToString(issuerAuth)
         })
-        put("nameSpaces", JSONArray().apply {
+        put("nameSpaces", JSONObject().apply {
             nameSpaces?.forEach {
-                this.put(JSONObject().apply {
-                    this.put(it.key, it.value.map { it.toJson() })
-                })
+                this.put(it.key, it.value.map { it.toJson() })
             }
         })
     }

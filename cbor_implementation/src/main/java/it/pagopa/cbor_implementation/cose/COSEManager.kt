@@ -25,10 +25,11 @@ class COSEManager {
     @CheckResult
     fun signWithCOSE(
         data: ByteArray,
-        alias: String = "pagoPaAlias"
+        alias: String = "pagoPaAlias",
+        isDetached: Boolean = false
     ): SignWithCOSEResult {
         try {
-            return CreateCOSE.build(alias).sign(data)
+            return CreateCOSE.build(alias).sign(data, isDetached)
         } catch (e: Exception) {
             CborLogger.e("signWithCOSE", e.toString())
             return SignWithCOSEResult.Failure(e.toString())

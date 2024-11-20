@@ -1,16 +1,13 @@
 package it.pagopa.cbor_implementation.helper
 
-import com.android.identity.crypto.EcPublicKey
-import com.android.identity.crypto.javaPublicKey
 import com.upokecenter.cbor.CBORObject
 import com.upokecenter.cbor.CBORType
+import it.pagopa.cbor_implementation.extensions.asNameSpacedData
 import it.pagopa.cbor_implementation.model.Document
 import it.pagopa.cbor_implementation.model.DocumentX
 import it.pagopa.cbor_implementation.model.IssuerSigned
 import it.pagopa.cbor_implementation.model.ModelMDoc
 import java.util.Base64
-
-internal fun EcPublicKey.toBytes() = this.javaPublicKey.encoded
 
 internal fun CBORObject.parse(): Any? {
     if (isNull) return null
@@ -36,10 +33,13 @@ internal fun CBORObject.parse(): Any? {
 
 internal fun CBORObject.oneDocument(): Document {
     val issuerSigned = this.get("issuerSigned")
+    val nameSpaces = issuerSigned.get("nameSpaces")
+    val nameSpacesKeys = issuerSigned.get("nameSpaces")?.keys
+    val data = nameSpaces.asNameSpacedData()
     return Document(
         docType = this.get("docType")?.AsString(),
         issuerSigned = IssuerSigned(
-            nameSpaces = issuerSigned.get("nameSpaces")?.keys
+            nameSpaces = nameSpacesKeys
                 ?.let { keys ->
                     val mNameSpaces =
                         mutableMapOf<String, List<DocumentX>>()
@@ -47,27 +47,32 @@ internal fun CBORObject.oneDocument(): Document {
                         .distinct()
                         .forEach { key ->
                             val mList = mutableListOf<DocumentX>()
-                            issuerSigned.get("nameSpaces")
-                                ?.get(key)?.values?.forEach {
-                                    val value =
-                                        CBORObject.DecodeFromBytes(it.GetByteString())
-                                    mList.add(
-                                        DocumentX(
-                                            digestID = value.get("digestID")
-                                                ?.AsInt32(),
-                                            random = value.get("random")
-                                                ?.GetByteString(),
-                                            elementIdentifier = value.get("elementIdentifier")
-                                                ?.AsString(),
-                                            elementValue = value.get("elementValue")
-                                                ?.parse()
-                                        )
+                            nameSpaces?.get(key)?.values?.forEach {
+                                val value =
+                                    CBORObject.DecodeFromBytes(it.GetByteString())
+                                mList.add(
+                                    DocumentX(
+                                        digestID = value.get("digestID")
+                                            ?.AsInt32(),
+                                        random = value.get("random")
+                                            ?.GetByteString(),
+                                        elementIdentifier = value.get("elementIdentifier")
+                                            ?.AsString(),
+                                        elementValue = value.get("elementValue")
+                                            ?.parse()
                                     )
-                                }
+                                )
+                            }
                             mNameSpaces[key.AsString()] = mList
                         }
                     mNameSpaces
                 },
+            nameSpacedData = data.nameSpaceNames.associateWith { nameSpace ->
+                data.getDataElementNames(nameSpace)
+                    .associateWith { elementIdentifier ->
+                        data.getDataElement(nameSpace, elementIdentifier)
+                    }
+            },
             rawValue = issuerSigned?.EncodeToBytes(),
             issuerAuth = issuerSigned?.get("issuerAuth")?.EncodeToBytes(),
         ),

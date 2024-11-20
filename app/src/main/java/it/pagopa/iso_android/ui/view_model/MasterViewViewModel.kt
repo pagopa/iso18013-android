@@ -2,24 +2,20 @@ package it.pagopa.iso_android.ui.view_model
 
 import android.content.res.Resources
 import android.graphics.Bitmap
+import android.util.Base64
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import it.pagopa.cbor_implementation.document_manager.DocumentManager
-import it.pagopa.cbor_implementation.document_manager.DocumentManagerBuilder
-import it.pagopa.cbor_implementation.document_manager.document.Document
-import it.pagopa.cbor_implementation.document_manager.document.IssuedDocument
+import it.pagopa.cbor_implementation.document_manager.DocManager
+import it.pagopa.cbor_implementation.model.DocType
+import it.pagopa.cbor_implementation.model.Document
 import it.pagopa.iso_android.R
 import it.pagopa.iso_android.qr_code.QrCode
 import it.pagopa.iso_android.ui.AppDialog
-import it.pagopa.iso_android.ui.CborValuesImpl
-import it.pagopa.proximity.DocType
 import it.pagopa.proximity.ProximityLogger
-import it.pagopa.proximity.document.DisclosedDocument
 import it.pagopa.proximity.qr_code.QrEngagement
 import it.pagopa.proximity.qr_code.QrEngagementListener
-import it.pagopa.proximity.request.CborValues
-import it.pagopa.proximity.request.RequestFromDevice
+import it.pagopa.proximity.request.DocRequested
 import it.pagopa.proximity.response.ResponseGenerator
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.json.JSONObject
 
 class MasterViewViewModel(
     val qrCodeEngagement: QrEngagement,
@@ -38,17 +35,17 @@ class MasterViewViewModel(
     val loader = mutableStateOf<String?>(null)
     val qrCodeBitmap = mutableStateOf<Bitmap?>(null)
     var dialogText = ""
-    val documentManager by lazy {
-        DocumentManager.build(
-            DocumentManagerBuilder(
-                qrCodeEngagement.context
-            ).enableUserAuth(false)
-                .checkPublicKeyBeforeAdding(false)
+    val docManager by lazy {
+        DocManager.getInstance(
+            context = qrCodeEngagement.context,
+            storageDirectory = qrCodeEngagement.context.noBackupFilesDir,
+            prefix = "SECURE_STORAGE",
+            alias = "SECURE_STORAGE_KEY_${qrCodeEngagement.context.noBackupFilesDir}"
         )
     }
-    private lateinit var request: RequestFromDevice
+    private lateinit var request: String
     var deviceConnected: DeviceRetrievalHelperWrapper? = null
-    fun getQrCodeBitmap(qrCodeSize: Int, cborValues: CborValuesImpl) {
+    fun getQrCodeBitmap(qrCodeSize: Int) {
         viewModelScope.launch(Dispatchers.IO) {
             runBlocking {
                 qrCodeBitmap.value = QrCode(
@@ -57,34 +54,30 @@ class MasterViewViewModel(
                         .getQrCodeString()
                 ).asBitmap(qrCodeSize)
             }
-            attachListenerAndObserve(cborValues)
+            attachListenerAndObserve()
         }
     }
 
     private fun manageRequestFromDeviceUi(
-        cborValues: CborValues,
         sessionsTranscript: ByteArray
     ) {
         val sb = StringBuilder().apply {
             append("${resources.getString(R.string.share_info_title)}:\n")
         }
-        this.request.getList().forEach {
-            ProximityLogger.i("CERT is valid:", "${it.isAuthenticated}")
-            val isMdl = it.requiredFields!!.docType == DocType.MDL
-            if (isMdl)
-                sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
-            else
-                sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
-            it.requiredFields?.toArray()?.forEach { (_, fieldName) ->
-                val array = if (isMdl)
-                    cborValues.mdlCborValues
-                else
-                    cborValues.euPidCborValues
-                array
-                    .filter { (cborValue, _) -> cborValue == fieldName }
-                    .forEach { (_, appValue) ->
-                        sb.append("$appValue;\n")
-                    }
+        val req = JSONObject(request).optJSONObject("request")
+        ProximityLogger.i("CERT is valid:", "${JSONObject(request).optBoolean("isAuthenticated")}")
+        req?.optJSONObject(DocType.MDL.value)?.let { mdlJson ->
+            sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
+            mdlJson.keys().forEach { key ->
+                if (mdlJson.optBoolean(key) == true)
+                    sb.append("$key;\n")
+            }
+        }
+        req?.optJSONObject(DocType.EU_PID.value)?.let { euPidJson ->
+            sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
+            euPidJson.keys().forEach { key ->
+                if (euPidJson.optBoolean(key) == true)
+                    sb.append("$key;\n")
             }
         }
         this.dialogText = sb.toString()
@@ -111,29 +104,29 @@ class MasterViewViewModel(
     private fun shareInfo(sessionsTranscript: ByteArray) {
         this.loader.value = resources.getString(R.string.sending_doc)
         viewModelScope.launch(Dispatchers.IO) {
-            val disclosedDocuments = ArrayList<DisclosedDocument>()
-            this@MasterViewViewModel.request.getList().forEach {
-                val issuedDoc = if (it.requiredFields?.docType == DocType.MDL) {
-                    getMdl() as? IssuedDocument
-                } else
-                    getEuPid() as? IssuedDocument
-                issuedDoc?.let { issuedDoc ->
-                    disclosedDocuments.add(
-                        DisclosedDocument(
-                            documentId = issuedDoc.id,
-                            docType = issuedDoc.docType,
-                            requestedFields = it.requiredFields!!,
-                            nameSpaces = issuedDoc.nameSpacedDataValues
-                        )
-                    )
+            val disclosedDocuments = ArrayList<Document>()
+            val req = JSONObject(request).optJSONObject("request")
+            req?.keys()?.forEach {
+                when {
+                    DocType(it) == DocType.MDL -> disclosedDocuments.add(getMdl()!!)
+                    DocType(it) == DocType.EU_PID -> disclosedDocuments.add(getEuPid()!!)
                 }
             }
+            val docRequested = disclosedDocuments.map {
+                DocRequested(
+                    content = Base64.encodeToString(
+                        it.rawValue,
+                        Base64.DEFAULT
+                    ),
+                    alias = "SECURE_STORAGE_KEY_${qrCodeEngagement.context.noBackupFilesDir}"
+                )
+            }
             ResponseGenerator(
-                context = qrCodeEngagement.context,
                 sessionsTranscript = sessionsTranscript
             ).createResponse(
-                disclosedDocuments.toTypedArray(),
-                object : ResponseGenerator.Response {
+                documents = docRequested.toTypedArray(),
+                fieldRequestedAndAccepted = req?.toString() ?: "{}",
+                response = object : ResponseGenerator.Response {
                     override fun onResponseGenerated(response: ByteArray) {
                         this@MasterViewViewModel.loader.value = null
                         qrCodeEngagement.sendResponse(response)
@@ -185,9 +178,12 @@ class MasterViewViewModel(
         )
     }
 
-    private fun attachListenerAndObserve(cborValues: CborValues) {
+    private fun attachListenerAndObserve() {
         qrCodeEngagement.withListener(object : QrEngagementListener {
-            override fun onConnecting() {}
+            override fun onConnecting() {
+                this@MasterViewViewModel.loader.value = "Connecting"
+            }
+
             override fun onCommunicationError(msg: String) {}
             override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {
                 ProximityLogger.i(this@MasterViewViewModel.javaClass.name, "onDeviceDisconnected")
@@ -199,16 +195,16 @@ class MasterViewViewModel(
             }
 
             override fun onNewDeviceRequest(
-                request: RequestFromDevice,
+                request: String?,
                 sessionsTranscript: ByteArray
             ) {
                 ProximityLogger.i("request", request.toString())
-                this@MasterViewViewModel.request = request
-                manageRequestFromDeviceUi(cborValues, sessionsTranscript)
+                this@MasterViewViewModel.request = request.orEmpty()
+                manageRequestFromDeviceUi(sessionsTranscript)
             }
         })
     }
 
-    fun getEuPid() = documentManager.getAllEuPidDocuments(Document.State.ISSUED).firstOrNull()
-    fun getMdl() = documentManager.getAllMdlDocuments(Document.State.ISSUED).firstOrNull()
+    fun getEuPid() = docManager.gelAllEuPidDocuments().firstOrNull()
+    fun getMdl() = docManager.gelAllMdlDocuments().firstOrNull()
 }

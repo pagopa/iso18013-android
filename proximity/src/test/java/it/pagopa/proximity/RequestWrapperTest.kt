@@ -1,9 +1,8 @@
 package it.pagopa.proximity
 
-import it.pagopa.proximity.request.RequestFromDevice
+import it.pagopa.cbor_implementation.model.DocType
 import it.pagopa.proximity.request.RequestWrapper
-import it.pagopa.proximity.request.RequiredFieldsEuPid
-import it.pagopa.proximity.request.RequiredFieldsMdl
+import org.json.JSONObject
 import org.junit.Test
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -16,112 +15,23 @@ class RequestWrapperTest {
         "omdkb2NUeXBldW9yZy5pc28uMTgwMTMuNS4xLm1ETGpuYW1lU3BhY2VzoXFvcmcuaXNvLjE4MDEzLjUuMbgga2ZhbWlseV9uYW1l9GpnaXZlbl9uYW1l9GpiaXJ0aF9kYXRl9Gppc3N1ZV9kYXRl9GtleHBpcnlfZGF0ZfRvaXNzdWluZ19jb3VudHJ59HFpc3N1aW5nX2F1dGhvcml0efRvZG9jdW1lbnRfbnVtYmVy9Ghwb3J0cmFpdPRyZHJpdmluZ19wcml2aWxlZ2Vz9HZ1bl9kaXN0aW5ndWlzaGluZ19zaWdu9HVhZG1pbmlzdHJhdGl2ZV9udW1iZXL0ZmhlaWdodPRmd2VpZ2h09GpleWVfY29sb3Vy9GtoYWlyX2NvbG91cvRrYmlydGhfcGxhY2X0cHJlc2lkZW50X2FkZHJlc3P0dXBvcnRyYWl0X2NhcHR1cmVfZGF0ZfRsYWdlX2luX3llYXJz9G5hZ2VfYmlydGhfeWVhcvRrYWdlX292ZXJfMTj0a2FnZV9vdmVyXzIx9HRpc3N1aW5nX2p1cmlzZGljdGlvbvRrbmF0aW9uYWxpdHn0bXJlc2lkZW50X2NpdHn0bnJlc2lkZW50X3N0YXRl9HRyZXNpZGVudF9wb3N0YWxfY29kZfRwcmVzaWRlbnRfY291bnRyefR4HmZhbWlseV9uYW1lX25hdGlvbmFsX2NoYXJhY3RlcvR4HWdpdmVuX25hbWVfbmF0aW9uYWxfY2hhcmFjdGVy9HRzaWduYXR1cmVfdXN1YWxfbWFya/Q="
     }
 
-    @Test
-    @OptIn(ExperimentalEncodingApi::class)
-    fun `test requestWrapper EU Pid instance`() {
-        val req = RequestWrapper(Base64.decode(mockEuPidRequest)).prepare()
-        assert(req.requiredFields != null)
-        assert(req.requiredFields!!.docType == DocType.EU_PID)
-        val requiredFields = req.requiredFields!! as RequiredFieldsEuPid
-        requiredFields.toArray().forEach { (value, _) ->
-            assert(value == false)
-        }
-        assert(requiredFields.gender.first == false)
-        assert(requiredFields.portrait.first == false)
-        assert(requiredFields.birthCity.first == false)
-        assert(requiredFields.birthDate.first == false)
-        assert(requiredFields.givenName.first == false)
-        assert(requiredFields.ageOver13.first == false)
-        assert(requiredFields.ageOver16.first == false)
-        assert(requiredFields.ageOver18.first == false)
-        assert(requiredFields.ageOver21.first == false)
-        assert(requiredFields.ageOver60.first == false)
-        assert(requiredFields.ageOver65.first == false)
-        assert(requiredFields.ageOver68.first == false)
-        assert(requiredFields.birthPlace.first == false)
-        assert(requiredFields.birthState.first == false)
-        assert(requiredFields.expiryDate.first == false)
-        assert(requiredFields.familyName.first == false)
-        assert(requiredFields.nationality.first == false)
-        assert(requiredFields.ageInYears.first == false)
-        assert(requiredFields.birthCountry.first == false)
-        assert(requiredFields.issuanceDate.first == false)
-        assert(requiredFields.residentCity.first == false)
-        assert(requiredFields.ageBirthYear.first == false)
-        assert(requiredFields.residentState.first == false)
-        assert(requiredFields.documentNumber.first == false)
-        assert(requiredFields.issuingCountry.first == false)
-        assert(requiredFields.residentStreet.first == false)
-        assert(requiredFields.givenNameBirth.first == false)
-        assert(requiredFields.residentAddress.first == false)
-        assert(requiredFields.residentCountry.first == false)
-        assert(requiredFields.familyNameBirth.first == false)
-        assert(requiredFields.issuingAuthority.first == false)
-        assert(requiredFields.issuingJurisdiction.first == false)
-        assert(requiredFields.residentPostalCode.first == false)
-        assert(requiredFields.administrativeNumber.first == false)
-        assert(requiredFields.portraitCaptureDate.first == false)
-        assert(requiredFields.residentHouseNumber.first == false)
-        val json = requiredFields.toJson()
-        println(json)
-        assert(
-            json
-                .getJSONObject("nameSpaces")
-                .getJSONObject("gender")
-                .getBoolean("requested") == true
-        )
-    }
-
-    @Test
-    @OptIn(ExperimentalEncodingApi::class)
-    fun `test requestWrapper Mdl instance`() {
-        val req = RequestWrapper(Base64.decode(mockMdlRequest)).prepare()
-        assert(req.requiredFields != null)
-        assert(req.requiredFields!!.docType == DocType.MDL)
-        val requiredFields = req.requiredFields!! as RequiredFieldsMdl
-        requiredFields.toArray().forEach { (value, _) ->
-            assert(value == false)
-        }
-        assert(requiredFields.portrait.first == false)
-        assert(requiredFields.birthDate.first == false)
-        assert(requiredFields.givenName.first == false)
-        assert(requiredFields.ageOver18.first == false)
-        assert(requiredFields.ageOver21.first == false)
-        assert(requiredFields.birthPlace.first == false)
-        assert(requiredFields.expiryDate.first == false)
-        assert(requiredFields.familyName.first == false)
-        assert(requiredFields.nationality.first == false)
-        assert(requiredFields.ageInYears.first == false)
-        assert(requiredFields.residentCity.first == false)
-        assert(requiredFields.ageBirthYear.first == false)
-        assert(requiredFields.residentState.first == false)
-        assert(requiredFields.documentNumber.first == false)
-        assert(requiredFields.issuingCountry.first == false)
-        assert(requiredFields.residentAddress.first == false)
-        assert(requiredFields.residentCountry.first == false)
-        assert(requiredFields.issuingAuthority.first == false)
-        assert(requiredFields.issuingJurisdiction.first == false)
-        assert(requiredFields.residentPostalCode.first == false)
-        assert(requiredFields.administrativeNumber.first == false)
-        assert(requiredFields.portraitCaptureDate.first == false)
-        val json = requiredFields.toJson()
-        println(json)
-        val portraitValue = json.getJSONObject("nameSpaces").getJSONObject("portrait")
-        assert(
-            portraitValue.getBoolean("requested") == true && portraitValue.getBoolean("intentToRetain") == false
-        )
-    }
-
     @OptIn(ExperimentalEncodingApi::class)
     @Test
-    fun `test request from device list instance`() {
-        val req = RequestFromDevice(
-            listOf(
-                RequestWrapper(Base64.decode(mockEuPidRequest)).prepare(),
-                RequestWrapper(Base64.decode(mockMdlRequest)).prepare()
-            )
-        )
-        assert(req.getList()[0].requiredFields is RequiredFieldsEuPid)
-        assert(req.getList()[1].requiredFields is RequiredFieldsMdl)
+    fun `test request from device JSON`() {
+        val requestWrapperList = arrayListOf<JSONObject?>()
+        val req = RequestWrapper(Base64.decode(mockEuPidRequest), false).prepare().toJson()
+        val req1 = RequestWrapper(Base64.decode(mockMdlRequest), false).prepare().toJson()
+        requestWrapperList.addAll(listOf(req, req1))
+        val jsonToSend = requestWrapperList.toTypedArray().toRequest()
+        println(jsonToSend)
+        assert(jsonToSend.keys().asSequence().count() == 2)
+        assert(!jsonToSend.getBoolean("isAuthenticated"))
+        val request = jsonToSend.getJSONObject("request")
+        assert(request.getJSONObject(DocType.EU_PID.value).keys().asSequence().map {
+            request.getJSONObject(DocType.EU_PID.value).getBoolean(it)
+        }.first())
+        assert(request.getJSONObject(DocType.MDL.value).keys().asSequence().map {
+            request.getJSONObject(DocType.MDL.value).getBoolean(it)
+        }.first())
     }
 }

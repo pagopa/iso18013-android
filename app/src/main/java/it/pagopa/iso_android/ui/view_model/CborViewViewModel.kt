@@ -49,42 +49,40 @@ class CborViewViewModel : ViewModel() {
             model.docList?.forEach { doc ->
                 doc.docType?.let { lazyColumnScope.title(it) }
                 doc.issuerSigned?.nameSpaces?.let { nameSpaces ->
-                    val array = JSONArray(nameSpaces)
-                    if (array.length() > 0) {
-                        array.optJSONObject(0)?.optString(DocType(doc.docType).nameSpacesValue)
-                            ?.let { nameSpacesArrayString ->
-                                val nameSpacesArray = JSONArray(nameSpacesArrayString)
-                                for (i in 0 until nameSpacesArray.length()) {
-                                    nameSpacesArray.optJSONObject(i)?.let { currentJson ->
-                                        currentJson.keys().forEach { key ->
-                                            if (key == "portrait" || key == "signature_usual_mark") {
-                                                val bArray: ByteArray? =
-                                                    when (currentJson.get(key)) {
-                                                        is ByteArray -> currentJson.get(key) as ByteArray
-                                                        is String -> Base64.getDecoder()
-                                                            .decode(currentJson.get(key) as String)
+                    val obj = JSONObject(nameSpaces)
+                    obj.optString(DocType(doc.docType).nameSpacesValue)
+                        .let { nameSpacesArrayString ->
+                            val nameSpacesArray= JSONArray(nameSpacesArrayString)
+                            for (i in 0 until nameSpacesArray.length()) {
+                                nameSpacesArray.optJSONObject(i)?.let { currentJson ->
+                                    currentJson.keys().forEach { key ->
+                                        if (key == "portrait" || key == "signature_usual_mark") {
+                                            val bArray: ByteArray? =
+                                                when (currentJson.get(key)) {
+                                                    is ByteArray -> currentJson.get(key) as ByteArray
+                                                    is String -> Base64.getDecoder()
+                                                        .decode(currentJson.get(key) as String)
 
-                                                        else -> null
-                                                    }
-                                                bArray?.let {
-                                                    lazyColumnScope.lazyColumnItem(
-                                                        key,
-                                                        bArray
-                                                    )
+                                                    else -> null
                                                 }
-                                            } else {
-                                                if (key != "random" && key != "digestID") {
-                                                    lazyColumnScope.lazyColumnItem(
-                                                        key,
-                                                        currentJson.get(key)
-                                                    )
-                                                }
+                                            bArray?.let {
+                                                lazyColumnScope.lazyColumnItem(
+                                                    key,
+                                                    bArray
+                                                )
+                                            }
+                                        } else {
+                                            if (key != "random" && key != "digestID") {
+                                                lazyColumnScope.lazyColumnItem(
+                                                    key,
+                                                    currentJson.get(key)
+                                                )
                                             }
                                         }
                                     }
                                 }
                             }
-                    }
+                        }
                 }
             }
         }

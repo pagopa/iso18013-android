@@ -1,14 +1,9 @@
 package it.pagopa.iso_android.ui.view_model
 
-import android.util.Base64
 import androidx.lifecycle.ViewModel
-import it.pagopa.iso_android.exampleRequestB64
-import it.pagopa.iso_android.ui.view_model.MasterViewViewModel
 import it.pagopa.proximity.ProximityLogger
 import it.pagopa.proximity.qr_code.QrEngagement
 import it.pagopa.proximity.qr_code.QrEngagementListener
-import it.pagopa.proximity.request.CborValues
-import it.pagopa.proximity.request.RequestFromDevice
 import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -50,13 +45,8 @@ class SlaveViewViewModel(
                 this@SlaveViewViewModel.deviceConnected = deviceRetrievalHelper
             }
 
-            override fun onNewDeviceRequest(
-                request: RequestFromDevice,
-                sessionsTranscript: ByteArray
-            ) {
-                ProximityLogger.i("request", request.toString())
-                //this@SlaveViewViewModel.request = request
-                //manageRequestFromDeviceUi(cborValues, sessionsTranscript)
+            override fun onNewDeviceRequest(request: String?, sessionsTranscript: ByteArray) {
+                ProximityLogger.i("request", request.orEmpty())
             }
         })
     }

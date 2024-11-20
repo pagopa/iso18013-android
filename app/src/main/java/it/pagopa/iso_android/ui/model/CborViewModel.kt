@@ -49,7 +49,7 @@ data class DocIssuerSigned(val issuerAuth: String?, val nameSpaces: String?) {
             if(json==null) return null
             return DocIssuerSigned(
                 json.optString("issuerAuth"),
-                json.optJSONArray("nameSpaces")?.toString()
+                json.optJSONObject("nameSpaces")?.toString()
             )
         }
     }
