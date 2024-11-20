@@ -1,10 +1,10 @@
 package it.pagopa.cbor_implementation.document_manager
 
-import it.pagopa.cbor_implementation.document_manager.document.DocumentId
 import it.pagopa.cbor_implementation.model.Document
 
+typealias DocumentId = String
+
 interface LibIso18013Interface {
-    @Throws(DocumentWithIdentifierNotFound::class)
     fun getDocumentByIdentifier(id: DocumentId): Document
     fun createDocument(id: DocumentId, data: ByteArray)
     fun gelAllDocuments(): List<Document>

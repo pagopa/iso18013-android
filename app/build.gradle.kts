@@ -35,7 +35,7 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        buildConfigField("String", "appVersion", "\"0.0.2\"")
+        buildConfigField("String", "appVersion", "\"0.0.3\"")
     }
 
     buildTypes {

@@ -10,8 +10,7 @@ import android.security.keystore.KeyProperties
 import android.security.keystore.KeyProperties.SECURITY_LEVEL_STRONGBOX
 import android.security.keystore.KeyProperties.SECURITY_LEVEL_TRUSTED_ENVIRONMENT
 import android.security.keystore.KeyProperties.SECURITY_LEVEL_UNKNOWN_SECURE
-import android.util.AtomicFile
-import it.pagopa.cbor_implementation.document_manager.document.DocumentId
+import androidx.core.util.AtomicFile
 import it.pagopa.cbor_implementation.model.DocType
 import it.pagopa.cbor_implementation.model.Document
 import kotlinx.io.files.FileNotFoundException
@@ -62,7 +61,7 @@ class DocManager private constructor(
     override fun getDocumentByIdentifier(id: DocumentId): Document {
         val content = getFileContent(id)
         if (content == null)
-            throw DocumentWithIdentifierNotFound()
+            throw IllegalStateException("no doc with give id: $id")
         return getDocument(content)
     }
 
@@ -113,7 +112,7 @@ class DocManager private constructor(
      * @return an array of byte containing the content of the file associated with the [key].
      * null if the key is not mapped to any value or if the encryption key doesn't exist when
      * manually [useEncryption] is true
-     * @throws LibIso18013DAOException when the file has a size less than [PREFIX_ENCRYPTED_SIZE],
+     * @throws Exception when the file has a size less than [PREFIX_ENCRYPTED_SIZE],
      * when the file has an unrecognized prefix, or when an unexpected error occurs.
      */
     private fun getFileContent(key: String): ByteArray? = runCatching {
@@ -137,7 +136,7 @@ class DocManager private constructor(
     }.getOrElse { e ->
         when (e) {
             is FileNotFoundException -> null
-            else -> throw LibIso18013DAOException()
+            else -> throw Exception()
         }
     }
 

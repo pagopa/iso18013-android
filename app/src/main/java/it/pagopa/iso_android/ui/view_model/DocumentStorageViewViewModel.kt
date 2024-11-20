@@ -4,8 +4,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.pagopa.cbor_implementation.document_manager.DocManager
-import it.pagopa.cbor_implementation.document_manager.DocumentWithIdentifierNotFound
-import it.pagopa.cbor_implementation.document_manager.document.DocumentId
+import it.pagopa.cbor_implementation.document_manager.DocumentId
 import it.pagopa.cbor_implementation.impl.MDoc
 import it.pagopa.cbor_implementation.model.Document
 import it.pagopa.cbor_implementation.model.EU_PID_DOCTYPE
@@ -16,7 +15,6 @@ import it.pagopa.iso_android.ui.model.Actions
 import it.pagopa.iso_android.ui.model.ActionsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
 
 class DocumentStorageViewViewModel(
     private val libDao: DocManager?
@@ -173,15 +171,11 @@ class DocumentStorageViewViewModel(
         if (id == null) return
         this.loader.value = "Deleting"
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val back = libDao?.deleteDocument(id)
-                if (back == true)
-                    documents = documents.filter { it.docType != id }.toTypedArray()
-                if (documents.isEmpty()) actionCaller.reset()
-                appDialogWithOkBtn("doc", if (back == true) "eliminated" else "fail to eliminate")
-            } catch (e: DocumentWithIdentifierNotFound) {
-                appDialogWithOkBtn("Exception", e.message)
-            }
+            val back = libDao?.deleteDocument(id)
+            if (back == true)
+                documents = documents.filter { it.docType != id }.toTypedArray()
+            if (documents.isEmpty()) actionCaller.reset()
+            appDialogWithOkBtn("doc", if (back == true) "eliminated" else "fail to eliminate")
             this@DocumentStorageViewViewModel.loader.value = null
         }
     }

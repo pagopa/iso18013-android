@@ -9,7 +9,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 24
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -44,12 +44,6 @@ dependencies {
     implementation(libs.biometric.ktx)
     //Google identity
     implementation(libs.google.identity) {
-        exclude(group = "org.bouncycastle")
-    }
-    implementation(libs.google.identity.android) {
-        exclude(group = "org.bouncycastle")
-    }
-    implementation(libs.google.identity.mdoc) {
         exclude(group = "org.bouncycastle")
     }
     // Bouncy castle
