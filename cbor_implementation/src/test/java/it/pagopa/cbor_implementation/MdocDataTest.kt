@@ -1,12 +1,23 @@
 package it.pagopa.cbor_implementation
 
 import com.upokecenter.cbor.CBORException
+import it.pagopa.cbor_implementation.exception.DocTypeNotValid
 import it.pagopa.cbor_implementation.exception.MandatoryFieldNotFound
 import it.pagopa.cbor_implementation.impl.*
+import it.pagopa.cbor_implementation.model.Document
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 class MDocDataTest {
+    @org.junit.Test
+    fun `test doc type not valid exception`() {
+        val doc = Document(
+            docType = "bla bla bla",
+            issuerSigned = null, rawValue = byteArrayOf()
+        )
+        assert(doc.verifyValidity().second is DocTypeNotValid)
+    }
+
     @org.junit.Test
     fun `test encode and decode`() {
         val mDoc = MDoc(source = oneDocSource)

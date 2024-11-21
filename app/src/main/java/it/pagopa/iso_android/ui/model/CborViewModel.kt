@@ -46,7 +46,7 @@ data class DocModel(val docType: String?, val issuerSigned: DocIssuerSigned?) {
 data class DocIssuerSigned(val issuerAuth: String?, val nameSpaces: String?) {
     companion object {
         fun fromJson(json: JSONObject?): DocIssuerSigned? {
-            if(json==null) return null
+            if (json == null) return null
             return DocIssuerSigned(
                 json.optString("issuerAuth"),
                 json.optJSONObject("nameSpaces")?.toString()

@@ -83,4 +83,18 @@ class CborParserTest {
             println(json)
         }
     }
+    @Test
+    fun `test not good cbor`() {
+        val rawCbor = "a".toByteArray()
+        val json = CBorParser(rawCbor).toJson()
+        println(json)
+        assert(json == null)
+    }
+    @Test
+    fun `test not good cbor documents json`() {
+        val rawCbor = "a".toByteArray()
+        CBorParser(rawCbor).documentsCborToJson { json->
+            assert(json == null)
+        }
+    }
 }

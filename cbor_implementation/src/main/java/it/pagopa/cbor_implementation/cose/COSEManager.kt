@@ -1,6 +1,7 @@
 package it.pagopa.cbor_implementation.cose
 
 import androidx.annotation.CheckResult
+import androidx.annotation.VisibleForTesting
 import com.android.identity.crypto.EcSignature
 import com.android.identity.crypto.toDer
 import com.upokecenter.cbor.CBORObject
@@ -18,8 +19,16 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 /**
  * With this class you can sign every object with COSE*/
 class COSEManager {
+    //ONLY FOR TEST PURPOSE
+    private var createCOSE: CreateCOSE? = null
+
     init {
         addBcIfNeeded()
+    }
+
+    @VisibleForTesting
+    internal fun withCreateCOSE(createCOSE: CreateCOSE) = apply {
+        this.createCOSE = createCOSE
     }
 
     @CheckResult
@@ -28,15 +37,19 @@ class COSEManager {
         alias: String = "pagoPaAlias",
         isDetached: Boolean = false
     ): SignWithCOSEResult {
-        try {
-            return CreateCOSE.build(alias).sign(data, isDetached)
+        return try {
+            if (createCOSE != null)
+                createCOSE!!.sign(data, isDetached)
+            else
+                CreateCOSE.build(alias).sign(data, isDetached)
         } catch (e: Exception) {
             CborLogger.e("signWithCOSE", e.toString())
-            return SignWithCOSEResult.Failure(e.toString())
+            SignWithCOSEResult.Failure(e.toString())
         }
     }
 
-    private fun algorithmFromProtectedHeader(protectedHeader: CBORObject): String {
+    @VisibleForTesting
+    fun algorithmFromProtectedHeader(protectedHeader: CBORObject): String {
         return when (protectedHeader[1].AsInt32()) {
             -7 -> "SHA256withECDSA"
             -35 -> "SHA384withECDSA"
@@ -93,6 +106,7 @@ class COSEManager {
         publicKey: ByteArray
     ): Boolean {
         try {
+            CborLogger.i("dataSigned", Base64.encode(dataSigned))
             val cborArray = CBORObject.DecodeFromBytes(dataSigned)
             // extracting CBOR components
             val protectedHeader = cborArray[0].GetByteString()

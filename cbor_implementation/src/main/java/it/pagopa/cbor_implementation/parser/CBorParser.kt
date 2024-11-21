@@ -5,7 +5,11 @@ import it.pagopa.cbor_implementation.impl.MDoc
 
 class CBorParser(val rawCbor: ByteArray) {
     fun toJson(): String? {
-        return CBORObject.DecodeFromBytes(this.rawCbor)?.ToJSONString()
+        return try {
+            CBORObject.DecodeFromBytes(this.rawCbor)?.ToJSONString()
+        } catch (_: Exception) {
+            null
+        }
     }
 
     fun documentsCborToJson(onComplete: (String?) -> Unit) {

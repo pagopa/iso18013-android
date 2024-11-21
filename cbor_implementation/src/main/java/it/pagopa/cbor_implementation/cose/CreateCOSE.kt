@@ -16,9 +16,13 @@ import COSE.HeaderKeys.Algorithm as BaseAlgorithm
 
 internal class CreateCOSE private constructor() {
     private var alias = ""
+    private val keyStoreType by lazy {
+        "AndroidKeyStore"
+    }
+
     private fun keyExists(): Boolean {
         return try {
-            val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            val keyStore = KeyStore.getInstance(keyStoreType).apply { load(null) }
             keyStore.containsAlias(alias)
         } catch (_: Exception) {
             false
@@ -27,7 +31,10 @@ internal class CreateCOSE private constructor() {
 
     private fun generateKey() {
         val keyPairGenerator =
-            KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC, "AndroidKeyStore")
+            KeyPairGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_EC,
+                keyStoreType
+            )
         val keyGenParameterSpec = KeyGenParameterSpec.Builder(
             alias,
             KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
@@ -39,7 +46,7 @@ internal class CreateCOSE private constructor() {
     }
 
     private fun getPrivateKeyAndPublicKey(): Pair<PrivateKey, PublicKey>? {
-        val keyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+        val keyStore = KeyStore.getInstance(keyStoreType).apply { load(null) }
         val entry = keyStore.getEntry(alias, null) as? KeyStore.PrivateKeyEntry ?: return null
         return entry.privateKey to entry.certificate.publicKey
     }

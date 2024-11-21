@@ -6,7 +6,6 @@ import it.pagopa.cbor_implementation.exception.DocTypeNotValid
 import it.pagopa.cbor_implementation.exception.MandatoryFieldNotFound
 import it.pagopa.cbor_implementation.helper.oneDocument
 import it.pagopa.cbor_implementation.helper.toModelMDoc
-import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Base64
 
@@ -24,13 +23,6 @@ data class ModelMDoc(
     }
 
     companion object {
-        fun fromByteArray(
-            model: ByteArray
-        ): ModelMDoc {
-            val cbor = CBORObject.DecodeFromBytes(model)
-            return cbor.toModelMDoc()
-        }
-
         fun fromCBORObject(
             model: CBORObject,
             onComplete: (ModelMDoc) -> Unit,
