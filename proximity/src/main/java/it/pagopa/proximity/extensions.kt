@@ -2,7 +2,7 @@ package it.pagopa.proximity
 
 import org.json.JSONObject
 
-fun Array<JSONObject?>.toRequest(): JSONObject{
+internal fun Array<JSONObject?>.toRequest(): JSONObject{
     val jsonToSend = JSONObject()
     this.forEach {
         if (it != null) {

@@ -8,7 +8,7 @@ enum class DocType(
     EU_PID("eu.europa.ec.eudi.pid.1", "eu.europa.ec.eudi.pid.1"),
     ANY_OTHER("", "");
 
-    val isAccepted get() = this == MDL || this == EU_PID
+    val isAccepted get() = this != ANY_OTHER
 
     companion object {
         @JvmSynthetic

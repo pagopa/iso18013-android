@@ -11,7 +11,7 @@ import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
 
 @Parcelize
-data class RequestWrapper(
+internal data class RequestWrapper(
     private val cborByte: ByteArray,
     val isAuthenticated: Boolean = false
 ) : Parcelable {
