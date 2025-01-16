@@ -1,0 +1,83 @@
+[versions]
+agp = "8.7.2"
+json = "20220924"
+kotlin = "2.0.20"
+coreKtx = "1.15.0"
+junit = "4.13.2"
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+kotlinxSerializationJson = "1.7.3"
+lifecycleRuntimeKtx = "2.8.7"
+activityCompose = "1.9.3"
+composeBom = "2024.11.00"
+kotlinx-io = "0.4.0"
+mockitoCore = "5.12.0"
+mockitoKotlin = "4.1.0"
+navigationCompose = "2.8.4"
+playServicesBasement = "18.5.0"
+kotlinx-datetime = "0.6.0"
+appcompat = "1.7.0"
+material = "1.12.0"
+mockk = "1.13.12"
+cameraX = "1.4.0"
+qrcodeKotlin = "4.2.0"
+qrCodeScanner = "17.3.0"
+cbor = "4.5.6"
+google-identity = "202411.1"
+google-identity-android = "202411.1"
+google-identity-mdoc = "202411.1"
+bouncy-castle = "1.78.1"
+ui-test-manifest = "1.7.5"
+biometric-ktx = "1.2.0-alpha05"
+cose = "1.1.0"
+zxing-core = "3.5.3"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+json = { module = "org.json:json", version.ref = "json" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest", version.ref = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockitoCore" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockitoKotlin" }
+play-services-basement = { group = "com.google.android.gms", name = "play-services-basement", version.ref = "playServicesBasement" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+cameraXCore = { module = "androidx.camera:camera-core", version.ref = "cameraX" }
+cameraX2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraX" }
+cameraXView = { module = "androidx.camera:camera-view", version.ref = "cameraX" }
+cameraXLifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraX" }
+qrcode-kotlin = { module = "io.github.g0dkar:qrcode-kotlin", version.ref = "qrcodeKotlin" }
+qrCodeScanner = { module = "com.google.mlkit:barcode-scanning", version.ref = "qrCodeScanner" }
+cbor = { module = "com.upokecenter:cbor", version.ref = "cbor" }
+cose = { module = "com.augustcellars.cose:cose-java", version.ref = "cose" }
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "kotlinx-datetime" }
+google-identity = { module = "com.android.identity:identity", version.ref = "google-identity" }
+google-identity-android = { module = "com.android.identity:identity-android", version.ref = "google-identity-android" }
+google-identity-mdoc = { module = "com.android.identity:identity-mdoc", version.ref = "google-identity-mdoc" }
+bouncy-castle-pkix = { module = "org.bouncycastle:bcpkix-jdk18on", version.ref = "bouncy-castle" }
+bouncy-castle-prov = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncy-castle" }
+kotlinx-io-bytestring = { group = "org.jetbrains.kotlinx", name = "kotlinx-io-bytestring", version.ref = "kotlinx-io" }
+kotlinx-io-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-io-core", version.ref = "kotlinx-io" }
+biometric-ktx = { module = "androidx.biometric:biometric-ktx", version.ref = "biometric-ktx" }
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing-core" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
