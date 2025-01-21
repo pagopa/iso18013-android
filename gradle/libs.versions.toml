@@ -1,5 +1,5 @@
 [versions]
-agp = "8.7.2"
+agp = "8.8.0"
 json = "20220924"
 kotlin = "2.0.20"
 coreKtx = "1.15.0"
@@ -8,18 +8,18 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 kotlinxSerializationJson = "1.7.3"
 lifecycleRuntimeKtx = "2.8.7"
-activityCompose = "1.9.3"
-composeBom = "2024.11.00"
+activityCompose = "1.10.0"
+composeBom = "2025.01.00"
 kotlinx-io = "0.4.0"
 mockitoCore = "5.12.0"
 mockitoKotlin = "4.1.0"
-navigationCompose = "2.8.4"
+navigationCompose = "2.8.5"
 playServicesBasement = "18.5.0"
 kotlinx-datetime = "0.6.0"
 appcompat = "1.7.0"
 material = "1.12.0"
 mockk = "1.13.12"
-cameraX = "1.4.0"
+cameraX = "1.4.1"
 qrcodeKotlin = "4.2.0"
 qrCodeScanner = "17.3.0"
 cbor = "4.5.6"
@@ -27,10 +27,11 @@ google-identity = "202411.1"
 google-identity-android = "202411.1"
 google-identity-mdoc = "202411.1"
 bouncy-castle = "1.78.1"
-ui-test-manifest = "1.7.5"
+ui-test-manifest = "1.7.6"
 biometric-ktx = "1.2.0-alpha05"
 cose = "1.1.0"
 zxing-core = "3.5.3"
+cbor-implementation = "1.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -74,6 +75,7 @@ kotlinx-io-bytestring = { group = "org.jetbrains.kotlinx", name = "kotlinx-io-by
 kotlinx-io-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-io-core", version.ref = "kotlinx-io" }
 biometric-ktx = { module = "androidx.biometric:biometric-ktx", version.ref = "biometric-ktx" }
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing-core" }
+cbor-impl = { module = "it.pagopa:cbor", version.ref = "cbor-implementation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
@@ -81,3 +83,4 @@ jetbrains-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = 
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+maven-publish = { id = "maven-publish" }

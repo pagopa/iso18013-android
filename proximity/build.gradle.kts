@@ -1,7 +1,11 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)
     id("kotlin-parcelize")
+    alias(libs.plugins.maven.publish)
 }
 
 android {
@@ -34,7 +38,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":cbor_implementation"))
+    implementation(libs.cbor.impl)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -57,4 +61,59 @@ dependencies {
     testImplementation(libs.json)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+val libGroupId = "it.pagopa"
+val libArtifactID = "proximity"
+val libVersion = "1.0.0"
+val localProperties = Properties()
+localProperties.load(FileInputStream(rootProject.file("local.properties")))
+val pushingUrl: String? = localProperties["git_hub_pushing_url"] as? String
+val gitHubUser: String? = localProperties["git_hub_user"] as? String
+val gitHubToken: String? = localProperties["git_hub_token"] as? String
+val aarName = "proximity-release"
+
+val sources by tasks.creating(Jar::class) {
+    group = JavaBasePlugin.DOCUMENTATION_GROUP
+    description = "Assembles AAR sources"
+    archiveClassifier.set("sources")
+    from(android.sourceSets.getByName("main").java.srcDirs)
+}
+
+configure<PublishingExtension> {
+    if (pushingUrl == null) {
+        println("no pushing url configured into local properties!!")
+        return@configure
+    }
+    repositories {
+        maven(pushingUrl) {
+            credentials {
+                username = gitHubUser ?: System.getenv("GITHUB_USER")
+                password = gitHubToken ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+    publications {
+        create<MavenPublication>("proximity") {
+            groupId = libGroupId
+            artifactId = libArtifactID
+            version = libVersion
+            val baseDir = rootProject.layout.projectDirectory.dir("proximity").dir("build")
+            val reference = "$baseDir/outputs/aar/$aarName.aar"
+            artifact(reference)
+            artifact(sources)
+
+            pom.withXml {
+                val dependenciesNode = asNode().appendNode("dependencies")
+                configurations.api {
+                    allDependencies.forEach { dependency ->
+                        val dependencyNode = dependenciesNode.appendNode("dependency")
+                        dependencyNode.appendNode("groupId", dependency.group)
+                        dependencyNode.appendNode("artifactId", dependency.name)
+                        dependencyNode.appendNode("version", dependency.version)
+                    }
+                }
+            }
+        }
+    }
 }
