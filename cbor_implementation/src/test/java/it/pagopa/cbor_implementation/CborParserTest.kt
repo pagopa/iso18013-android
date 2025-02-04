@@ -13,6 +13,7 @@ class CborParserTest {
     private val mockMdlRequest by lazy {
         "omdkb2NUeXBldW9yZy5pc28uMTgwMTMuNS4xLm1ETGpuYW1lU3BhY2VzoXFvcmcuaXNvLjE4MDEzLjUuMbgga2ZhbWlseV9uYW1l9GpnaXZlbl9uYW1l9GpiaXJ0aF9kYXRl9Gppc3N1ZV9kYXRl9GtleHBpcnlfZGF0ZfRvaXNzdWluZ19jb3VudHJ59HFpc3N1aW5nX2F1dGhvcml0efRvZG9jdW1lbnRfbnVtYmVy9Ghwb3J0cmFpdPRyZHJpdmluZ19wcml2aWxlZ2Vz9HZ1bl9kaXN0aW5ndWlzaGluZ19zaWdu9HVhZG1pbmlzdHJhdGl2ZV9udW1iZXL0ZmhlaWdodPRmd2VpZ2h09GpleWVfY29sb3Vy9GtoYWlyX2NvbG91cvRrYmlydGhfcGxhY2X0cHJlc2lkZW50X2FkZHJlc3P0dXBvcnRyYWl0X2NhcHR1cmVfZGF0ZfRsYWdlX2luX3llYXJz9G5hZ2VfYmlydGhfeWVhcvRrYWdlX292ZXJfMTj0a2FnZV9vdmVyXzIx9HRpc3N1aW5nX2p1cmlzZGljdGlvbvRrbmF0aW9uYWxpdHn0bXJlc2lkZW50X2NpdHn0bnJlc2lkZW50X3N0YXRl9HRyZXNpZGVudF9wb3N0YWxfY29kZfRwcmVzaWRlbnRfY291bnRyefR4HmZhbWlseV9uYW1lX25hdGlvbmFsX2NoYXJhY3RlcvR4HWdpdmVuX25hbWVfbmF0aW9uYWxfY2hhcmFjdGVy9HRzaWduYXR1cmVfdXN1YWxfbWFya/Q="
     }
+
     @OptIn(ExperimentalEncodingApi::class)
     @Test
     fun `test is json`() {
@@ -42,7 +43,7 @@ class CborParserTest {
     @Test
     fun `test one document json`() {
         val rawCbor = kotlin.io.encoding.Base64.decode(oneDocSource)
-        CBorParser(rawCbor).documentsCborToJson { json ->
+        CBorParser(rawCbor).documentsCborToJson(false) { json ->
             println(json)
             assert(json != null)
         }
@@ -52,7 +53,7 @@ class CborParserTest {
     @Test
     fun `test documents json`() {
         val rawCbor = kotlin.io.encoding.Base64.decode(moreDocsSource)
-        CBorParser(rawCbor).documentsCborToJson { json ->
+        CBorParser(rawCbor).documentsCborToJson(false) { json ->
             println(json)
             assert(json != null)
         }
@@ -62,7 +63,7 @@ class CborParserTest {
     @Test
     fun `test documents json issuer auth`() {
         val rawCbor = kotlin.io.encoding.Base64.decode(moreDocsIssuerAuth)
-        CBorParser(rawCbor).documentsCborToJson { json ->
+        CBorParser(rawCbor).documentsCborToJson(false) { json ->
             assert(json != null)
             val myJson = JSONObject(json!!)
             myJson.optJSONArray("documents")?.let {
@@ -83,6 +84,7 @@ class CborParserTest {
             println(json)
         }
     }
+
     @Test
     fun `test not good cbor`() {
         val rawCbor = "a".toByteArray()
@@ -90,11 +92,32 @@ class CborParserTest {
         println(json)
         assert(json == null)
     }
+
     @Test
     fun `test not good cbor documents json`() {
         val rawCbor = "a".toByteArray()
-        CBorParser(rawCbor).documentsCborToJson { json->
+        CBorParser(rawCbor).documentsCborToJson(false) { json ->
             assert(json == null)
+        }
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    @Test
+    fun `test documents json element identifier separated`() {
+        val rawCbor = kotlin.io.encoding.Base64.decode(moreDocsIssuerAuth)
+        CBorParser(rawCbor).documentsCborToJson(true) { json ->
+            assert(json != null)
+            println(json)
+        }
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    @Test
+    fun `test documents json element identifier not separated`() {
+        val rawCbor = kotlin.io.encoding.Base64.decode(moreDocsIssuerAuth)
+        CBorParser(rawCbor).documentsCborToJson(false) { json ->
+            assert(json != null)
+            println(json)
         }
     }
 }

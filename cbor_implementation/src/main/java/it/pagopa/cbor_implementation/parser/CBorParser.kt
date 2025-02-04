@@ -12,10 +12,13 @@ class CBorParser(val rawCbor: ByteArray) {
         }
     }
 
-    fun documentsCborToJson(onComplete: (String?) -> Unit) {
+    fun documentsCborToJson(
+        separateElementIdentifier: Boolean = true,
+        onComplete: (String?) -> Unit
+    ) {
         val mDoc = MDoc(source = this.rawCbor)
         mDoc.decodeMDoc(onComplete = { model ->
-            onComplete.invoke(model.toJson())
+            onComplete.invoke(model.toJson(separateElementIdentifier))
         }, onError = {
             onComplete.invoke(null)
         })

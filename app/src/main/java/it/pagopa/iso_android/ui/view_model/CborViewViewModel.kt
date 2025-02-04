@@ -31,7 +31,7 @@ class CborViewViewModel : ViewModel() {
         val mDoc = MDoc(this.cborText)
         mDoc.decodeMDoc(
             onComplete = { model ->
-                val json = JSONObject(model.toJson())
+                val json = JSONObject(model.toJson(false))
                 this@CborViewViewModel.model = DocsModel.fromJson(json)
                 this@CborViewViewModel.errorToShow = null
             },
