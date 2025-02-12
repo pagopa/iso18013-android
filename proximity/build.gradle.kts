@@ -38,11 +38,12 @@ android {
     publishing {
         publications {
             create<MavenPublication>("release") {
-                // from(components["release"])  // this line generates an error on syncing as undefined component
                 groupId = "it.pagopa.io.wallet"
                 artifactId = "proximity"
                 version = "1.0.0"
-
+                afterEvaluate {
+                    from(components["release"])
+                }
                 pom {
                     name.set("PagoPA IO Wallet PROXIMITY Library")
                     description.set("A native implementation of iso18013 (aka proximity)")
@@ -74,9 +75,6 @@ android {
 
         repositories {
             maven {
-                /* A trick to test publish of packages locally */
-                // name = "ProximityTestRepo"
-                // url = uri("${rootProject.buildDir}/proximity")
                 name = "MavenCentral"
                 url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
                 credentials {
@@ -87,7 +85,9 @@ android {
         }
     }
 
-    // comment signing section on locally publishing to avoid signing errors
+if (project.hasProperty("signing.key") &&
+    project.hasProperty("signing.keyId") &&
+    project.hasProperty("signing.password")) {
     signing {
         useInMemoryPgpKeys(
             project.findProperty("signing.keyId") as String?,
@@ -96,7 +96,9 @@ android {
         )
         sign(publishing.publications["release"])
     }
-
+} else {
+    logger.lifecycle("Skipping signing configuration")
+}
 
 dependencies {
     implementation(project(":cbor"))

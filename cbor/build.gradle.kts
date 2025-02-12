@@ -37,10 +37,13 @@ android {
     publishing {
         publications {
             create<MavenPublication>("release") {
-                // from(components["release"])  // this line generates an error on syncing as undefined component
+                // from(components["components"])  // this line generates an error on syncing as undefined component
                 groupId = "it.pagopa.io.wallet"
                 artifactId = "cbor"
                 version = "1.0.0"
+                afterEvaluate {
+                    from(components["release"])
+                }
                 pom {
                     name.set("PagoPA IO Wallet CBOR Library")
                     description.set("A native implementation of CBOR")
@@ -72,9 +75,6 @@ android {
 
         repositories {
             maven {
-                /* A trick to test publish of packages locally */
-                // name = "CborTestRepo"
-                // url = uri("${rootProject.buildDir}/cbor")
                 name = "MavenCentral"
                 url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
                 credentials {
@@ -84,7 +84,10 @@ android {
             }
         }
     }
-    // comment signing section on locally publishing to avoid signing errors
+
+if (project.hasProperty("signing.key") &&
+    project.hasProperty("signing.keyId") &&
+    project.hasProperty("signing.password")) {
     signing {
         useInMemoryPgpKeys(
             project.findProperty("signing.keyId") as String?,
@@ -93,6 +96,9 @@ android {
         )
         sign(publishing.publications["release"])
     }
+} else {
+    logger.lifecycle("Skipping signing configuration")
+}
 
 
 dependencies {
