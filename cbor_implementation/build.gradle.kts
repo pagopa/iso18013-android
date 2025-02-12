@@ -2,10 +2,12 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
+    `maven-publish`
+    signing
 }
 
 android {
-    namespace = "it.pagopa.cbor_implementation"
+    namespace = "it.pagopa.io.wallet.cbor"
     compileSdk = 35
 
     defaultConfig {
@@ -31,6 +33,65 @@ android {
         jvmTarget = "1.8"
     }
 }
+
+    publishing {
+        publications {
+            create<MavenPublication>("release") {
+                // from(components["release"])  // this line generates an error on syncing as undefined component
+                groupId = "it.pagopa.io.wallet"
+                artifactId = "cbor"
+                version = "1.0.0"
+                pom {
+                    name.set("PagoPA IO Wallet CBOR Library")
+                    description.set("A native implementation of CBOR")
+                    url.set("https://github.com/pagopa/iso18013-android")
+
+                    licenses {
+                        license {
+                            name.set("The Apache License, Version 2.0")
+                            url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id.set("iowallettech")
+                            name.set("PagoPA S.p.A.")
+                            email.set("iowallettech@pagopa.it")
+                        }
+                    }
+
+                    scm {
+                        connection.set("scm:git:git://github.com/pagopa/iso18013-android.git")
+                        developerConnection.set("scm:git:ssh://github.com/pagopa/iso18013-android.git")
+                        url.set("https://github.com/pagopa/iso18013-android")
+                    }
+                }
+            }
+        }
+
+        repositories {
+            maven {
+                name = "CborTestRepo"
+                url = uri("${rootProject.buildDir}/cbor")
+                /* name = "MavenCentral"
+                url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+                credentials {
+                    username = project.findProperty("mavenCentralUsername") as String? ?: System.getenv("MAVEN_CENTRAL_USERNAME") ?: ""
+                    password = project.findProperty("mavenCentralPassword") as String? ?: System.getenv("MAVEN_CENTRAL_PASSWORD") ?: ""
+                } */
+            }
+        }
+    }
+    /* signing {
+        useInMemoryPgpKeys(
+            project.findProperty("signing.keyId") as String?,
+            project.findProperty("signing.key") as String?,
+            project.findProperty("signing.password") as String?
+        )
+        sign(publishing.publications["release"])
+    } */
+
 
 dependencies {
     implementation(libs.androidx.core.ktx)
