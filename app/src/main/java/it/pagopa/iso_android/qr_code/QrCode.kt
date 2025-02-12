@@ -7,7 +7,7 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.WriterException
 import com.google.zxing.common.CharacterSetECI
 import com.google.zxing.qrcode.QRCodeWriter
-import it.pagopa.proximity.ProximityLogger
+import it.pagopa.io.wallet.proximity.ProximityLogger
 import java.util.EnumMap
 
 /**

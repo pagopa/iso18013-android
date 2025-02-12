@@ -14,8 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
-import it.pagopa.cbor_implementation.impl.MDoc
-import it.pagopa.cbor_implementation.model.DocType
+import it.pagopa.io.wallet.cbor.impl.MDoc
+import it.pagopa.io.wallet.cbor.model.DocType
 import it.pagopa.iso_android.ui.BigText
 import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.model.DocsModel

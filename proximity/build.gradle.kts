@@ -74,30 +74,32 @@ android {
 
         repositories {
             maven {
-                name = "ProximityTestRepo"
-                url = uri("${rootProject.buildDir}/proximity")
-                /* name = "MavenCentral"
+                /* A trick to test publish of packages locally */
+                // name = "ProximityTestRepo"
+                // url = uri("${rootProject.buildDir}/proximity")
+                name = "MavenCentral"
                 url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
                 credentials {
                     username = project.findProperty("mavenCentralUsername") as String? ?: System.getenv("MAVEN_CENTRAL_USERNAME") ?: ""
                     password = project.findProperty("mavenCentralPassword") as String? ?: System.getenv("MAVEN_CENTRAL_PASSWORD") ?: ""
-                } */
+                }
             }
         }
     }
 
-    /* signing {
+    // comment signing section on locally publishing to avoid signing errors
+    signing {
         useInMemoryPgpKeys(
             project.findProperty("signing.keyId") as String?,
             project.findProperty("signing.key") as String?,
             project.findProperty("signing.password") as String?
         )
         sign(publishing.publications["release"])
-    } */
+    }
 
 
 dependencies {
-    implementation(project(":cbor_implementation"))
+    implementation(project(":cbor"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
