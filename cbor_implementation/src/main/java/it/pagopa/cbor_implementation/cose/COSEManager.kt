@@ -15,6 +15,13 @@ import java.security.Signature
 import java.security.spec.X509EncodedKeySpec
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import org.bouncycastle.jce.ECNamedCurveTable
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
+import org.bouncycastle.jce.spec.ECPublicKeySpec
+import org.json.JSONObject
+import org.bouncycastle.util.encoders.Base64 as B64BC
+import java.math.BigInteger
+import java.security.PublicKey
 
 /**
  * With this class you can sign every object with COSE*/
@@ -60,19 +67,52 @@ class COSEManager {
             else -> throw IllegalArgumentException("Unsupported algorithm")
         }
     }
-    /*
 
-        @Throws(Exception::class)
-        private fun getPublicKey(publicKey: ByteArray, algorithm: String): PublicKey {
-            val keySpec = X509EncodedKeySpec(publicKey)
-            val keyFactory = when {
-                algorithm.contains("ECDSA") -> KeyFactory.getInstance("EC", "BC")
-                algorithm.contains("RSA") -> KeyFactory.getInstance("RSA", "BC")
-                else -> throw IllegalArgumentException("Unsupported key algorithm")
-            }
-            return keyFactory.generatePublic(keySpec)
-        }
-    */
+    /**
+     * Converts a JSON Web Key (JWK) with EC (Elliptic Curve) parameters into a Java PublicKey instance using Bouncy Castle.
+     *
+     * @param jwkJson A JSON string containing the JWK with EC parameters.
+     *                The JWK must include the following fields:
+     *                - "crv": The name of the elliptic curve (e.g., "P-256", "P-384", etc.).
+     *                - "x": The x-coordinate of the public key, Base64URL-encoded.
+     *                - "y": The y-coordinate of the public key, Base64URL-encoded.
+     * @return A `PublicKey` instance representing the EC public key.
+     * @throws Exception if the conversion fails due to invalid input or configuration.
+     * @throws IllegalArgumentException if key type is not 'EC'
+     */
+    @VisibleForTesting
+    fun jwkToPublicKey(jwkJson: String): PublicKey {
+        // Parse the JWK JSON string into a JSONObject.
+        // JSONObject is used to extract the required fields: "crv", "x", and "y".
+        val jwk = JSONObject(jwkJson)
+        // Extract the "crv" field, which specifies the name of the elliptic curve (e.g., "P-256").
+        val crv = jwk.getString("crv")
+        // Extract the "x" and "y" fields, which are the x and y coordinates of the public key.
+        // These are Base64URL-encoded strings.
+        val x = jwk.getString("x")
+        val y = jwk.getString("y")
+        val kty = jwk.getString("kty")
+        if (kty != "EC")
+            throw IllegalArgumentException("Unsupported key type")
+        // Decode the x and y coordinates from Base64URL format into byte arrays.
+        // Then convert these byte arrays into BigInteger instances.
+        // '1' ensures the number is treated as positive
+        val xCoordinate = BigInteger(1, B64BC.decode(x))
+        val yCoordinate = BigInteger(1, B64BC.decode(y))
+        // Use Bouncy Castle to fetch the elliptic curve parameters using the curve name ("crv").
+        // ECNamedCurveTable.getParameterSpec() retrieves the specification for the given curve.
+        val ecSpec: ECNamedCurveParameterSpec = ECNamedCurveTable.getParameterSpec(crv)
+        // Create the elliptic curve point using the x and y coordinates.
+        // ecSpec.curve is the mathematical representation of the elliptic curve.
+        val ecPoint = ecSpec.curve.createPoint(xCoordinate, yCoordinate)
+        // Create a public key specification (ECPublicKeySpec) using the curve parameters and the EC point.
+        val keySpec = ECPublicKeySpec(ecPoint, ecSpec)
+        // Use the Java KeyFactory to generate the public key from the key specification.
+        // The provider "BC" refers to the Bouncy Castle library, which must be properly configured.
+        val keyFactory = KeyFactory.getInstance(kty, BouncyCastleProvider.PROVIDER_NAME)
+        // Generate and return the public key.
+        return keyFactory.generatePublic(keySpec)
+    }
 
     private fun verifySign1(
         signature: ByteArray,
@@ -100,6 +140,22 @@ class COSEManager {
         }
     }
 
+    /**It verifies sign1 with jwk
+     * @param dataSigned dataSigned as [ByteArray]
+     * @param jwk jwk string
+     * @return true if data is valid, false otherwise*/
+    fun verifySign1FromJWK(
+        dataSigned: ByteArray,
+        jwk: String
+    ): Boolean = verifySign1(
+        dataSigned,
+        jwkToPublicKey(jwk).encoded
+    )
+
+    /**It verifies sign1 with public key
+     * @param dataSigned dataSigned as [ByteArray]
+     * @param publicKey publicKey as [ByteArray]]
+     * @return true if data is valid, false otherwise*/
     @OptIn(ExperimentalEncodingApi::class)
     fun verifySign1(
         dataSigned: ByteArray,

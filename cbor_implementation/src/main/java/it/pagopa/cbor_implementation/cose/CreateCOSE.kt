@@ -64,7 +64,7 @@ internal class CreateCOSE private constructor() {
 
     private fun ByteArray.signWithCOSE(): SignWithCOSEResult {
         if (!keyExists())
-            generateKey()
+            return SignWithCOSEResult.Failure("Key doesn't exists!!")
         val pair = getPrivateKeyAndPublicKey()
         if (pair == null) return SignWithCOSEResult.Failure("key not found")
         val (private, public) = pair

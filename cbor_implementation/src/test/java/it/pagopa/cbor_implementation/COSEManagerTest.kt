@@ -125,4 +125,18 @@ class COSEManagerTest {
             assert(e is IllegalArgumentException)
         }
     }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    @Test
+    fun `test verify from jwk`() {
+        val jwkKey = "{\n" +
+                "  crv: 'P-256',\n" +
+                "  kty: 'EC',\n" +
+                "  x: 'd2SM2WRV0lOKlMQJGcN76P+mAyau4vhVLlhgzAxyWp4=',\n" +
+                "  y: 'FiQJMW6agCMNC9i79ePkQqvtvsaOVaQwZkkcmbsQ/gQ=',\n" +
+                "}"
+        val back = coseManager.jwkToPublicKey(jwkKey)
+        println("back:")
+        println(Base64.encode(back.encoded))
+    }
 }
