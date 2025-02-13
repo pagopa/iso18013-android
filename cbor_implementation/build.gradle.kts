@@ -67,7 +67,7 @@ dependencies {
 
 val libGroupId = "it.pagopa"
 val libArtifactID = "cbor"
-val libVersion = "1.0.1"
+val libVersion = "1.1.0"
 val localProperties = Properties()
 localProperties.load(FileInputStream(rootProject.file("local.properties")))
 val pushingUrl: String? = localProperties["git_hub_pushing_url"] as? String
