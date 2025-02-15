@@ -41,4 +41,4 @@ jobs:
           fi
 
       - name: Publish ${{ steps.module.outputs.module }} library
-        run: ./gradlew :${{ steps.module.outputs.module }}:publish
+        run: ./gradlew :${{ steps.module.outputs.module }}::cbor:publishAllPublicationsToMavenCentralRepository
