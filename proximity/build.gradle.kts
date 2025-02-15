@@ -1,16 +1,22 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)
     id("kotlin-parcelize")
+    id("com.vanniktech.maven.publish") version "0.30.0"
+
 }
 
+tasks.matching { it.name.contains("javaDocReleaseGeneration", ignoreCase = true) }
+    .configureEach { enabled = false }
+
 android {
-    namespace = "it.pagopa.proximity"
+    namespace = "it.pagopa.io.wallet.proximity"
     compileSdk = 35
 
     defaultConfig {
         minSdk = 26
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -33,8 +39,42 @@ android {
     }
 }
 
+mavenPublishing {
+    coordinates("it.pagopa.io.wallet.proximity", "proximity", "1.0.0")
+
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
+
+    pom {
+        name.set("IOWallet Proximity Library")
+        description.set("A native implementation of iso18013-5")
+        url.set("https://github.com/pagopa/iso18013-android")
+
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://github.com/pagopa/iso18013-android/blob/main/LICENSE")
+            }
+        }
+
+        developers {
+            developer {
+                id.set("iowallettech")
+                name.set("PagoPA S.p.A.")
+                email.set("iowallettech@pagopa.it")
+            }
+        }
+
+        scm {
+            connection.set("scm:git:git://github.com/pagopa/iso18013-android.git")
+            developerConnection.set("scm:git:ssh://github.com/pagopa/iso18013-android.git")
+            url.set("https://github.com/pagopa/iso18013-android")
+        }
+    }
+}
+
 dependencies {
-    implementation(project(":cbor_implementation"))
+    implementation(project(":cbor"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

@@ -18,8 +18,8 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import it.pagopa.cbor_implementation.cose.COSEManager
-import it.pagopa.cbor_implementation.document_manager.DocManager
+import it.pagopa.io.wallet.cbor.cose.COSEManager
+import it.pagopa.io.wallet.cbor.document_manager.DocManager
 import it.pagopa.iso_android.MainActivity
 import it.pagopa.iso_android.R
 import it.pagopa.iso_android.ui.view.CborView
@@ -34,8 +34,8 @@ import it.pagopa.iso_android.ui.view_model.MasterViewViewModel
 import it.pagopa.iso_android.ui.view_model.SignAndVerifyViewViewModel
 import it.pagopa.iso_android.ui.view_model.SlaveViewViewModel
 import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
-import it.pagopa.proximity.bluetooth.BleRetrievalMethod
-import it.pagopa.proximity.qr_code.QrEngagement
+import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
+import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
 
 private const val AnimDurationMillis = 700
 

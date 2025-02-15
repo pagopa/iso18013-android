@@ -76,7 +76,7 @@ composeCompiler {
 
 dependencies {
     implementation(project(":proximity"))
-    implementation(project(":cbor_implementation"))
+    implementation(project(":cbor"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

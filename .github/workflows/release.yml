@@ -1,0 +1,36 @@
+name: Publish Libraries to Maven Central
+
+on:
+  push:
+    tags:
+      - 'cbor-v*'       # Example: cbor-v1.0.0
+      - 'proximity-v*'  # Example: proximity-v1.0.0
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Determine module to publish
+        id: module
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == cbor-v* ]]; then
+            echo "module=cbor" >> $GITHUB_OUTPUT
+          elif [[ "${GITHUB_REF_NAME}" == proximity-v* ]]; then
+            echo "module=proximity" >> $GITHUB_OUTPUT
+          else
+            echo "Unsupported tag format"
+            exit 1
+          fi
+
+      - name: Publish ${{ steps.module.outputs.module }} library
+        run: ./gradlew :${{ steps.module.outputs.module }}::cbor:publishAllPublicationsToMavenCentralRepository

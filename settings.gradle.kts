@@ -22,4 +22,4 @@ dependencyResolutionManagement {
 rootProject.name = "iso18013"
 include(":app")
 include(":proximity")
-include(":cbor_implementation")
+include(":cbor")
