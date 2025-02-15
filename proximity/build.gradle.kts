@@ -1,18 +1,22 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.jetbrains.kotlin.android)
     id("kotlin-parcelize")
-    id("maven-publish")
-    id("signing")
+    id("com.vanniktech.maven.publish") version "0.30.0"
+
 }
 
+tasks.matching { it.name.contains("javaDocReleaseGeneration", ignoreCase = true) }
+    .configureEach { enabled = false }
+
 android {
-    namespace = "it.pagopa.proximity"
+    namespace = "it.pagopa.io.wallet.proximity"
     compileSdk = 35
 
     defaultConfig {
         minSdk = 26
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
     }
@@ -35,69 +39,38 @@ android {
     }
 }
 
-    publishing {
-        publications {
-            create<MavenPublication>("release") {
-                groupId = "it.pagopa.io.wallet"
-                artifactId = "proximity"
-                version = "1.0.0"
-                afterEvaluate {
-                    from(components["release"])
-                }
-                pom {
-                    name.set("PagoPA IO Wallet PROXIMITY Library")
-                    description.set("A native implementation of iso18013 (aka proximity)")
-                    url.set("https://github.com/pagopa/iso18013-android")
+mavenPublishing {
+    coordinates("it.pagopa.io.wallet.proximity", "proximity", "1.0.0")
 
-                    licenses {
-                        license {
-                            name.set("MIT License")
-                            url.set("https://github.com/pagopa/iso18013-android/blob/main/LICENSE")
-                        }
-                    }
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
 
-                    developers {
-                        developer {
-                            id.set("iowallettech")
-                            name.set("PagoPA S.p.A.")
-                            email.set("iowallettech@pagopa.it")
-                        }
-                    }
+    pom {
+        name.set("IOWallet Proximity Library")
+        description.set("A native implementation of iso18013-5")
+        url.set("https://github.com/pagopa/iso18013-android")
 
-                    scm {
-                        connection.set("scm:git:git://github.com/pagopa/iso18013-android.git")
-                        developerConnection.set("scm:git:ssh://github.com/pagopa/iso18013-android.git")
-                        url.set("https://github.com/pagopa/iso18013-android")
-                    }
-                }
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://github.com/pagopa/iso18013-android/blob/main/LICENSE")
             }
         }
 
-        repositories {
-            maven {
-                name = "MavenCentral"
-                url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
-                credentials {
-                    username = project.findProperty("mavenCentralUsername") as String? ?: System.getenv("MAVEN_CENTRAL_USERNAME") ?: ""
-                    password = project.findProperty("mavenCentralPassword") as String? ?: System.getenv("MAVEN_CENTRAL_PASSWORD") ?: ""
-                }
+        developers {
+            developer {
+                id.set("iowallettech")
+                name.set("PagoPA S.p.A.")
+                email.set("iowallettech@pagopa.it")
             }
         }
-    }
 
-if (project.hasProperty("signing.key") &&
-    project.hasProperty("signing.keyId") &&
-    project.hasProperty("signing.password")) {
-    signing {
-        useInMemoryPgpKeys(
-            project.findProperty("signing.keyId") as String?,
-            project.findProperty("signing.key") as String?,
-            project.findProperty("signing.password") as String?
-        )
-        sign(publishing.publications["release"])
+        scm {
+            connection.set("scm:git:git://github.com/pagopa/iso18013-android.git")
+            developerConnection.set("scm:git:ssh://github.com/pagopa/iso18013-android.git")
+            url.set("https://github.com/pagopa/iso18013-android")
+        }
     }
-} else {
-    logger.lifecycle("Skipping signing configuration")
 }
 
 dependencies {
