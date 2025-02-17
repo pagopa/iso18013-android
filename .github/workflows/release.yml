@@ -19,6 +19,25 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Configure GPG
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          echo "$SIGNING_KEY" | base64 --decode | gpg --dearmor > ${HOME}/secring.gpg
+
+      - name: Add Gradle Properties
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          echo "mavenCentralUsername=${MAVEN_CENTRAL_USERNAME}" >> gradle.properties
+          echo "mavenCentralPassword=${MAVEN_CENTRAL_PASSWORD}" >> gradle.properties
+          echo "signing.keyId=${SIGNING_KEY_ID}" >> gradle.properties
+          echo "signing.password=${SIGNING_KEY_PASSWORD}" >> gradle.properties
+          echo "signing.secretKeyRingFile=${HOME}/secring.gpg" >> gradle.properties
+
       - name: Determine module to publish
         id: module
         run: |
@@ -33,9 +52,3 @@ jobs:
 
       - name: Publish ${{ steps.module.outputs.module }} library
         run: ./gradlew :${{ steps.module.outputs.module }}:publishAllPublicationsToMavenCentralRepository
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USER_NAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_IN_MEMORY_KEY }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.SIGNING_IN_MEMORY_KEY_ID }}
-          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_IN_MEMORY_KEY_PASSWORD }}
