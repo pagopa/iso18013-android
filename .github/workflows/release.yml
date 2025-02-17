@@ -32,11 +32,11 @@ jobs:
           SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
         run: |
-          echo -e "\nmavenCentralUsername=${MAVEN_CENTRAL_USERNAME}" >> gradle.properties
-          echo -e "\nmavenCentralPassword=${MAVEN_CENTRAL_PASSWORD}" >> gradle.properties
-          echo -e "\nsigning.keyId=${SIGNING_KEY_ID}" >> gradle.properties
-          echo -e "\nsigning.password=${SIGNING_KEY_PASSWORD}" >> gradle.properties
-          echo -e "\nsigning.secretKeyRingFile=${HOME}/secring.gpg" >> gradle.properties
+          echo -e "mavenCentralUsername=${MAVEN_CENTRAL_USERNAME}" >> gradle.properties
+          echo -e "mavenCentralPassword=${MAVEN_CENTRAL_PASSWORD}" >> gradle.properties
+          echo -e "signing.keyId=${SIGNING_KEY_ID}" >> gradle.properties
+          echo -e "signing.password=${SIGNING_KEY_PASSWORD}" >> gradle.properties
+          echo -e "signing.secretKeyRingFile=${HOME}/secring.gpg" >> gradle.properties
 
       - name: Determine module to publish
         id: module
