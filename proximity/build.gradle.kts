@@ -38,7 +38,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":cbor_implementation"))
+    implementation(project(":cbor"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
