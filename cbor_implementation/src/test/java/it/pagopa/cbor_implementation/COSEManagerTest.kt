@@ -3,6 +3,7 @@ package it.pagopa.cbor_implementation
 import com.upokecenter.cbor.CBORObject
 import it.pagopa.cbor_implementation.cose.COSEManager
 import it.pagopa.cbor_implementation.cose.CreateCOSE
+import it.pagopa.cbor_implementation.cose.FailureReason
 import it.pagopa.cbor_implementation.cose.SignWithCOSEResult
 import org.junit.Assert.*
 import org.junit.Before
@@ -62,10 +63,10 @@ class COSEManagerTest {
 
     @Test
     fun `test signWithCOSE failure`() {
-        val mockResult = SignWithCOSEResult.Failure("signing error")
+        val mockResult = SignWithCOSEResult.Failure(FailureReason.FAIL_TO_SIGN)
         val result = prepareCreateCOSEToSign(mockResult)
         assertTrue(result is SignWithCOSEResult.Failure)
-        assertEquals("signing error", (result as SignWithCOSEResult.Failure).msg)
+        assertEquals(FailureReason.FAIL_TO_SIGN.msg, (result as SignWithCOSEResult.Failure).reason.msg)
     }
 
     @OptIn(ExperimentalEncodingApi::class)

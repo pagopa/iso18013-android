@@ -51,7 +51,9 @@ class COSEManager {
                 CreateCOSE.build(alias).sign(data, isDetached)
         } catch (e: Exception) {
             CborLogger.e("signWithCOSE", e.toString())
-            SignWithCOSEResult.Failure(e.toString())
+            SignWithCOSEResult.Failure(FailureReason.EXCEPTION.apply {
+                this.msg = e.message.orEmpty()
+            })
         }
     }
 
