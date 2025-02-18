@@ -9,19 +9,19 @@ import it.pagopa.cbor_implementation.CborLogger
 import it.pagopa.cbor_implementation.extensions.isDer
 import it.pagopa.cbor_implementation.helper.addBcIfNeeded
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
+import org.bouncycastle.jce.spec.ECPublicKeySpec
+import org.json.JSONObject
+import java.math.BigInteger
 import java.security.KeyFactory
+import java.security.PublicKey
 import java.security.Signature
 import java.security.spec.X509EncodedKeySpec
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
-import org.bouncycastle.jce.ECNamedCurveTable
-import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
-import org.bouncycastle.jce.spec.ECPublicKeySpec
-import org.json.JSONObject
 import org.bouncycastle.util.encoders.Base64 as B64BC
-import java.math.BigInteger
-import java.security.PublicKey
 
 /**
  * With this class you can sign every object with COSE*/

@@ -66,7 +66,10 @@ class COSEManagerTest {
         val mockResult = SignWithCOSEResult.Failure(FailureReason.FAIL_TO_SIGN)
         val result = prepareCreateCOSEToSign(mockResult)
         assertTrue(result is SignWithCOSEResult.Failure)
-        assertEquals(FailureReason.FAIL_TO_SIGN.msg, (result as SignWithCOSEResult.Failure).reason.msg)
+        assertEquals(
+            FailureReason.FAIL_TO_SIGN.msg,
+            (result as SignWithCOSEResult.Failure).reason.msg
+        )
     }
 
     @OptIn(ExperimentalEncodingApi::class)
@@ -139,5 +142,20 @@ class COSEManagerTest {
         val back = coseManager.jwkToPublicKey(jwkKey)
         println("back:")
         println(Base64.encode(back.encoded))
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    @Test
+    fun `test verify sign 1 from jwk`() {
+        val dataToVerify =
+            "hEOhASagUXRoaXMgaXMgdGVzdCBkYXRhWECWHFXxcZPkyupozacO5KTeBDcbXFYX6HaFynTZ85qXdtGGd9bhtgBq1vcjYdK0QHP+DmG15108cm497i83ScSf"
+        val jwkKey = "{\n" +
+                "  crv: 'P-256',\n" +
+                "  kty: 'EC',\n" +
+                "  x: 'RjbyQJnEKZuBIQ71mLMVs0+y5uzdEe1+pALMMoucqlQ=',\n" +
+                "  y: 'hlVFni6N2sqKY6XK3KGmqU4m7Y+U606ElJKRvNQ0nH4=',\n" +
+                "}"
+        println("RESULT:")
+        println(coseManager.verifySign1FromJWK(java.util.Base64.getDecoder().decode(dataToVerify), jwkKey))
     }
 }
