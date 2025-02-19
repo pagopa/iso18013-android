@@ -5,9 +5,9 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import it.pagopa.cbor_implementation.CborLogger
-import it.pagopa.cbor_implementation.cose.COSEManager
-import it.pagopa.cbor_implementation.cose.SignWithCOSEResult
+import it.pagopa.io.wallet.cbor.CborLogger
+import it.pagopa.io.wallet.cbor.cose.COSEManager
+import it.pagopa.io.wallet.cbor.cose.SignWithCOSEResult
 import it.pagopa.iso_android.ui.AppDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

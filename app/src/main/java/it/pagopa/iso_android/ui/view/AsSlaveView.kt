@@ -18,7 +18,7 @@ import it.pagopa.iso_android.camerax.CameraView
 import it.pagopa.iso_android.ui.AppDialog
 import it.pagopa.iso_android.ui.GenericDialog
 import it.pagopa.iso_android.ui.view_model.SlaveViewViewModel
-import it.pagopa.proximity.ProximityLogger
+import it.pagopa.io.wallet.proximity.ProximityLogger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
