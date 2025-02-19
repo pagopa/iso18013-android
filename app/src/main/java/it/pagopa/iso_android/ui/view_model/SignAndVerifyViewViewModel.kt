@@ -64,7 +64,7 @@ class SignAndVerifyViewViewModel(
                 data = data,
                 alias = "pagoPA"
             )) {
-                is SignWithCOSEResult.Failure -> failureAppDialog(result.msg)
+                is SignWithCOSEResult.Failure -> failureAppDialog(result.reason.msg)
                 is SignWithCOSEResult.Success -> {
                     successAppDialog()
                     val dataSigned = Base64.encodeToString(result.signature, Base64.DEFAULT or Base64.NO_WRAP)

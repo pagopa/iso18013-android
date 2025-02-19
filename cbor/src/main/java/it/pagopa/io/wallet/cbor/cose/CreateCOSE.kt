@@ -6,6 +6,10 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import androidx.annotation.CheckResult
 import com.upokecenter.cbor.CBORObject
+import org.bouncycastle.asn1.ASN1Integer
+import org.bouncycastle.asn1.ASN1Sequence
+import org.bouncycastle.crypto.signers.PlainDSAEncoding
+import org.bouncycastle.math.ec.custom.sec.SecP256R1Curve
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.PrivateKey
@@ -51,25 +55,31 @@ internal class CreateCOSE private constructor() {
         return entry.privateKey to entry.certificate.publicKey
     }
 
-    private fun signData(data: ByteArray, privateKey: PrivateKey): ByteArray? {
+    private fun signDataRaw(data: ByteArray, privateKey: PrivateKey): ByteArray? {
         return try {
             val signature = Signature.getInstance("SHA256withECDSA")
             signature.initSign(privateKey)
             signature.update(data)
-            signature.sign()
-        } catch (_: Exception) {
+            val derSignature = signature.sign()
+            val seq = ASN1Sequence.getInstance(derSignature)
+            val r = (seq.getObjectAt(0) as ASN1Integer).value
+            val s = (seq.getObjectAt(1) as ASN1Integer).value
+            val n = SecP256R1Curve().order
+            PlainDSAEncoding.INSTANCE.encode(n, r, s)
+        } catch (e: Exception) {
+            e.printStackTrace()
             null
         }
     }
 
     private fun ByteArray.signWithCOSE(): SignWithCOSEResult {
         if (!keyExists())
-            generateKey()
+            return SignWithCOSEResult.Failure(FailureReason.NO_KEY)
         val pair = getPrivateKeyAndPublicKey()
-        if (pair == null) return SignWithCOSEResult.Failure("key not found")
+        if (pair == null) return SignWithCOSEResult.Failure(FailureReason.PRIVATE_KEY_AND_PUBLIC_KEY_FAILURE)
         val (private, public) = pair
-        val signature = signData(this, private)
-        if (signature == null) return SignWithCOSEResult.Failure("Fail to sign")
+        val signature = signDataRaw(this, private)
+        if (signature == null) return SignWithCOSEResult.Failure(FailureReason.FAIL_TO_SIGN)
         return SignWithCOSEResult.Success(signature, public.encoded)
     }
 
@@ -86,12 +96,12 @@ internal class CreateCOSE private constructor() {
         array.Add(data)
         val dataToSign = array.EncodeToBytes()
         return when (val result = dataToSign.signWithCOSE()) {
-            is SignWithCOSEResult.Failure -> SignWithCOSEResult.Failure(result.msg)
+            is SignWithCOSEResult.Failure -> SignWithCOSEResult.Failure(result.reason)
             is SignWithCOSEResult.Success -> {
                 SignWithCOSEResult.Success(
                     CBORObject.NewArray().apply {
                         this.Add(protectedAttr.EncodeToBytes())
-                        this.Add(unprotectedAttributes.EncodeToBytes())
+                        this.Add(unprotectedAttributes)
                         this.Add(if (isDetached) null else data)
                         this.Add(result.signature)
                     }.EncodeToBytes(),

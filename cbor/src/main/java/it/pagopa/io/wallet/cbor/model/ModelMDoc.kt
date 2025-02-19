@@ -14,9 +14,9 @@ data class ModelMDoc(
     var status: Int?,
     var version: String?
 ) {
-    fun toJson(): String {
+    fun toJson(separateElementIdentifier: Boolean): String {
         return JSONObject().apply {
-            put("documents", this@ModelMDoc.documents?.map { it.toJson() })
+            put("documents", this@ModelMDoc.documents?.map { it.toJson(separateElementIdentifier) })
             put("status", status)
             put("version", version)
         }.toString()
@@ -42,9 +42,9 @@ data class Document(
     var issuerSigned: IssuerSigned?,
     val rawValue: ByteArray
 ) {
-    fun toJson() = JSONObject().apply {
+    fun toJson(separateElementIdentifier: Boolean) = JSONObject().apply {
         put("docType", docType)
-        put("issuerSigned", issuerSigned?.toJson())
+        put("issuerSigned", issuerSigned?.toJson(separateElementIdentifier))
     }
 
     @CheckResult
@@ -108,13 +108,13 @@ data class IssuerSigned(
     val nameSpacedData: Map<String, Map<String, ByteArray>>,
     val issuerAuth: ByteArray? = null
 ) {
-    fun toJson() = JSONObject().apply {
+    fun toJson(separateElementIdentifier: Boolean) = JSONObject().apply {
         put("issuerAuth", issuerAuth?.let {
             Base64.getUrlEncoder().encodeToString(issuerAuth)
         })
         put("nameSpaces", JSONObject().apply {
             nameSpaces?.forEach {
-                this.put(it.key, it.value.map { it.toJson() })
+                this.put(it.key, it.value.map { it.toJson(separateElementIdentifier) })
             }
         })
     }
@@ -129,13 +129,18 @@ data class DocumentX(
     val elementIdentifier: String?,
     val elementValue: Any?
 ) {
-    fun toJson() = JSONObject().apply {
+    fun toJson(separateElementIdentifier: Boolean) = JSONObject().apply {
         put("digestID", digestID)
         put("random", random?.let {
             Base64.getUrlEncoder().encodeToString(random)
         })
-        if (elementIdentifier != null)
-            put(elementIdentifier, elementValue)
+        if (separateElementIdentifier) {
+            put("elementIdentifier", elementIdentifier)
+            put("elementValue", elementValue)
+        } else {
+            if (elementIdentifier != null)
+                put(elementIdentifier, elementValue)
+        }
     }
 }
 
