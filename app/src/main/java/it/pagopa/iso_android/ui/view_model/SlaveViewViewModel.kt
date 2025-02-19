@@ -1,10 +1,10 @@
 package it.pagopa.iso_android.ui.view_model
 
 import androidx.lifecycle.ViewModel
-import it.pagopa.proximity.ProximityLogger
-import it.pagopa.proximity.qr_code.QrEngagement
-import it.pagopa.proximity.qr_code.QrEngagementListener
-import it.pagopa.proximity.wrapper.DeviceRetrievalHelperWrapper
+import it.pagopa.io.wallet.proximity.ProximityLogger
+import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
+import it.pagopa.io.wallet.proximity.qr_code.QrEngagementListener
+import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class SlaveViewViewModel(

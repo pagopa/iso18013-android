@@ -31,7 +31,7 @@ import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.SmallText
 import it.pagopa.iso_android.ui.TwoButtonsInARow
 import it.pagopa.iso_android.ui.preview.ThemePreviews
-import it.pagopa.proximity.bluetooth.BluetoothUtils
+import it.pagopa.io.wallet.proximity.bluetooth.BluetoothUtils
 
 @Composable
 fun HomeView(

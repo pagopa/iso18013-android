@@ -1,0 +1,55 @@
+name: Publish Libraries to Maven Central
+
+on:
+  push:
+    tags:
+      - 'cbor-v*'       # Example: cbor-v1.0.0
+      - 'proximity-v*'  # Example: proximity-v1.0.0
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Configure GPG
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          echo "$SIGNING_KEY" | base64 --decode > ${HOME}/secring.gpg
+
+      - name: Add Gradle Properties
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: |
+          echo -e "mavenCentralUsername=${MAVEN_CENTRAL_USERNAME}" >> gradle.properties
+          echo -e "mavenCentralPassword=${MAVEN_CENTRAL_PASSWORD}" >> gradle.properties
+          echo -e "signing.keyId=${SIGNING_KEY_ID}" >> gradle.properties
+          echo -e "signing.password=${SIGNING_KEY_PASSWORD}" >> gradle.properties
+          echo -e "signing.secretKeyRingFile=${HOME}/secring.gpg" >> gradle.properties
+
+      - name: Determine module to publish
+        id: module
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == cbor-v* ]]; then
+            echo "module=cbor" >> $GITHUB_OUTPUT
+          elif [[ "${GITHUB_REF_NAME}" == proximity-v* ]]; then
+            echo "module=proximity" >> $GITHUB_OUTPUT
+          else
+            echo "Unsupported tag format"
+            exit 1
+          fi
+
+      - name: Publish ${{ steps.module.outputs.module }} library
+        run: ./gradlew :${{ steps.module.outputs.module }}:publishAllPublicationsToMavenCentralRepository
