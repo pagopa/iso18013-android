@@ -38,11 +38,13 @@ data class ModelMDoc(
 }
 
 data class Document(
+    var deviceSigned: DeviceSigned? = null,
     var docType: String?,
     var issuerSigned: IssuerSigned?,
     val rawValue: ByteArray
 ) {
     fun toJson(separateElementIdentifier: Boolean) = JSONObject().apply {
+        put("deviceSigned", deviceSigned?.toJson())
         put("docType", docType)
         put("issuerSigned", issuerSigned?.toJson(separateElementIdentifier))
     }
@@ -99,6 +101,28 @@ data class Document(
             val cbor = CBORObject.DecodeFromBytes(model)
             return cbor.oneDocument()
         }
+    }
+}
+
+data class DeviceSigned(
+    val deviceAuth: DeviceAuth?,
+    var nameSpaces: Map<String, Any>?
+) {
+    fun toJson() = JSONObject().apply {
+        put("deviceAuth", deviceAuth?.toJson())
+        put("nameSpaces", JSONObject().apply {
+            nameSpaces?.forEach {
+                this.put(it.key, it.value)
+            }
+        })
+    }
+}
+
+data class DeviceAuth(
+    val deviceSignature: String?
+) {
+    fun toJson() = JSONObject().apply {
+        put("deviceSignature", deviceSignature)
     }
 }
 

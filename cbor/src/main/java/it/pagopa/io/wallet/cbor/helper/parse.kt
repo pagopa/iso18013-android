@@ -3,6 +3,8 @@ package it.pagopa.io.wallet.cbor.helper
 import com.upokecenter.cbor.CBORObject
 import com.upokecenter.cbor.CBORType
 import it.pagopa.io.wallet.cbor.extensions.asNameSpacedData
+import it.pagopa.io.wallet.cbor.model.DeviceAuth
+import it.pagopa.io.wallet.cbor.model.DeviceSigned
 import it.pagopa.io.wallet.cbor.model.Document
 import it.pagopa.io.wallet.cbor.model.DocumentX
 import it.pagopa.io.wallet.cbor.model.IssuerSigned
@@ -36,37 +38,67 @@ internal fun CBORObject.oneDocument(): Document {
     val nameSpaces = issuerSigned.get("nameSpaces")
     val nameSpacesKeys = issuerSigned.get("nameSpaces")?.keys
     val data = nameSpaces.asNameSpacedData()
+    val deviceSigned = this.get("deviceSigned")
+
+    fun CBORObject?.parseNameSpaces() = this?.let { cbor ->
+        val map = mutableMapOf<String, Any>()
+        cbor.keys?.forEach { key ->
+            map[key?.AsString()?:""] = cbor.get(key)
+        }
+        map
+    }
+
+    fun Collection<CBORObject>?.parseNameSpaces() = this?.let { keys ->
+        val mNameSpaces =
+            mutableMapOf<String, List<DocumentX>>()
+        keys
+            .distinct()
+            .forEach { key ->
+                val mList = mutableListOf<DocumentX>()
+                nameSpaces?.get(key)?.values?.forEach {
+                    val value =
+                        CBORObject.DecodeFromBytes(it.GetByteString())
+                    mList.add(
+                        DocumentX(
+                            digestID = value.get("digestID")
+                                ?.AsInt32(),
+                            random = value.get("random")
+                                ?.GetByteString(),
+                            elementIdentifier = value.get("elementIdentifier")
+                                ?.AsString(),
+                            elementValue = value.get("elementValue")
+                                ?.parse()
+                        )
+                    )
+                }
+                mNameSpaces[key.AsString()] = mList
+            }
+        mNameSpaces
+    }
+
+    val mDeviceSigned = if (deviceSigned != null) {
+        val deviceAuth = deviceSigned.get("deviceAuth")
+        val deviceSignature = try {
+            Base64.getUrlEncoder()
+                .encodeToString(deviceAuth.get("deviceSignature")?.EncodeToBytes())
+        } catch (_: Exception) {
+            null
+        }
+        DeviceSigned(
+            deviceAuth = DeviceAuth(deviceSignature = deviceSignature),
+            nameSpaces = try {
+                deviceSigned.get("nameSpaces")?.parseNameSpaces()
+            } catch (_: Exception) {
+                null
+            }
+        )
+    } else
+        null
     return Document(
+        deviceSigned = mDeviceSigned,
         docType = this.get("docType")?.AsString(),
         issuerSigned = IssuerSigned(
-            nameSpaces = nameSpacesKeys
-                ?.let { keys ->
-                    val mNameSpaces =
-                        mutableMapOf<String, List<DocumentX>>()
-                    keys
-                        .distinct()
-                        .forEach { key ->
-                            val mList = mutableListOf<DocumentX>()
-                            nameSpaces?.get(key)?.values?.forEach {
-                                val value =
-                                    CBORObject.DecodeFromBytes(it.GetByteString())
-                                mList.add(
-                                    DocumentX(
-                                        digestID = value.get("digestID")
-                                            ?.AsInt32(),
-                                        random = value.get("random")
-                                            ?.GetByteString(),
-                                        elementIdentifier = value.get("elementIdentifier")
-                                            ?.AsString(),
-                                        elementValue = value.get("elementValue")
-                                            ?.parse()
-                                    )
-                                )
-                            }
-                            mNameSpaces[key.AsString()] = mList
-                        }
-                    mNameSpaces
-                },
+            nameSpaces = nameSpacesKeys.parseNameSpaces(),
             nameSpacedData = data.nameSpaceNames.associateWith { nameSpace ->
                 data.getDataElementNames(nameSpace)
                     .associateWith { elementIdentifier ->
@@ -82,7 +114,7 @@ internal fun CBORObject.oneDocument(): Document {
 
 internal fun CBORObject.toModelMDoc(): ModelMDoc {
     fun isSingleDoc(): Boolean = this.get("docType") != null
-
+    
     return if (isSingleDoc()) {
         ModelMDoc(
             documents = listOf(

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.cbor.impl.MDoc
 import it.pagopa.io.wallet.cbor.model.DocType
 import it.pagopa.iso_android.ui.BigText
@@ -52,7 +54,7 @@ class CborViewViewModel : ViewModel() {
                     val obj = JSONObject(nameSpaces)
                     obj.optString(DocType(doc.docType).nameSpacesValue)
                         .let { nameSpacesArrayString ->
-                            val nameSpacesArray= JSONArray(nameSpacesArrayString)
+                            val nameSpacesArray = JSONArray(nameSpacesArrayString)
                             for (i in 0 until nameSpacesArray.length()) {
                                 nameSpacesArray.optJSONObject(i)?.let { currentJson ->
                                     currentJson.keys().forEach { key ->
@@ -139,17 +141,7 @@ class CborViewViewModel : ViewModel() {
         } else {
             item {
                 if (value is ByteArray) {
-                    Image(
-                        modifier = Modifier
-                            .padding(top = 16.dp)
-                            .fillMaxWidth(),
-                        bitmap = BitmapFactory.decodeByteArray(
-                            value,
-                            0,
-                            value.size
-                        ).asImageBitmap(),
-                        contentDescription = null
-                    )
+                    value.ImageOrEmpty()
                 } else {
                     MediumText(
                         modifier = Modifier
@@ -160,5 +152,28 @@ class CborViewViewModel : ViewModel() {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ByteArray.ImageOrEmpty() {
+    val bitmap = try {
+        BitmapFactory.decodeByteArray(
+            this,
+            0,
+            this.size
+        ).asImageBitmap()
+    } catch (e: Exception) {
+        CborLogger.i("EXCEPTION IN IMAGE", e.message.orEmpty())
+        null
+    }
+    if (bitmap != null) {
+        Image(
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .fillMaxWidth(),
+            bitmap = bitmap,
+            contentDescription = null
+        )
     }
 }
