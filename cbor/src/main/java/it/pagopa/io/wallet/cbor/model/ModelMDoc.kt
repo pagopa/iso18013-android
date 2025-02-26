@@ -6,6 +6,8 @@ import it.pagopa.io.wallet.cbor.exception.DocTypeNotValid
 import it.pagopa.io.wallet.cbor.exception.MandatoryFieldNotFound
 import it.pagopa.io.wallet.cbor.helper.oneDocument
 import it.pagopa.io.wallet.cbor.helper.toModelMDoc
+import kotlinx.serialization.json.JsonArray
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Base64
 
@@ -160,10 +162,23 @@ data class DocumentX(
         })
         if (separateElementIdentifier) {
             put("elementIdentifier", elementIdentifier)
-            put("elementValue", elementValue)
+            put("elementValue", elementValue.toJson())
         } else {
             if (elementIdentifier != null)
-                put(elementIdentifier, elementValue)
+                put(elementIdentifier, elementValue.toJson())
+        }
+    }
+}
+
+private fun Any?.toJson(): Any? {
+    val back = this
+    return try {
+        JSONObject(back.toString())
+    } catch (_: Exception) {
+        try {
+            JSONArray(back.toString())
+        } catch (_: Exception) {
+            back
         }
     }
 }
