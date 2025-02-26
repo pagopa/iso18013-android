@@ -6,7 +6,6 @@ import it.pagopa.io.wallet.cbor.exception.DocTypeNotValid
 import it.pagopa.io.wallet.cbor.exception.MandatoryFieldNotFound
 import it.pagopa.io.wallet.cbor.helper.oneDocument
 import it.pagopa.io.wallet.cbor.helper.toModelMDoc
-import kotlinx.serialization.json.JsonArray
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Base64
