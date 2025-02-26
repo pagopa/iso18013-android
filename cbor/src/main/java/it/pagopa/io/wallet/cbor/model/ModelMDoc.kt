@@ -170,6 +170,7 @@ data class DocumentX(
 }
 
 private fun Any?.toJson(): Any? {
+    if(this == null) return null
     val back = this
     return try {
         JSONObject(back.toString())
