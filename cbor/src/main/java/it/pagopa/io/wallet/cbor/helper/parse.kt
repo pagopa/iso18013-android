@@ -35,15 +35,15 @@ internal fun CBORObject.parse(): Any? {
 
 internal fun CBORObject.oneDocument(): Document {
     val issuerSigned = this.get("issuerSigned")
-    val nameSpaces = issuerSigned.get("nameSpaces")
-    val nameSpacesKeys = issuerSigned.get("nameSpaces")?.keys
-    val data = nameSpaces.asNameSpacedData()
+    val nameSpaces = issuerSigned?.get("nameSpaces")
+    val nameSpacesKeys = issuerSigned?.get("nameSpaces")?.keys
+    val data = nameSpaces?.asNameSpacedData()
     val deviceSigned = this.get("deviceSigned")
 
     fun CBORObject?.parseNameSpaces() = this?.let { cbor ->
         val map = mutableMapOf<String, Any>()
         cbor.keys?.forEach { key ->
-            map[key?.AsString()?:""] = cbor.get(key)
+            map[key?.AsString() ?: ""] = cbor.get(key)
         }
         map
     }
@@ -99,11 +99,15 @@ internal fun CBORObject.oneDocument(): Document {
         docType = this.get("docType")?.AsString(),
         issuerSigned = IssuerSigned(
             nameSpaces = nameSpacesKeys.parseNameSpaces(),
-            nameSpacedData = data.nameSpaceNames.associateWith { nameSpace ->
-                data.getDataElementNames(nameSpace)
-                    .associateWith { elementIdentifier ->
-                        data.getDataElement(nameSpace, elementIdentifier)
-                    }
+            nameSpacedData = if (data?.nameSpaceNames != null) {
+                data.nameSpaceNames.associateWith { nameSpace ->
+                    data.getDataElementNames(nameSpace)
+                        .associateWith { elementIdentifier ->
+                            data.getDataElement(nameSpace, elementIdentifier)
+                        }
+                }
+            } else {
+                mapOf<String, Map<String, ByteArray>>()
             },
             rawValue = issuerSigned?.EncodeToBytes(),
             issuerAuth = issuerSigned?.get("issuerAuth")?.EncodeToBytes(),
@@ -114,7 +118,7 @@ internal fun CBORObject.oneDocument(): Document {
 
 internal fun CBORObject.toModelMDoc(): ModelMDoc {
     fun isSingleDoc(): Boolean = this.get("docType") != null
-    
+
     return if (isSingleDoc()) {
         ModelMDoc(
             documents = listOf(
