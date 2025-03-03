@@ -34,8 +34,6 @@ class CborViewViewModel : ViewModel() {
     var errorToShow by mutableStateOf<Pair<String, String>?>(null)
     fun decodeMDoc() {
         CBorParser(this.cborText).documentsCborToJson(separateElementIdentifier, onComplete = {
-            println("JSON:")
-            println(it)
             this@CborViewViewModel.model = DocsModel.fromJson(JSONObject(it))
             this@CborViewViewModel.errorToShow = null
         }) { ex ->
