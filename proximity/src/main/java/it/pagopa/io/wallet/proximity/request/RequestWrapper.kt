@@ -30,11 +30,14 @@ internal data class RequestWrapper(
         }
     }
 
-    fun toJson() = CBorParser(requiredFields!!.EncodeToBytes()).toJson()?.let {
-        JSONObject().apply {
-            put("docType", docTypeCbor)
-            put("values", JSONObject(it))
-            put("isAuthenticated", isAuthenticated)
+    fun toJson(): JSONObject? {
+        if (requiredFields == null) return null
+        return CBorParser(requiredFields!!.EncodeToBytes()).toJson()?.let {
+            JSONObject().apply {
+                put("docType", docTypeCbor)
+                put("values", JSONObject(it))
+                put("isAuthenticated", isAuthenticated)
+            }
         }
     }
 

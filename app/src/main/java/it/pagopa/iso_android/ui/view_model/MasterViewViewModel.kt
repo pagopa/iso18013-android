@@ -9,15 +9,15 @@ import androidx.lifecycle.viewModelScope
 import it.pagopa.io.wallet.cbor.document_manager.DocManager
 import it.pagopa.io.wallet.cbor.model.DocType
 import it.pagopa.io.wallet.cbor.model.Document
-import it.pagopa.iso_android.R
-import it.pagopa.iso_android.qr_code.QrCode
-import it.pagopa.iso_android.ui.AppDialog
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
 import it.pagopa.io.wallet.proximity.qr_code.QrEngagementListener
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
+import it.pagopa.iso_android.R
+import it.pagopa.iso_android.qr_code.QrCode
+import it.pagopa.iso_android.ui.AppDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -130,7 +130,10 @@ class MasterViewViewModel(
                     override fun onResponseGenerated(response: ByteArray) {
                         this@MasterViewViewModel.loader.value = null
                         qrCodeEngagement.sendResponse(response)
-                        ProximityLogger.i("RESPONSE TO SEND", Base64.encodeToString(response, Base64.NO_WRAP))
+                        ProximityLogger.i(
+                            "RESPONSE TO SEND",
+                            Base64.encodeToString(response, Base64.NO_WRAP)
+                        )
                         this@MasterViewViewModel.dialog.value = AppDialog(
                             title = resources.getString(R.string.data),
                             description = resources.getString(R.string.sent),
@@ -201,7 +204,11 @@ class MasterViewViewModel(
             ) {
                 ProximityLogger.i("request", request.toString())
                 this@MasterViewViewModel.request = request.orEmpty()
-                manageRequestFromDeviceUi(sessionsTranscript)
+                if (request == null) {
+                    qrCodeEngagement.sendErrorResponse()
+                    _shouldGoBack.value = true
+                } else
+                    manageRequestFromDeviceUi(sessionsTranscript)
             }
         })
     }
