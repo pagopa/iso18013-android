@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -14,32 +15,31 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
-import it.pagopa.io.wallet.cbor.impl.MDoc
+import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.cbor.model.DocType
+import it.pagopa.io.wallet.cbor.model.DocsModel
+import it.pagopa.io.wallet.cbor.parser.CBorParser
 import it.pagopa.iso_android.ui.BigText
 import it.pagopa.iso_android.ui.MediumText
-import it.pagopa.iso_android.ui.model.DocsModel
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Base64
 
 class CborViewViewModel : ViewModel() {
-    var cborText by mutableStateOf("")
+    var cborText by mutableStateOf(
+        ""
+    )
+    private val separateElementIdentifier = true
     var model by mutableStateOf<DocsModel?>(null)
     var errorToShow by mutableStateOf<Pair<String, String>?>(null)
     fun decodeMDoc() {
-        val mDoc = MDoc(this.cborText)
-        mDoc.decodeMDoc(
-            onComplete = { model ->
-                val json = JSONObject(model.toJson(false))
-                this@CborViewViewModel.model = DocsModel.fromJson(json)
-                this@CborViewViewModel.errorToShow = null
-            },
-            onError = { ex ->
-                this@CborViewViewModel.model = null
-                this@CborViewViewModel.errorToShow = "Exception" to ex.message.orEmpty()
-            }
-        )
+        CBorParser(this.cborText).documentsCborToJson(separateElementIdentifier, onComplete = {
+            this@CborViewViewModel.model = DocsModel.fromJson(JSONObject(it))
+            this@CborViewViewModel.errorToShow = null
+        }) { ex ->
+            this@CborViewViewModel.model = null
+            this@CborViewViewModel.errorToShow = "Exception" to ex.message.orEmpty()
+        }
     }
 
     fun modelToList(
@@ -52,31 +52,58 @@ class CborViewViewModel : ViewModel() {
                     val obj = JSONObject(nameSpaces)
                     obj.optString(DocType(doc.docType).nameSpacesValue)
                         .let { nameSpacesArrayString ->
-                            val nameSpacesArray= JSONArray(nameSpacesArrayString)
+                            val nameSpacesArray = JSONArray(nameSpacesArrayString)
                             for (i in 0 until nameSpacesArray.length()) {
                                 nameSpacesArray.optJSONObject(i)?.let { currentJson ->
-                                    currentJson.keys().forEach { key ->
-                                        if (key == "portrait" || key == "signature_usual_mark") {
+                                    if (separateElementIdentifier) {
+                                        val elementIdentifier = currentJson.get("elementIdentifier")
+                                        if (elementIdentifier == "portrait" || elementIdentifier == "signature_usual_mark") {
                                             val bArray: ByteArray? =
-                                                when (currentJson.get(key)) {
-                                                    is ByteArray -> currentJson.get(key) as ByteArray
+                                                when (currentJson.get("elementValue")) {
+                                                    is ByteArray -> currentJson.get("elementValue") as ByteArray
                                                     is String -> Base64.getDecoder()
-                                                        .decode(currentJson.get(key) as String)
+                                                        .decode(currentJson.get("elementValue") as String)
 
                                                     else -> null
                                                 }
                                             bArray?.let {
                                                 lazyColumnScope.lazyColumnItem(
-                                                    key,
+                                                    (elementIdentifier as? String).orEmpty(),
                                                     bArray
                                                 )
                                             }
                                         } else {
-                                            if (key != "random" && key != "digestID") {
+                                            if (elementIdentifier != "random" && elementIdentifier != "digestID") {
                                                 lazyColumnScope.lazyColumnItem(
-                                                    key,
-                                                    currentJson.get(key)
+                                                    (elementIdentifier as? String).orEmpty(),
+                                                    currentJson.get("elementValue")
                                                 )
+                                            }
+                                        }
+                                    } else {
+                                        currentJson.keys().forEach { key ->
+                                            if (key == "portrait" || key == "signature_usual_mark") {
+                                                val bArray: ByteArray? =
+                                                    when (currentJson.get(key)) {
+                                                        is ByteArray -> currentJson.get(key) as ByteArray
+                                                        is String -> Base64.getDecoder()
+                                                            .decode(currentJson.get(key) as String)
+
+                                                        else -> null
+                                                    }
+                                                bArray?.let {
+                                                    lazyColumnScope.lazyColumnItem(
+                                                        key,
+                                                        bArray
+                                                    )
+                                                }
+                                            } else {
+                                                if (key != "random" && key != "digestID") {
+                                                    lazyColumnScope.lazyColumnItem(
+                                                        key,
+                                                        currentJson.get(key)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -139,17 +166,7 @@ class CborViewViewModel : ViewModel() {
         } else {
             item {
                 if (value is ByteArray) {
-                    Image(
-                        modifier = Modifier
-                            .padding(top = 16.dp)
-                            .fillMaxWidth(),
-                        bitmap = BitmapFactory.decodeByteArray(
-                            value,
-                            0,
-                            value.size
-                        ).asImageBitmap(),
-                        contentDescription = null
-                    )
+                    value.ImageOrEmpty()
                 } else {
                     MediumText(
                         modifier = Modifier
@@ -160,5 +177,28 @@ class CborViewViewModel : ViewModel() {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ByteArray.ImageOrEmpty() {
+    val bitmap = try {
+        BitmapFactory.decodeByteArray(
+            this,
+            0,
+            this.size
+        ).asImageBitmap()
+    } catch (e: Exception) {
+        CborLogger.i("EXCEPTION IN IMAGE", e.message.orEmpty())
+        null
+    }
+    if (bitmap != null) {
+        Image(
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .fillMaxWidth(),
+            bitmap = bitmap,
+            contentDescription = null
+        )
     }
 }

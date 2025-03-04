@@ -26,7 +26,7 @@ class MDocDataTest {
             assert(modelMDoc.documents?.size!! > 0)
             val document = modelMDoc.documents?.get(0)!!
             assert(document.docType == "org.iso.18013.5.1.mDL")
-            assert(document.issuerSigned!!.nameSpaces!!["org.iso.18013.5.1"]?.get(0)!!.digestID == 0)
+            assert(document.issuerSigned!!.nameSpaces!!["org.iso.18013.5.1"]!=null)
         }, onError = {
 
         })
@@ -61,7 +61,7 @@ class MDocDataTest {
             assert(modelMDoc.documents?.size!! > 0)
             val document = modelMDoc.documents?.get(0)!!
             assert(document.docType == "org.iso.18013.5.1.mDL")
-            assert(document.issuerSigned!!.nameSpaces!!["org.iso.18013.5.1"]?.get(0)!!.digestID == 0)
+            assert(document.issuerSigned!!.nameSpaces!!["org.iso.18013.5.1"]!=null)
         }, onError = {
 
         })

@@ -6,6 +6,7 @@ import it.pagopa.io.wallet.cbor.exception.DocTypeNotValid
 import it.pagopa.io.wallet.cbor.exception.MandatoryFieldNotFound
 import it.pagopa.io.wallet.cbor.helper.oneDocument
 import it.pagopa.io.wallet.cbor.helper.toModelMDoc
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Base64
 
@@ -38,11 +39,13 @@ data class ModelMDoc(
 }
 
 data class Document(
+    var deviceSigned: DeviceSigned? = null,
     var docType: String?,
     var issuerSigned: IssuerSigned?,
     val rawValue: ByteArray
 ) {
     fun toJson(separateElementIdentifier: Boolean) = JSONObject().apply {
+        put("deviceSigned", deviceSigned?.toJson())
         put("docType", docType)
         put("issuerSigned", issuerSigned?.toJson(separateElementIdentifier))
     }
@@ -102,6 +105,28 @@ data class Document(
     }
 }
 
+data class DeviceSigned(
+    val deviceAuth: DeviceAuth?,
+    var nameSpaces: Map<String, Any>?
+) {
+    fun toJson() = JSONObject().apply {
+        put("deviceAuth", deviceAuth?.toJson())
+        put("nameSpaces", JSONObject().apply {
+            nameSpaces?.forEach {
+                this.put(it.key, it.value)
+            }
+        })
+    }
+}
+
+data class DeviceAuth(
+    val deviceSignature: String?
+) {
+    fun toJson() = JSONObject().apply {
+        put("deviceSignature", deviceSignature)
+    }
+}
+
 data class IssuerSigned(
     var nameSpaces: Map<String, List<DocumentX>>?,
     val rawValue: ByteArray? = null,
@@ -136,10 +161,24 @@ data class DocumentX(
         })
         if (separateElementIdentifier) {
             put("elementIdentifier", elementIdentifier)
-            put("elementValue", elementValue)
+            put("elementValue", elementValue.toJson())
         } else {
             if (elementIdentifier != null)
-                put(elementIdentifier, elementValue)
+                put(elementIdentifier, elementValue.toJson())
+        }
+    }
+}
+
+private fun Any?.toJson(): Any? {
+    if(this == null) return null
+    val back = this
+    return try {
+        JSONObject(back.toString())
+    } catch (_: Exception) {
+        try {
+            JSONArray(back.toString())
+        } catch (_: Exception) {
+            back
         }
     }
 }

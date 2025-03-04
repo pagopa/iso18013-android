@@ -130,6 +130,7 @@ class MasterViewViewModel(
                     override fun onResponseGenerated(response: ByteArray) {
                         this@MasterViewViewModel.loader.value = null
                         qrCodeEngagement.sendResponse(response)
+                        ProximityLogger.i("RESPONSE TO SEND", Base64.encodeToString(response, Base64.NO_WRAP))
                         this@MasterViewViewModel.dialog.value = AppDialog(
                             title = resources.getString(R.string.data),
                             description = resources.getString(R.string.sent),
