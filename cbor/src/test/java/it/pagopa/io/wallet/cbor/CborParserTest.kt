@@ -58,6 +58,7 @@ class CborParserTest {
     fun `test one document json`() {
         val rawCbor = kotlin.io.encoding.Base64.decode(mockTest)
         CBorParser(rawCbor).documentsCborToJson(true, { json ->
+            println("JSON")
             println(json)
             assert(json != null)
         }) {

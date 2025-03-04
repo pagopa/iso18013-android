@@ -114,11 +114,12 @@ class MasterViewViewModel(
             }
             val docRequested = disclosedDocuments.map {
                 DocRequested(
-                    content = Base64.encodeToString(
-                        it.rawValue,
+                    issuerSignedContent = Base64.encodeToString(
+                        it.issuerSigned?.rawValue,
                         Base64.DEFAULT
                     ),
-                    alias = "SECURE_STORAGE_KEY_${qrCodeEngagement.context.noBackupFilesDir}"
+                    alias = "SECURE_STORAGE_KEY_${qrCodeEngagement.context.noBackupFilesDir}",
+                    docType = it.docType!!
                 )
             }
             ResponseGenerator(

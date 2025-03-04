@@ -66,7 +66,7 @@ data class DocIssuerSigned(val issuerAuth: String?, val nameSpaces: String?) {
         fun fromJson(json: JSONObject?): DocIssuerSigned? {
             if (json == null) return null
             return DocIssuerSigned(
-                json.optString("issuerAuth"),
+                json.optJSONObject("issuerAuth")?.toString(),
                 json.optJSONObject("nameSpaces")?.toString()
             )
         }
