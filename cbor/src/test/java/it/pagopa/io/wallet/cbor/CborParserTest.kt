@@ -5,7 +5,6 @@ import it.pagopa.io.wallet.cbor.helper.toModelMDoc
 import it.pagopa.io.wallet.cbor.parser.CBorParser
 import org.json.JSONObject
 import org.junit.Test
-import java.util.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 class CborParserTest {
@@ -56,6 +55,20 @@ class CborParserTest {
     @OptIn(ExperimentalEncodingApi::class)
     @Test
     fun `test one document json`() {
+        val rawCbor = kotlin.io.encoding.Base64.decode(mockNew)
+        CBorParser(rawCbor).documentsCborToJson(true, { json ->
+            println("JSON")
+            println(json)
+            assert(json != null)
+        }) {
+            println("EXCEPTION")
+            println(it.message)
+        }
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    @Test
+    fun `test mock ita request json`() {
         val rawCbor = kotlin.io.encoding.Base64.decode(mockItaRequest)
         CBorParser(rawCbor).documentsCborToJson(true, { json ->
             println("JSON")
@@ -83,22 +96,16 @@ class CborParserTest {
         val rawCbor = kotlin.io.encoding.Base64.decode(moreDocsIssuerAuth)
         CBorParser(rawCbor).documentsCborToJson(false, { json ->
             assert(json != null)
-            val myJson = JSONObject(json!!)
+            val myJson = JSONObject(json)
             myJson.optJSONArray("documents")?.let {
                 for (i in 0 until it.length()) {
                     it.getJSONObject(i).optJSONObject("issuerSigned")?.let { issuerSigned ->
-                        issuerSigned.optString("issuerAuth").let { issuerAuth ->
-                            val ba = Base64.getUrlDecoder().decode(issuerAuth)
-                            println("###############################")
-                            println("ISSUER_AUTH PARSED:")
-                            val parsed = CBorParser(ba).toJson()
-                            println(parsed)
-                            println("###############################")
+                        issuerSigned.optJSONObject("issuerAuth")?.let { issuerAuth ->
+                            assert(issuerAuth.getString("docType").isNotEmpty())
                         }
                     }
                 }
             }
-
             println(json)
         })
     }
@@ -122,7 +129,7 @@ class CborParserTest {
     @OptIn(ExperimentalEncodingApi::class)
     @Test
     fun `test documents json element identifier separated`() {
-        val rawCbor = kotlin.io.encoding.Base64.decode(moreDocsIssuerAuth)
+        val rawCbor = kotlin.io.encoding.Base64.decode(mockTest)
         CBorParser(rawCbor).documentsCborToJson(true, { json ->
             assert(json != null)
             println(json)
@@ -137,11 +144,5 @@ class CborParserTest {
             assert(json != null)
             println(json)
         })
-    }
-
-    @Test
-    fun testACaso() {
-        val rawCbor = android.util.Base64.decode(mockItaRequest, android.util.Base64.NO_WRAP)
-        print(CBORObject.DecodeFromBytes(rawCbor).toModelMDoc().toJson(true))
     }
 }
