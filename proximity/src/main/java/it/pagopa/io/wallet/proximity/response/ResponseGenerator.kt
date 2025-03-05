@@ -77,9 +77,7 @@ class ResponseGenerator(
             val deviceResponse = DeviceResponseGenerator(Constants.DEVICE_RESPONSE_STATUS_OK)
             val fieldsRequested = JSONObject(fieldRequestedAndAccepted)
             fieldsRequested.keys().forEach { key ->
-                documents.filter {
-                    it.docType == key
-                }.map {
+                documents.map {
                     val bytes = Base64.decode(it.issuerSignedContent, Base64.DEFAULT)
                     Triple(IssuerSigned.issuerSignedFromByteArray(bytes), it.alias, it.docType)
                 }.forEach { (doc, alias, docType) ->

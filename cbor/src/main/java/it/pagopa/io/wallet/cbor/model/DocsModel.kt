@@ -1,5 +1,6 @@
 package it.pagopa.io.wallet.cbor.model
 
+import it.pagopa.io.wallet.cbor.CborLogger
 import kotlinx.serialization.Serializable
 import org.json.JSONArray
 import org.json.JSONObject
@@ -12,18 +13,24 @@ data class DocsModel(
 ) {
     companion object {
         fun fromJson(json: JSONObject): DocsModel {
+            val array = try {
+                json.optJSONArray("documents") ?: JSONArray(json.getString("documents"))
+            } catch (e: Exception) {
+                CborLogger.e("EXCEPTION PARSING", e.message.orEmpty())
+                null
+            }
             return DocsModel(
-                DocModel.fromJsonArray(JSONArray(json.getString("documents"))),
+                DocModel.fromJsonArray(array),
                 json.optInt("status"),
                 json.optString("version")
             )
         }
     }
 
-    fun toJson(separateElementIdentifier: Boolean = true) = JSONObject().apply {
+    fun toJson() = JSONObject().apply {
         put("documents", JSONArray().apply {
             this@DocsModel.docList?.forEach { doc ->
-                this.put(doc.toJson(separateElementIdentifier))
+                this.put(doc.toJson())
             }
         })
     }
@@ -49,14 +56,9 @@ data class DocModel(val docType: String?, val issuerSigned: DocIssuerSigned?) {
         }
     }
 
-    fun toJson(separateElementIdentifier: Boolean = true) = JSONObject().apply {
+    fun toJson() = JSONObject().apply {
         put("docType", this@DocModel.docType)
-        put(
-            "issuerSigned", this@DocModel.issuerSigned?.toJson(
-                this@DocModel.docType,
-                separateElementIdentifier
-            )
-        )
+        put("issuerSigned", this@DocModel.issuerSigned?.toJson())
     }
 }
 
@@ -72,34 +74,17 @@ data class DocIssuerSigned(val issuerAuth: String?, val nameSpaces: String?) {
         }
     }
 
-    fun toJson(docType: String?, separateElementIdentifier: Boolean = true) = JSONObject().apply {
-        put("issuerAuth", this@DocIssuerSigned.issuerAuth)
+    fun toJson() = JSONObject().apply {
+        if (this@DocIssuerSigned.issuerAuth == null)
+            put("issuerAuth", null)
+        else {
+            put("issuerAuth", JSONObject(this@DocIssuerSigned.issuerAuth))
+        }
         if (this@DocIssuerSigned.nameSpaces == null)
             put("nameSpaces", null)
         else {
-            val jsonBack = JSONObject()
             val obj = JSONObject(this@DocIssuerSigned.nameSpaces)
-            val docTypeNamespaces = DocType(docType).nameSpacesValue
-            obj.optString(docTypeNamespaces)
-                .let { nameSpacesArrayString ->
-                    val nameSpacesArray = JSONArray(nameSpacesArrayString)
-                    val docTypeJsonArray = JSONArray()
-                    for (i in 0 until nameSpacesArray.length()) {
-                        nameSpacesArray.optJSONObject(i)?.let { currentJson ->
-                            currentJson.keys().forEach { key ->
-                                val jsonToAdd = JSONObject()
-                                if (separateElementIdentifier) {
-                                    jsonToAdd.put("elementIdentifier", key)
-                                    jsonToAdd.put("elementValue", currentJson.get(key))
-                                } else
-                                    jsonToAdd.put(key, currentJson.get(key))
-                                docTypeJsonArray.put(jsonToAdd)
-                            }
-                        }
-                    }
-                    jsonBack.put(docTypeNamespaces, docTypeJsonArray)
-                }
-            put("nameSpaces", jsonBack)
+            put("nameSpaces", obj)
         }
     }
 }

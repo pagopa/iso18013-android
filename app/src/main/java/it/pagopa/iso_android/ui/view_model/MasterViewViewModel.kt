@@ -112,6 +112,10 @@ class MasterViewViewModel(
                     DocType(it) == DocType.EU_PID -> disclosedDocuments.add(getEuPid()!!)
                 }
             }
+            if (disclosedDocuments.isEmpty()) {
+                disclosedDocuments.add(getMdl()!!)
+                disclosedDocuments.add(getEuPid()!!)
+            }
             val docRequested = disclosedDocuments.map {
                 DocRequested(
                     issuerSignedContent = Base64.encodeToString(

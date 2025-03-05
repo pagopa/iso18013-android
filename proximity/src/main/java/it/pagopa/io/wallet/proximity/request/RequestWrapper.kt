@@ -24,10 +24,7 @@ internal data class RequestWrapper(
     fun prepare() = apply {
         val cbor = CBORObject.DecodeFromBytes(cborByte)
         docTypeCbor = cbor.get("docType")?.AsString()
-        val docType = DocType(docTypeCbor)
-        if (docType.isAccepted) {
-            requiredFields = cbor.get("nameSpaces")
-        }
+        requiredFields = cbor.get("nameSpaces")
     }
 
     fun toJson(): JSONObject? {
