@@ -290,6 +290,8 @@ data class IssuerAuth(
     }
 
     fun toJson() = JSONObject().apply {
+        if (this@IssuerAuth.rawValue != null)
+            put("rawValue", Base64.getUrlEncoder().encodeToString(this@IssuerAuth.rawValue))
         if (protectedHeader != null)
             put("protectedHeader", Base64.getUrlEncoder().encodeToString(protectedHeader))
         if (unprotectedHeader != null) {

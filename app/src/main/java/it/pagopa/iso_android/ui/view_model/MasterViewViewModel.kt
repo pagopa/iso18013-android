@@ -2,6 +2,8 @@ package it.pagopa.iso_android.ui.view_model
 
 import android.content.res.Resources
 import android.graphics.Bitmap
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
@@ -24,6 +26,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
+import java.security.KeyPairGenerator
+import java.security.KeyStore
+import java.security.spec.ECGenParameterSpec
 
 class MasterViewViewModel(
     val qrCodeEngagement: QrEngagement,
@@ -43,6 +48,10 @@ class MasterViewViewModel(
             alias = "SECURE_STORAGE_KEY_${qrCodeEngagement.context.noBackupFilesDir}"
         )
     }
+    private val keyStoreType by lazy {
+        "AndroidKeyStore"
+    }
+    private val alias = "pagoPa"
     private lateinit var request: String
     var deviceConnected: DeviceRetrievalHelperWrapper? = null
     fun getQrCodeBitmap(qrCodeSize: Int) {
@@ -56,6 +65,31 @@ class MasterViewViewModel(
             }
             attachListenerAndObserve()
         }
+    }
+
+    private fun keyExists(alias: String): Boolean {
+        return try {
+            val keyStore = KeyStore.getInstance(keyStoreType).apply { load(null) }
+            keyStore.containsAlias(alias)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun generateKey(alias: String) {
+        val keyPairGenerator =
+            KeyPairGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_EC,
+                keyStoreType
+            )
+        val keyGenParameterSpec = KeyGenParameterSpec.Builder(
+            alias,
+            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+        ).setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
+            .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
+            .build()
+        keyPairGenerator.initialize(keyGenParameterSpec)
+        keyPairGenerator.generateKeyPair()
     }
 
     private fun manageRequestFromDeviceUi(
@@ -102,6 +136,9 @@ class MasterViewViewModel(
     }
 
     private fun shareInfo(sessionsTranscript: ByteArray) {
+        if (!keyExists(alias)) {
+            generateKey(alias)
+        }
         this.loader.value = resources.getString(R.string.sending_doc)
         viewModelScope.launch(Dispatchers.IO) {
             val disclosedDocuments = ArrayList<Document>()
@@ -122,7 +159,7 @@ class MasterViewViewModel(
                         it.issuerSigned?.rawValue,
                         Base64.DEFAULT
                     ),
-                    alias = "SECURE_STORAGE_KEY_${qrCodeEngagement.context.noBackupFilesDir}",
+                    alias = alias,
                     docType = it.docType!!
                 )
             }
