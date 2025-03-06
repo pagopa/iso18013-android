@@ -26,6 +26,7 @@ class SignAndVerifyViewViewModel(
     val publicKey = mutableStateOf("")
     var appDialog = mutableStateOf<AppDialog?>(null)
     var isValidString = mutableStateOf("")
+    private val alias = "pagoPa"
     private val keyStoreType by lazy {
         "AndroidKeyStore"
     }
@@ -91,13 +92,13 @@ class SignAndVerifyViewViewModel(
         isValidString.value = ""
         if (what.isEmpty()) return
         loader.value = "Signing"
-        if (!keyExists("pagoPa"))
-            generateKey("pagoPa")
+        if (!keyExists(alias))
+            generateKey(alias)
         viewModelScope.launch(Dispatchers.IO) {
             val data = what.toByteArray()
             when (val result = coseManager.signWithCOSE(
                 data = data,
-                alias = "pagoPA"
+                alias = alias
             )) {
                 is SignWithCOSEResult.Failure -> failureAppDialog(result.reason.msg)
                 is SignWithCOSEResult.Success -> {
