@@ -1,11 +1,8 @@
 package it.pagopa.iso_android.ui.view_model
 
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.cbor.cose.COSEManager
@@ -13,48 +10,16 @@ import it.pagopa.io.wallet.cbor.cose.SignWithCOSEResult
 import it.pagopa.iso_android.ui.AppDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.security.KeyPairGenerator
-import java.security.KeyStore
-import java.security.spec.ECGenParameterSpec
 
 class SignAndVerifyViewViewModel(
     private val coseManager: COSEManager
-) : ViewModel() {
+) : BaseVmKeyCtrl() {
     val loader = mutableStateOf<String?>(null)
     val stringToSign = mutableStateOf("")
     val stringToCheck: MutableState<String> = mutableStateOf("")
     val publicKey = mutableStateOf("")
     var appDialog = mutableStateOf<AppDialog?>(null)
     var isValidString = mutableStateOf("")
-    private val alias = "pagoPa"
-    private val keyStoreType by lazy {
-        "AndroidKeyStore"
-    }
-
-    private fun keyExists(alias: String): Boolean {
-        return try {
-            val keyStore = KeyStore.getInstance(keyStoreType).apply { load(null) }
-            keyStore.containsAlias(alias)
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private fun generateKey(alias: String) {
-        val keyPairGenerator =
-            KeyPairGenerator.getInstance(
-                KeyProperties.KEY_ALGORITHM_EC,
-                keyStoreType
-            )
-        val keyGenParameterSpec = KeyGenParameterSpec.Builder(
-            alias,
-            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
-        ).setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
-            .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
-            .build()
-        keyPairGenerator.initialize(keyGenParameterSpec)
-        keyPairGenerator.generateKeyPair()
-    }
 
     fun verify() {
         loader.value = "Verifying"
@@ -92,8 +57,8 @@ class SignAndVerifyViewViewModel(
         isValidString.value = ""
         if (what.isEmpty()) return
         loader.value = "Signing"
-        if (!keyExists(alias))
-            generateKey(alias)
+        if (!keyExists())
+            generateKey()
         viewModelScope.launch(Dispatchers.IO) {
             val data = what.toByteArray()
             when (val result = coseManager.signWithCOSE(

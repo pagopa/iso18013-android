@@ -2,11 +2,8 @@ package it.pagopa.iso_android.ui.view_model
 
 import android.content.res.Resources
 import android.graphics.Bitmap
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
 import android.util.Base64
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.pagopa.io.wallet.cbor.document_manager.DocManager
 import it.pagopa.io.wallet.cbor.model.DocType
@@ -26,14 +23,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
-import java.security.KeyPairGenerator
-import java.security.KeyStore
-import java.security.spec.ECGenParameterSpec
 
 class MasterViewViewModel(
     val qrCodeEngagement: QrEngagement,
     private val resources: Resources
-) : ViewModel() {
+) : BaseVmKeyCtrl() {
     private val _shouldGoBack = MutableStateFlow(false)
     val shouldGoBack = _shouldGoBack.asStateFlow()
     val dialog = mutableStateOf<AppDialog?>(null)
@@ -48,10 +42,6 @@ class MasterViewViewModel(
             alias = "SECURE_STORAGE_KEY_${qrCodeEngagement.context.noBackupFilesDir}"
         )
     }
-    private val keyStoreType by lazy {
-        "AndroidKeyStore"
-    }
-    private val alias = "pagoPa"
     private lateinit var request: String
     var deviceConnected: DeviceRetrievalHelperWrapper? = null
     fun getQrCodeBitmap(qrCodeSize: Int) {
@@ -67,30 +57,6 @@ class MasterViewViewModel(
         }
     }
 
-    private fun keyExists(alias: String): Boolean {
-        return try {
-            val keyStore = KeyStore.getInstance(keyStoreType).apply { load(null) }
-            keyStore.containsAlias(alias)
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private fun generateKey(alias: String) {
-        val keyPairGenerator =
-            KeyPairGenerator.getInstance(
-                KeyProperties.KEY_ALGORITHM_EC,
-                keyStoreType
-            )
-        val keyGenParameterSpec = KeyGenParameterSpec.Builder(
-            alias,
-            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
-        ).setDigests(KeyProperties.DIGEST_SHA256, KeyProperties.DIGEST_SHA512)
-            .setAlgorithmParameterSpec(ECGenParameterSpec("secp256r1"))
-            .build()
-        keyPairGenerator.initialize(keyGenParameterSpec)
-        keyPairGenerator.generateKeyPair()
-    }
 
     private fun manageRequestFromDeviceUi(
         sessionsTranscript: ByteArray
@@ -100,18 +66,29 @@ class MasterViewViewModel(
         }
         val req = JSONObject(request).optJSONObject("request")
         ProximityLogger.i("CERT is valid:", "${JSONObject(request).optBoolean("isAuthenticated")}")
-        req?.optJSONObject(DocType.MDL.value)?.let { mdlJson ->
-            sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
-            mdlJson.keys().forEach { key ->
-                if (mdlJson.optBoolean(key) == true)
-                    sb.append("$key;\n")
+        if (req?.has(DocType.MDL.value) == true || req?.has(DocType.EU_PID.value) == true) {
+            req.optJSONObject(DocType.MDL.value)?.let { mdlJson ->
+                sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
+                mdlJson.keys().forEach { key ->
+                    if (mdlJson.optBoolean(key) == true)
+                        sb.append("$key;\n")
+                }
             }
-        }
-        req?.optJSONObject(DocType.EU_PID.value)?.let { euPidJson ->
-            sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
-            euPidJson.keys().forEach { key ->
-                if (euPidJson.optBoolean(key) == true)
-                    sb.append("$key;\n")
+            req.optJSONObject(DocType.EU_PID.value)?.let { euPidJson ->
+                sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
+                euPidJson.keys().forEach { key ->
+                    if (euPidJson.optBoolean(key) == true)
+                        sb.append("$key;\n")
+                }
+            }
+        } else {
+            req?.keys()?.forEach {
+                req.optJSONObject(it)?.let { json ->
+                    json.keys().forEach { key ->
+                        if (json.optBoolean(key) == true)
+                            sb.append("$key;\n")
+                    }
+                }
             }
         }
         this.dialogText = sb.toString()
@@ -136,9 +113,8 @@ class MasterViewViewModel(
     }
 
     private fun shareInfo(sessionsTranscript: ByteArray) {
-        if (!keyExists(alias)) {
-            generateKey(alias)
-        }
+        if (!keyExists())
+            generateKey()
         this.loader.value = resources.getString(R.string.sending_doc)
         viewModelScope.launch(Dispatchers.IO) {
             val disclosedDocuments = ArrayList<Document>()

@@ -70,6 +70,8 @@ internal fun <T> List<T>.toReaderTrustStore(context: Context): ReaderTrustStore 
     return ReaderTrustStore.getDefault(certs)
 }
 
+/**It converts a [DeviceRequestParser.DocRequest] into a [ReaderAuth] class
+ * @param readerTrustStore: a [ReaderTrustStore] specified with one of [QrEngagement.withReaderTrustStore] method*/
 internal infix fun DeviceRequestParser.DocRequest.toReaderAuthWith(
     readerTrustStore: ReaderTrustStore?
 ): ReaderAuth? {
