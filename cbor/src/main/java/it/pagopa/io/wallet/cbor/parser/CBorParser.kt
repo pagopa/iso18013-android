@@ -37,9 +37,9 @@ class CBorParser private constructor(
             source = this.source as String
         )
         mDoc.decodeMDoc(onComplete = { model ->
-            val json = JSONObject(model.toJson(false))
+            val json = JSONObject(model.toJson(separateElementIdentifier))
             val model = DocsModel.fromJson(json)
-            onComplete.invoke(model.toJson(separateElementIdentifier).toString())
+            onComplete.invoke(model.toJson().toString())
         }, onError = onError?:{})
     }
 }

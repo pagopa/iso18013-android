@@ -16,6 +16,7 @@ import com.android.identity.mdoc.util.MdocUtil
 import com.android.identity.util.Constants
 import it.pagopa.io.wallet.cbor.cose.COSEManager
 import it.pagopa.io.wallet.cbor.cose.SignWithCOSEResult
+import it.pagopa.io.wallet.cbor.model.IssuerSigned
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import org.json.JSONObject
@@ -23,7 +24,6 @@ import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.forEach
 import kotlin.collections.iterator
-import it.pagopa.io.wallet.cbor.model.Document as DocumentModel
 
 class ResponseGenerator(
     private val sessionsTranscript: ByteArray
@@ -77,22 +77,18 @@ class ResponseGenerator(
             val deviceResponse = DeviceResponseGenerator(Constants.DEVICE_RESPONSE_STATUS_OK)
             val fieldsRequested = JSONObject(fieldRequestedAndAccepted)
             fieldsRequested.keys().forEach { key ->
-                documents.filter {
-                    val bytes = Base64.decode(it.content, Base64.DEFAULT)
-                    val doc = DocumentModel.fromByteArray(bytes)
-                    doc.docType == key
-                }.map {
-                    val bytes = Base64.decode(it.content, Base64.DEFAULT)
-                    DocumentModel.fromByteArray(bytes) to it.alias
-                }.forEach { (doc, alias) ->
+                documents.map {
+                    val bytes = Base64.decode(it.issuerSignedContent, Base64.DEFAULT)
+                    Triple(IssuerSigned.issuerSignedFromByteArray(bytes), it.alias, it.docType)
+                }.forEach { (doc, alias, docType) ->
                     addDocToResponse(
                         responseGenerator = deviceResponse,
-                        document = doc,
+                        issuerSignedObj = doc,
                         fieldsRequested = fieldsRequested,
                         key = key,
                         transcript = sessionsTranscript,
                         alias = alias,
-                        docType = doc.docType!!
+                        docType = docType
                     )
                 }
             }
@@ -160,20 +156,21 @@ class ResponseGenerator(
 
     private fun addDocToResponse(
         responseGenerator: DeviceResponseGenerator,
-        document: DocumentModel,
+        issuerSignedObj: IssuerSigned?,
         fieldsRequested: JSONObject,
         key: String,
         transcript: ByteArray,
         alias: String,
         docType: String
     ) {
+        if (issuerSignedObj == null) return
         val dataElements = ArrayList<DocumentRequest.DataElement>()
         val json = fieldsRequested.optJSONObject(key)
         json?.keys()?.forEach { nameSpaceValue ->
-            document.issuerSigned?.nameSpaces?.keys?.forEach { nameSpaceKey ->
+            issuerSignedObj.nameSpaces?.keys?.forEach { nameSpaceKey ->
                 val isRequested = json.optBoolean(nameSpaceValue) == true
                 if (isRequested) {
-                    document.issuerSigned?.nameSpaces?.get(nameSpaceKey)?.filter {
+                    issuerSignedObj.nameSpaces?.get(nameSpaceKey)?.filter {
                         it.elementIdentifier == nameSpaceValue
                     }?.forEach {
                         dataElements.add(
@@ -192,11 +189,11 @@ class ResponseGenerator(
             alias,
             docType
         )
-        val staticAuthData = StaticAuthDataParser(document.issuerSigned!!.rawValue!!).parse()
+        val staticAuthData = StaticAuthDataParser(issuerSignedObj.rawValue!!).parse()
         val request = DocumentRequest(dataElements)
         val issuerNamespaces = MdocUtil.mergeIssuerNamesSpaces(
             request,
-            NameSpacedData.fromDataItem(nameSpacedData(document.issuerSigned!!.nameSpacedData)),
+            NameSpacedData.fromDataItem(nameSpacedData(issuerSignedObj.nameSpacedData)),
             staticAuthData
         )
         val issuerSignedMapBuilder = CborMap.builder()
@@ -210,7 +207,7 @@ class ResponseGenerator(
         }
         insOuter.end()
         issuerSignedMapBuilder.put("nameSpaces", insOuter.end().build())
-        issuerSignedMapBuilder.put("issuerAuth", RawCbor(document.issuerSigned!!.issuerAuth!!))
+        issuerSignedMapBuilder.put("issuerAuth", RawCbor(issuerSignedObj.issuerAuth!!.rawValue!!))
         val issuerSigned = issuerSignedMapBuilder.end().build()
         val mapBuilder = CborMap.builder().apply {
             put("docType", docType)

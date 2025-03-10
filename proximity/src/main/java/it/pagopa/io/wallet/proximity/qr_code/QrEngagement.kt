@@ -16,6 +16,7 @@ import com.android.identity.mdoc.engagement.EngagementParser
 import com.android.identity.mdoc.request.DeviceRequestParser
 import com.android.identity.util.Constants
 import com.android.identity.util.Logger
+import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.document.reader_auth.ReaderTrustStore
 import it.pagopa.io.wallet.proximity.request.RequestWrapper
@@ -185,6 +186,7 @@ class QrEngagement private constructor(
                 }
             }
             val jsonToSend = requestWrapperList.toTypedArray().toRequest()
+            CborLogger.i("REQ_JSON", jsonToSend.toString())
             listener?.onNewDeviceRequest(
                 if (jsonToSend.keys().asSequence().toMutableList().isEmpty())
                     null

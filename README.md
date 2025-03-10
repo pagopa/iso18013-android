@@ -252,8 +252,9 @@ where DocRequested is:
 ```kotlin
 @Parcelize
 data class DocRequested(
-    val content: String,
-    val alias: String
+   val issuerSignedContent: String,
+   val alias: String,
+   val docType: String
 ) : Parcelable
 ```
 

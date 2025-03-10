@@ -4,20 +4,19 @@ import android.content.res.Resources
 import android.graphics.Bitmap
 import android.util.Base64
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.pagopa.io.wallet.cbor.document_manager.DocManager
 import it.pagopa.io.wallet.cbor.model.DocType
 import it.pagopa.io.wallet.cbor.model.Document
-import it.pagopa.iso_android.R
-import it.pagopa.iso_android.qr_code.QrCode
-import it.pagopa.iso_android.ui.AppDialog
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
 import it.pagopa.io.wallet.proximity.qr_code.QrEngagementListener
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
+import it.pagopa.iso_android.R
+import it.pagopa.iso_android.qr_code.QrCode
+import it.pagopa.iso_android.ui.AppDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,7 +27,7 @@ import org.json.JSONObject
 class MasterViewViewModel(
     val qrCodeEngagement: QrEngagement,
     private val resources: Resources
-) : ViewModel() {
+) : BaseVmKeyCtrl() {
     private val _shouldGoBack = MutableStateFlow(false)
     val shouldGoBack = _shouldGoBack.asStateFlow()
     val dialog = mutableStateOf<AppDialog?>(null)
@@ -58,6 +57,7 @@ class MasterViewViewModel(
         }
     }
 
+
     private fun manageRequestFromDeviceUi(
         sessionsTranscript: ByteArray
     ) {
@@ -66,18 +66,29 @@ class MasterViewViewModel(
         }
         val req = JSONObject(request).optJSONObject("request")
         ProximityLogger.i("CERT is valid:", "${JSONObject(request).optBoolean("isAuthenticated")}")
-        req?.optJSONObject(DocType.MDL.value)?.let { mdlJson ->
-            sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
-            mdlJson.keys().forEach { key ->
-                if (mdlJson.optBoolean(key) == true)
-                    sb.append("$key;\n")
+        if (req?.has(DocType.MDL.value) == true || req?.has(DocType.EU_PID.value) == true) {
+            req.optJSONObject(DocType.MDL.value)?.let { mdlJson ->
+                sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
+                mdlJson.keys().forEach { key ->
+                    if (mdlJson.optBoolean(key) == true)
+                        sb.append("$key;\n")
+                }
             }
-        }
-        req?.optJSONObject(DocType.EU_PID.value)?.let { euPidJson ->
-            sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
-            euPidJson.keys().forEach { key ->
-                if (euPidJson.optBoolean(key) == true)
-                    sb.append("$key;\n")
+            req.optJSONObject(DocType.EU_PID.value)?.let { euPidJson ->
+                sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
+                euPidJson.keys().forEach { key ->
+                    if (euPidJson.optBoolean(key) == true)
+                        sb.append("$key;\n")
+                }
+            }
+        } else {
+            req?.keys()?.forEach {
+                req.optJSONObject(it)?.let { json ->
+                    json.keys().forEach { key ->
+                        if (json.optBoolean(key) == true)
+                            sb.append("$key;\n")
+                    }
+                }
             }
         }
         this.dialogText = sb.toString()
@@ -102,6 +113,8 @@ class MasterViewViewModel(
     }
 
     private fun shareInfo(sessionsTranscript: ByteArray) {
+        if (!keyExists())
+            generateKey()
         this.loader.value = resources.getString(R.string.sending_doc)
         viewModelScope.launch(Dispatchers.IO) {
             val disclosedDocuments = ArrayList<Document>()
@@ -112,13 +125,18 @@ class MasterViewViewModel(
                     DocType(it) == DocType.EU_PID -> disclosedDocuments.add(getEuPid()!!)
                 }
             }
+            if (disclosedDocuments.isEmpty()) {
+                disclosedDocuments.add(getMdl()!!)
+                disclosedDocuments.add(getEuPid()!!)
+            }
             val docRequested = disclosedDocuments.map {
                 DocRequested(
-                    content = Base64.encodeToString(
-                        it.rawValue,
+                    issuerSignedContent = Base64.encodeToString(
+                        it.issuerSigned?.rawValue,
                         Base64.DEFAULT
                     ),
-                    alias = "SECURE_STORAGE_KEY_${qrCodeEngagement.context.noBackupFilesDir}"
+                    alias = alias,
+                    docType = it.docType!!
                 )
             }
             ResponseGenerator(
@@ -130,7 +148,10 @@ class MasterViewViewModel(
                     override fun onResponseGenerated(response: ByteArray) {
                         this@MasterViewViewModel.loader.value = null
                         qrCodeEngagement.sendResponse(response)
-                        ProximityLogger.i("RESPONSE TO SEND", Base64.encodeToString(response, Base64.NO_WRAP))
+                        ProximityLogger.i(
+                            "RESPONSE TO SEND",
+                            Base64.encodeToString(response, Base64.NO_WRAP)
+                        )
                         this@MasterViewViewModel.dialog.value = AppDialog(
                             title = resources.getString(R.string.data),
                             description = resources.getString(R.string.sent),
@@ -201,7 +222,11 @@ class MasterViewViewModel(
             ) {
                 ProximityLogger.i("request", request.toString())
                 this@MasterViewViewModel.request = request.orEmpty()
-                manageRequestFromDeviceUi(sessionsTranscript)
+                if (request == null) {
+                    qrCodeEngagement.sendErrorResponse()
+                    _shouldGoBack.value = true
+                } else
+                    manageRequestFromDeviceUi(sessionsTranscript)
             }
         })
     }
