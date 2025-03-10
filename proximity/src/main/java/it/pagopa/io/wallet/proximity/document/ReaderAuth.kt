@@ -1,5 +1,3 @@
-@file:JvmMultifileClass
-
 package it.pagopa.io.wallet.proximity.document
 
 import android.os.Parcelable

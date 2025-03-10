@@ -3,7 +3,6 @@ package it.pagopa.iso_android.ui.view_model
 import android.util.Base64
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.cbor.cose.COSEManager
@@ -14,7 +13,7 @@ import kotlinx.coroutines.launch
 
 class SignAndVerifyViewViewModel(
     private val coseManager: COSEManager
-) : ViewModel() {
+) : BaseVmKeyCtrl() {
     val loader = mutableStateOf<String?>(null)
     val stringToSign = mutableStateOf("")
     val stringToCheck: MutableState<String> = mutableStateOf("")
@@ -58,17 +57,21 @@ class SignAndVerifyViewViewModel(
         isValidString.value = ""
         if (what.isEmpty()) return
         loader.value = "Signing"
+        if (!keyExists())
+            generateKey()
         viewModelScope.launch(Dispatchers.IO) {
             val data = what.toByteArray()
             when (val result = coseManager.signWithCOSE(
                 data = data,
-                alias = "pagoPA"
+                alias = alias
             )) {
                 is SignWithCOSEResult.Failure -> failureAppDialog(result.reason.msg)
                 is SignWithCOSEResult.Success -> {
                     successAppDialog()
-                    val dataSigned = Base64.encodeToString(result.signature, Base64.DEFAULT or Base64.NO_WRAP)
-                    val publicKey = Base64.encodeToString(result.publicKey, Base64.DEFAULT or Base64.NO_WRAP)
+                    val dataSigned =
+                        Base64.encodeToString(result.signature, Base64.DEFAULT or Base64.NO_WRAP)
+                    val publicKey =
+                        Base64.encodeToString(result.publicKey, Base64.DEFAULT or Base64.NO_WRAP)
                     this@SignAndVerifyViewViewModel.stringToCheck.value = dataSigned
                     this@SignAndVerifyViewViewModel.publicKey.value = publicKey
                     CborLogger.i("HexStringReconverted", data.toString(Charsets.UTF_8))

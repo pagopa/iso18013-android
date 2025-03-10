@@ -24,17 +24,17 @@ internal data class RequestWrapper(
     fun prepare() = apply {
         val cbor = CBORObject.DecodeFromBytes(cborByte)
         docTypeCbor = cbor.get("docType")?.AsString()
-        val docType = DocType(docTypeCbor)
-        if (docType.isAccepted) {
-            requiredFields = cbor.get("nameSpaces")
-        }
+        requiredFields = cbor.get("nameSpaces")
     }
 
-    fun toJson() = CBorParser(requiredFields!!.EncodeToBytes()).toJson()?.let {
-        JSONObject().apply {
-            put("docType", docTypeCbor)
-            put("values", JSONObject(it))
-            put("isAuthenticated", isAuthenticated)
+    fun toJson(): JSONObject? {
+        if (requiredFields == null) return null
+        return CBorParser(requiredFields!!.EncodeToBytes()).toJson()?.let {
+            JSONObject().apply {
+                put("docType", docTypeCbor)
+                put("values", JSONObject(it))
+                put("isAuthenticated", isAuthenticated)
+            }
         }
     }
 
