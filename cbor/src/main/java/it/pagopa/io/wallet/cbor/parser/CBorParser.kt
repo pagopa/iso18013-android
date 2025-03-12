@@ -1,8 +1,10 @@
 package it.pagopa.io.wallet.cbor.parser
 
 import com.upokecenter.cbor.CBORObject
+import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.cbor.impl.MDoc
 import it.pagopa.io.wallet.cbor.model.DocsModel
+import it.pagopa.io.wallet.cbor.model.IssuerSigned
 import org.json.JSONObject
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -29,7 +31,7 @@ class CBorParser private constructor(
     fun documentsCborToJson(
         separateElementIdentifier: Boolean = true,
         onComplete: (String) -> Unit,
-        onError: ((Exception) -> Unit)?=null
+        onError: ((Exception) -> Unit)? = null
     ) {
         val mDoc = if (isByteArray) MDoc(
             source = this.source as ByteArray
@@ -40,6 +42,23 @@ class CBorParser private constructor(
             val json = JSONObject(model.toJson(separateElementIdentifier))
             val model = DocsModel.fromJson(json)
             onComplete.invoke(model.toJson().toString())
-        }, onError = onError?:{})
+        }, onError = onError ?: {})
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    fun issuerSignedCborToJson(
+        separateElementIdentifier: Boolean = true
+    ): String? {
+        return try {
+            val rawValue = if (isByteArray)
+                this.source as ByteArray
+            else
+                Base64.decode(this.source as String)
+            IssuerSigned
+                .issuerSignedFromByteArray(rawValue)?.toJson(separateElementIdentifier)?.toString()
+        } catch (e: Exception) {
+            CborLogger.e("ISSUER_SIGNED DECODING EX.", "$e")
+            null
+        }
     }
 }
