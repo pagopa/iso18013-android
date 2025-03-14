@@ -36,6 +36,7 @@ class CBorParser private constructor(
     /**
      * It parses a document Cbor raw value to a json string
      * @param separateElementIdentifier false if you want to merge elementIdentifier and elementValue as i.e.:
+     * ```json
      * {
      *   "random": "749knalJ0xgtGBK1lVhhXe8D-beFtIiXyln1UhmTPKmbNmTwvolOya3h-_AyFE2MqCom3sBYs8VylU238nkOTA==",
      *   "digestID": 14,
@@ -47,6 +48,7 @@ class CBorParser private constructor(
      *   "elementIdentifier": "family_name",
      *   "elementValue": "ANDERSSON"
      * }
+     * ```
      * @param onComplete callback with the json string
      * @param onError callback with the error as [Exception]*/
     fun documentsCborToJson(
@@ -65,9 +67,11 @@ class CBorParser private constructor(
             onComplete.invoke(model.toJson().toString())
         }, onError = onError ?: {})
     }
+
     /**
      * As [documentsCborToJson] It parses a issuerSigned Cbor raw value to a json string
      * @param separateElementIdentifier false if you want to merge elementIdentifier and elementValue as i.e.:
+     * ```json
      * {
      *   "random": "749knalJ0xgtGBK1lVhhXe8D-beFtIiXyln1UhmTPKmbNmTwvolOya3h-_AyFE2MqCom3sBYs8VylU238nkOTA==",
      *   "digestID": 14,
@@ -79,6 +83,60 @@ class CBorParser private constructor(
      *   "elementIdentifier": "family_name",
      *   "elementValue": "ANDERSSON"
      * }
+     * ```
+     * The resulting JSON has the following general schema (keys may be omitted if their corresponding values are `null`):
+     *
+     * ```
+     * {
+     *   "issuerAuth": {
+     *     "rawValue": "<Base64Url-encoded string?>",
+     *     "protectedHeader": "<Base64Url-encoded string?>",
+     *     "unprotectedHeader": [
+     *       {
+     *         "algorithm": "<String?>",
+     *         "keyId": "<Base64Url-encoded string?>"
+     *       }
+     *     ],
+     *     "payload": {
+     *       "docType": "<String?>",
+     *       "version": "<String?>",
+     *       "validityInfo": { ... },             // JSONObject containing validity data
+     *       "digestAlgorithm": "<String?>",
+     *       "deviceKeyInfo": {
+     *         // JSON object representing device key info; may contain:
+     *         // {
+     *         //   "deviceKey": {
+     *         //     "kty": "EC",
+     *         //     "crv": "P-256"|"P-384"|"P-521",
+     *         //     "x": "<Base64Url-encoded string>",
+     *         //     "y": "<Base64Url-encoded string>"
+     *         //   }
+     *         // }
+     *       },
+     *       "valueDigests": {
+     *         "<docTypeKey?>": {
+     *           // A JSON object mapping integer keys to Base64-encoded strings
+     *         }
+     *       }
+     *     },
+     *     "signature": "<Base64Url-encoded string?>"
+     *   },
+     *   "nameSpaces": {
+     *     "<docTypeString>": [
+     *       {
+     *         "digestID": <Int?>,
+     *         "random": "<Base64Url-encoded string?>",
+     *         // If separateElementIdentifier = true:
+     *         "elementIdentifier": "<String?>",
+     *         "elementValue": (JSONObject | JSONArray | String?),
+     *         // Else (if false), the "elementIdentifier" becomes a nested key:
+     *         "<elementIdentifier>": (JSONObject | JSONArray | String?)
+     *       },
+     *       ...
+     *     ]
+     *   }
+     * }
+     * ```
      * @return json string or null if error*/
     @OptIn(ExperimentalEncodingApi::class)
     fun issuerSignedCborToJson(
