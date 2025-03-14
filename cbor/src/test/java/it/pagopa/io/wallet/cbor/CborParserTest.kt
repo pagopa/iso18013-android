@@ -2,6 +2,7 @@ package it.pagopa.io.wallet.cbor
 
 import com.upokecenter.cbor.CBORObject
 import it.pagopa.io.wallet.cbor.helper.toModelMDoc
+import it.pagopa.io.wallet.cbor.impl.MDoc
 import it.pagopa.io.wallet.cbor.parser.CBorParser
 import org.json.JSONObject
 import org.junit.Test
@@ -144,5 +145,28 @@ class CborParserTest {
             assert(json != null)
             println(json)
         })
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    @Test
+    fun `test issuer signed to JSON`() {
+        val rawCbor = kotlin.io.encoding.Base64.decode(moreDocsIssuerAuth)
+        MDoc(rawCbor).decodeMDoc(onComplete = {
+            it.documents?.forEachIndexed { i, document ->
+                document.issuerSigned?.rawValue?.let { issuerSigned ->
+                    val jsonString = CBorParser(issuerSigned).issuerSignedCborToJson()
+                    assert(jsonString != null)
+                    val json = JSONObject(jsonString!!)
+                    println("==================")
+                    println("ISSUER_SIGNED:")
+                    println(json)
+                    if (i == it.documents!!.size - 1)
+                        println("==================")
+                    assert(json.optJSONObject("nameSpaces") != null)
+                }
+            }
+        }) { ex ->
+            assert(ex != null)
+        }
     }
 }
