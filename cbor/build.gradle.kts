@@ -36,7 +36,7 @@ android {
 }
 
 mavenPublishing {
-    coordinates("it.pagopa.io.wallet.cbor", "cbor", "1.0.2")
+    coordinates("it.pagopa.io.wallet.cbor", "cbor", "1.1.0")
 
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()

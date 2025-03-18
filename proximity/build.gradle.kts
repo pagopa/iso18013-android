@@ -40,7 +40,7 @@ android {
 }
 
 mavenPublishing {
-    coordinates("it.pagopa.io.wallet.proximity", "proximity", "1.0.0")
+    coordinates("it.pagopa.io.wallet.proximity", "proximity", "1.1.0")
 
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()
