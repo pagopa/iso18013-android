@@ -1,6 +1,7 @@
 package it.pagopa.io.wallet.proximity
 
 import it.pagopa.io.wallet.cbor.model.DocType
+import it.pagopa.io.wallet.cbor.parser.CBorParser
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator.Response
@@ -16,6 +17,18 @@ class ResponseGeneratorTest {
     private val mockSessionsTranscript = ByteArray(10)
     private val mockFieldRequestedAndAccepted by lazy {
         JSONObject("""{"org.iso.18013.5.1.mDL":{"height":true,"weight":true,"portrait":true,"birth_date":true,"eye_colour":true,"given_name":true,"issue_date":true,"age_over_18":true,"age_over_21":true,"birth_place":true,"expiry_date":true,"family_name":true,"hair_colour":true,"nationality":true,"age_in_years":true,"resident_city":true,"age_birth_year":true,"resident_state":true,"document_number":true,"issuing_country":true,"resident_address":true,"resident_country":true,"issuing_authority":true,"driving_privileges":true,"issuing_jurisdiction":true,"resident_postal_code":true,"signature_usual_mark":true,"administrative_number":true,"portrait_capture_date":true,"un_distinguishing_sign":true,"given_name_national_character":true,"family_name_national_character":true}}""")
+    }
+
+    @Test
+    fun createOpenIdV4SessionTranscript(){
+        val sessionTranscript = OpenID4VP(
+            "clientId",
+            "responseUri",
+            "authorizationRequestNonce",
+            "mdocGeneratedNonce"
+        ).createSessionTranscript()
+        val parser= CBorParser(sessionTranscript).toJson()
+        println(parser)
     }
 
     @OptIn(ExperimentalEncodingApi::class)
