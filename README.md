@@ -261,7 +261,34 @@ data class DocRequested(
 See in app MasterViewViewModel.shareInfo method to understand how to retrieve documents from JSON request and correctly
 send to response.
 
+##  ISO 18013-7
 
+class OpenID4VP can be used to generate a sessionTranscript to pass to ResponseGenerator to use standard ISO 18013-7.
+Class parameters can be retrieved by calling backend an getting parameters themselves.
+Example:
+```kotlin
+val sessionTranscript = OpenID4VP(
+   clientId,
+   responseUri,
+   authorizationRequestNonce,
+   mdocGeneratedNonce
+).createSessionTranscript()
+```
+Then you can create a device response doing:
+```kotlin
+val responseGenerator = ResponseGenerator(sessionTranscript)
+responseGenerator.createResponse(
+    documents,
+    fieldRequestedAndAccepted,
+    object : ResponseGenerator.Response {
+        override fun onResponseGenerated(response: ByteArray) {
+            //do what you want with response
+        }
 
-
+        override fun onError(message: String) {
+            //ERROR!!
+        }
+    }
+)
+```
 
