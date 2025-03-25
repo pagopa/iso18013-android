@@ -274,3 +274,21 @@ val sessionTranscript = OpenID4VP(
    mdocGeneratedNonce
 ).createSessionTranscript()
 ```
+Then you can create a device response doing:
+```kotlin
+val responseGenerator = ResponseGenerator(sessionTranscript)
+responseGenerator.createResponse(
+    documents,
+    fieldRequestedAndAccepted,
+    object : ResponseGenerator.Response {
+        override fun onResponseGenerated(response: ByteArray) {
+            //do what you want with response
+        }
+
+        override fun onError(message: String) {
+            //ERROR!!
+        }
+    }
+)
+```
+
