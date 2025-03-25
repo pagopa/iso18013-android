@@ -1,27 +1,26 @@
 # iso18013-android
 
-This project is divided into two main libraries.
+This project contains two main libraries and a sample application demonstrating how to use them:
 
 1. [cbor_implementation](#CBOR).
 2. [proximity](#Proximity).
 
-And one app to test these libraries.
-
-Both libraries have one logger called ProximityLogger and CborLogger which can be used safely as in app MainActivity:
+You can enable or disable logging for both libraries via `ProximityLogger` and `CborLogger`. For example, in `MainActivity`:
 
 ```kotlin
 ProximityLogger.enabled = BuildConfig.DEBUG
 CborLogger.enabled = BuildConfig.DEBUG
 ```
 
-### CBOR
+# CBOR
 
-Public classes are:
+The public classes in this library are:
 
 - COSEManager
 - MDoc
 
-COSEManager is intended to be used to sign any bytes[] using COSE and also verify COSE signature.</br>
+The `COSEManager` is designed for signing arbitrary byte arrays using COSE (CBOR Object Signing and Encryption) and for verifying COSE signatures.
+
 Examples: </br>
 Sign data:
 
@@ -50,7 +49,8 @@ coseManager.verifySign1(
 )
 ```
 
-In app you can find these examples into SignAndVerifyViewViewModel class. </br>
+Examples of how to use `COSEManager` can be found in the `SignAndVerifyViewViewModel` class.
+
 MDoc: </br>
 
 The `MDoc` class is a polymorphic class in Kotlin that returns an object of type `ModelMDoc`. The `ModelMDoc` is a
@@ -72,9 +72,9 @@ The `MDoc` class has three constructors:
     constructor(source: ByteArray) : this(source, true)
     ```
 
-### Proximity
+# Proximity
 
-Public classes are:
+The public classes here are:
 
 - QrEngagement
 - ResponseGenerator
@@ -95,7 +95,11 @@ data class BleRetrievalMethod(
 ) : DeviceRetrievalMethod
 ```
 
-QrEngagement: </br>
+ ## QrEngagement:
+
+ `QrEngagement` is used to generate and handle QR-based connections for an mdoc session.
+
+ ### Instantiation Example
 
 ```kotlin
 companion object {
@@ -124,7 +128,7 @@ companion object {
 
 This is thew way this class is intended to be instantiated. Examples can be found into MasterViewViewModel class.
 
-Methods:</br>
+### Key Methods:</br>
 
 1. **configure**: builds QrEngagementHelper by com.android.identity package and returns QrEngagement instance created
    via QrEngagement.build static method.
@@ -209,7 +213,8 @@ interface QrEngagementListener {
 }
 ```
 
-ResponseGenerator: </br>
+### ResponseGenerator
+`ResponseGenerator` is used to create a response in `ByteArray` format for the connected mdoc verifier.
 
 ```kotlin
 interface Response {
@@ -247,7 +252,7 @@ interface Response {
  }
 ```
 
-where DocRequested is:
+where `DocRequested` is:
 
 ```kotlin
 @Parcelize
@@ -258,12 +263,12 @@ data class DocRequested(
 ) : Parcelable
 ```
 
-See in app MasterViewViewModel.shareInfo method to understand how to retrieve documents from JSON request and correctly
+See in app `MasterViewViewModel.shareInfo` method to understand how to retrieve documents from JSON request and correctly
 send to response.
 
-##  ISO 18013-7
+#  ISO 18013-7
 
-class OpenID4VP can be used to generate a sessionTranscript to pass to ResponseGenerator to use standard ISO 18013-7.
+The `OpenID4VP` class can be used to generate a `sessionTranscript` to pass to `ResponseGenerator` to use standard ISO 18013-7.
 Class parameters can be retrieved by calling backend an getting parameters themselves.
 Example:
 ```kotlin
@@ -291,4 +296,35 @@ responseGenerator.createResponse(
     }
 )
 ```
+
+# Release
+
+This section describes the steps required to publish a new version of the library to Maven. 
+
+## 1. Bump the Version
+Open your Gradle file, `proximity/build.gradle.kts` and/or `cbor/build.gradle.kts` and update the version in the `mavenPublishing` block:
+
+```diff
+mavenPublishing {
+-    coordinates("it.pagopa.io.wallet.proximity", "proximity", "x.y.z")
++    coordinates("it.pagopa.io.wallet.proximity", "proximity", "x.y.z+1")
+}
+```
+
+Replace `proximity` with `cbor` (and the respective coordinates) if you are releasing that library instead.
+
+## 2. Create and Push the Tag
+Create a git tag corresponding to your version, then push it to your remote repository. For example:
+
+```perl
+git tag proximity-v1.1.1
+git push origin proximity-v1.1.1
+(Adjust the tag name according to your library and version.)
+```
+
+## 3. Automatic Release to Maven
+Once the tag is pushed, the release process will trigger automatically. Your library will be published to Maven if the pipeline completes successfully.
+
+## 4. Automatic Approval in Maven
+After the release is published, Maven automatically approve the new version. This final step ensures that the artifact is visible and available for consumers.
 
