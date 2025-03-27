@@ -323,8 +323,5 @@ git push origin proximity-v1.1.1
 ```
 
 ## 3. Automatic Release to Maven
-Once the tag is pushed, the release process will trigger automatically. Your library will be published to Maven if the pipeline completes successfully.
-
-## 4. Automatic Approval in Maven
-After the release is published, Maven automatically approve the new version. This final step ensures that the artifact is visible and available for consumers.
+Once the tag is pushed, the release process on Maven will be triggered automatically through GitHub Actions.
 
