@@ -241,8 +241,8 @@ data class IssuerAuth(
                 }
                 val xBytes = cborObject[-2].GetByteString()
                 val yBytes = cborObject[-3].GetByteString()
-                val x = Base64.getUrlEncoder().withoutPadding().encodeToString(xBytes)
-                val y = Base64.getUrlEncoder().withoutPadding().encodeToString(yBytes)
+                val x = Base64.getUrlEncoder().encodeToString(xBytes)
+                val y = Base64.getUrlEncoder().encodeToString(yBytes)
                 return JSONObject().apply {
                     put("kty", "EC")
                     put("crv", crv)
