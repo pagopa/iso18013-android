@@ -1,11 +1,11 @@
 package it.pagopa.io.wallet.proximity.qr_code
 
 import android.content.Context
-import android.net.Uri
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
 import android.util.Base64
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import com.android.identity.android.mdoc.deviceretrieval.DeviceRetrievalHelper
 import com.android.identity.android.mdoc.engagement.QrEngagementHelper
 import com.android.identity.android.mdoc.transport.DataTransport
@@ -235,7 +235,7 @@ class QrEngagement private constructor(
     }
 
     fun connect(mDocString: String) {
-        val uri = Uri.parse(mDocString)
+        val uri = mDocString.toUri()
         if (!uri.scheme.equals("mdoc"))
             throw IllegalArgumentException("mdoc string must contain mdoc:")
         val ba = Base64.decode(
@@ -295,7 +295,9 @@ class QrEngagement private constructor(
      * it does nothing if [DeviceRetrievalHelperWrapper] was lost
      */
     fun sendResponse(response: ByteArray) {
+        CborLogger.i("RESPONSE", "deviceRetrievalHelper:$deviceRetrievalHelper")
         if (deviceRetrievalHelper == null) return
+        CborLogger.i("RESPONSE", "SENDING")
         deviceRetrievalHelper!!.sendResponse(
             response,
             Constants.SESSION_DATA_STATUS_SESSION_TERMINATION

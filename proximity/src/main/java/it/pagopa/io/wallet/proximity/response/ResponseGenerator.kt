@@ -14,6 +14,7 @@ import com.android.identity.mdoc.mso.StaticAuthDataParser
 import com.android.identity.mdoc.response.DeviceResponseGenerator
 import com.android.identity.mdoc.util.MdocUtil
 import com.android.identity.util.Constants
+import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.cbor.cose.COSEManager
 import it.pagopa.io.wallet.cbor.cose.SignWithCOSEResult
 import it.pagopa.io.wallet.cbor.model.IssuerSigned
@@ -75,22 +76,20 @@ class ResponseGenerator(
     ): Pair<ByteArray?, String> {
         try {
             val deviceResponse = DeviceResponseGenerator(Constants.DEVICE_RESPONSE_STATUS_OK)
+            CborLogger.i("Fields requested initially:", fieldRequestedAndAccepted)
             val fieldsRequested = JSONObject(fieldRequestedAndAccepted)
-            fieldsRequested.keys().forEach { key ->
-                documents.map {
-                    val bytes = Base64.decode(it.issuerSignedContent, Base64.DEFAULT)
-                    Triple(IssuerSigned.issuerSignedFromByteArray(bytes), it.alias, it.docType)
-                }.forEach { (doc, alias, docType) ->
-                    addDocToResponse(
-                        responseGenerator = deviceResponse,
-                        issuerSignedObj = doc,
-                        fieldsRequested = fieldsRequested,
-                        key = key,
-                        transcript = sessionsTranscript,
-                        alias = alias,
-                        docType = docType
-                    )
-                }
+            documents.map {
+                val bytes = Base64.decode(it.issuerSignedContent, Base64.DEFAULT)
+                Triple(IssuerSigned.issuerSignedFromByteArray(bytes), it.alias, it.docType)
+            }.forEach { (doc, alias, docType) ->
+                addDocToResponse(
+                    responseGenerator = deviceResponse,
+                    issuerSignedObj = doc,
+                    fieldsRequested = fieldsRequested,
+                    transcript = sessionsTranscript,
+                    alias = alias,
+                    docType = docType
+                )
             }
             return deviceResponse.generate() to "created"
         } catch (e: Exception) {
@@ -158,31 +157,49 @@ class ResponseGenerator(
         responseGenerator: DeviceResponseGenerator,
         issuerSignedObj: IssuerSigned?,
         fieldsRequested: JSONObject,
-        key: String,
         transcript: ByteArray,
         alias: String,
         docType: String
     ) {
         if (issuerSignedObj == null) return
         val dataElements = ArrayList<DocumentRequest.DataElement>()
-        val json = fieldsRequested.optJSONObject(key)
-        json?.keys()?.forEach { nameSpaceValue ->
-            issuerSignedObj.nameSpaces?.keys?.forEach { nameSpaceKey ->
-                val isRequested = json.optBoolean(nameSpaceValue) == true
-                if (isRequested) {
-                    issuerSignedObj.nameSpaces?.get(nameSpaceKey)?.filter {
-                        it.elementIdentifier == nameSpaceValue
-                    }?.forEach {
-                        dataElements.add(
-                            DocumentRequest.DataElement(
-                                nameSpaceKey,
-                                it.elementIdentifier!!,
-                                false
+        val alreadyAddedArray = arrayListOf<String>()
+        CborLogger.i("fieldsRequested", fieldsRequested.toString())
+        fieldsRequested.keys().forEach { nameSpacesIdentifier ->
+            val nameSpacesObj = fieldsRequested.optJSONObject(nameSpacesIdentifier)
+            nameSpacesObj?.keys()?.forEach { nameSpaceLastId ->
+                val json = nameSpacesObj.optJSONObject(nameSpaceLastId)
+                json?.keys()?.forEach { nameSpaceValue ->
+                    CborLogger.i("nameSpaceValue", nameSpaceValue)
+                    val isRequested = json.optBoolean(nameSpaceValue) == true
+                    if (isRequested) {
+                        CborLogger.i("isRequested", "true")
+                        issuerSignedObj.nameSpaces?.keys?.forEach { nameSpaceKey ->
+                            CborLogger.i(
+                                "nameSpaceKey",
+                                issuerSignedObj.nameSpaces?.get(nameSpaceKey)?.toString().orEmpty()
                             )
-                        )
+                            issuerSignedObj.nameSpaces?.get(nameSpaceKey)?.filter {
+                                it.elementIdentifier == nameSpaceValue
+                            }?.forEach {
+                                if (!alreadyAddedArray.contains(it.elementIdentifier!!)) {
+                                    dataElements.add(
+                                        DocumentRequest.DataElement(
+                                            nameSpaceKey,
+                                            it.elementIdentifier!!,
+                                            false
+                                        )
+                                    )
+                                    alreadyAddedArray.add(it.elementIdentifier!!)
+                                }
+                            }
+                        }
                     }
                 }
             }
+        }
+        dataElements.forEachIndexed { i, each ->
+            CborLogger.i("dataElement $i", each.toString())
         }
         val deviceSigned = setDeviceNamespaces(
             transcript,
@@ -214,6 +231,8 @@ class ResponseGenerator(
             put("issuerSigned", issuerSigned)
             put("deviceSigned", deviceSigned)
         }
+        CborLogger.i("issuerSigned", issuerSigned.toString())
+        CborLogger.i("mapBuilder", mapBuilder.end().toString())
         responseGenerator.addDocument(Cbor.encode(mapBuilder.end().build()))
     }
 

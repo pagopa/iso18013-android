@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.util.Base64
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.viewModelScope
+import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.cbor.document_manager.DocManager
 import it.pagopa.io.wallet.cbor.model.DocType
 import it.pagopa.io.wallet.cbor.model.Document
@@ -57,6 +58,28 @@ class MasterViewViewModel(
         }
     }
 
+    private fun acceptFields() {
+        val originalReq = JSONObject(request).optJSONObject("request")
+        val jsonAccepted = JSONObject()
+        originalReq?.keys()?.forEach {
+            originalReq.optJSONObject(it)?.let { json ->
+                val keyJson = JSONObject()
+                json.keys().forEach { key ->
+                    val internalJson = json.getJSONObject(key)
+                    val internalNewJson = JSONObject()
+                    internalJson.keys().forEach { dataKey ->
+                        internalNewJson.put(dataKey, true)
+                    }
+                    keyJson.put(key, internalNewJson)
+                }
+                jsonAccepted.put(it, keyJson)
+            }
+        }
+        this.request = JSONObject().apply {
+            put("request", jsonAccepted)
+        }.toString()
+        CborLogger.i("NEW REQUEST", this.request)
+    }
 
     private fun manageRequestFromDeviceUi(
         sessionsTranscript: ByteArray
@@ -70,23 +93,33 @@ class MasterViewViewModel(
             req.optJSONObject(DocType.MDL.value)?.let { mdlJson ->
                 sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
                 mdlJson.keys().forEach { key ->
-                    if (mdlJson.optBoolean(key) == true)
-                        sb.append("$key;\n")
+                    val internalJson = mdlJson.getJSONObject(key)
+                    sb.append("$key:\n")
+                    internalJson.keys().forEach { dataKey ->
+                        sb.append("$dataKey;\n")
+                    }
                 }
             }
             req.optJSONObject(DocType.EU_PID.value)?.let { euPidJson ->
                 sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
                 euPidJson.keys().forEach { key ->
-                    if (euPidJson.optBoolean(key) == true)
-                        sb.append("$key;\n")
+                    val internalJson = euPidJson.getJSONObject(key)
+                    sb.append("$key:\n")
+                    internalJson.keys().forEach { dataKey ->
+                        sb.append("$dataKey;\n")
+                    }
                 }
             }
         } else {
             req?.keys()?.forEach {
+                sb.append("\n${it}:\n\n")
                 req.optJSONObject(it)?.let { json ->
                     json.keys().forEach { key ->
-                        if (json.optBoolean(key) == true)
-                            sb.append("$key;\n")
+                        val internalJson = json.getJSONObject(key)
+                        sb.append("$key:\n")
+                        internalJson.keys().forEach { dataKey ->
+                            sb.append("$dataKey;\n")
+                        }
                     }
                 }
             }
@@ -99,6 +132,7 @@ class MasterViewViewModel(
                 resources.getString(R.string.ok),
                 onClick = {
                     this.dialog.value = null
+                    acceptFields()
                     shareInfo(sessionsTranscript)
                 },
             ),
