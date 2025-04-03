@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.util.Base64
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.viewModelScope
-import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.cbor.document_manager.DocManager
 import it.pagopa.io.wallet.cbor.model.DocType
 import it.pagopa.io.wallet.cbor.model.Document
@@ -58,7 +57,7 @@ class MasterViewViewModel(
         }
     }
 
-    private fun acceptFields() {
+    private fun acceptFields(request: String, notAccepted: Array<String> = arrayOf()): String {
         val originalReq = JSONObject(request).optJSONObject("request")
         val jsonAccepted = JSONObject()
         originalReq?.keys()?.forEach {
@@ -68,17 +67,15 @@ class MasterViewViewModel(
                     val internalJson = json.getJSONObject(key)
                     val internalNewJson = JSONObject()
                     internalJson.keys().forEach { dataKey ->
-                        internalNewJson.put(dataKey, true)
+                        if (!notAccepted.contains(dataKey))
+                            internalNewJson.put(dataKey, true)
                     }
                     keyJson.put(key, internalNewJson)
                 }
                 jsonAccepted.put(it, keyJson)
             }
         }
-        this.request = JSONObject().apply {
-            put("request", jsonAccepted)
-        }.toString()
-        CborLogger.i("NEW REQUEST", this.request)
+        return jsonAccepted.toString()
     }
 
     private fun manageRequestFromDeviceUi(
@@ -132,7 +129,6 @@ class MasterViewViewModel(
                 resources.getString(R.string.ok),
                 onClick = {
                     this.dialog.value = null
-                    acceptFields()
                     shareInfo(sessionsTranscript)
                 },
             ),
@@ -152,8 +148,8 @@ class MasterViewViewModel(
         this.loader.value = resources.getString(R.string.sending_doc)
         viewModelScope.launch(Dispatchers.IO) {
             val disclosedDocuments = ArrayList<Document>()
-            val req = JSONObject(request).optJSONObject("request")
-            req?.keys()?.forEach {
+            val req = acceptFields(this@MasterViewViewModel.request, arrayOf("signature_usual_mark"))
+            JSONObject(req).keys().forEach {
                 when {
                     DocType(it) == DocType.MDL -> disclosedDocuments.add(getMdl()!!)
                     DocType(it) == DocType.EU_PID -> disclosedDocuments.add(getEuPid()!!)
@@ -177,7 +173,7 @@ class MasterViewViewModel(
                 sessionsTranscript = sessionsTranscript
             ).createResponse(
                 documents = docRequested.toTypedArray(),
-                fieldRequestedAndAccepted = req?.toString() ?: "{}",
+                fieldRequestedAndAccepted = req,
                 response = object : ResponseGenerator.Response {
                     override fun onResponseGenerated(response: ByteArray) {
                         this@MasterViewViewModel.loader.value = null

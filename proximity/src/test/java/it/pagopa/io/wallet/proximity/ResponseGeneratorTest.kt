@@ -16,18 +16,20 @@ class ResponseGeneratorTest {
     }
     private val mockSessionsTranscript = ByteArray(10)
     private val mockFieldRequestedAndAccepted by lazy {
-        JSONObject("""{"org.iso.18013.5.1.mDL":{"height":true,"weight":true,"portrait":true,"birth_date":true,"eye_colour":true,"given_name":true,"issue_date":true,"age_over_18":true,"age_over_21":true,"birth_place":true,"expiry_date":true,"family_name":true,"hair_colour":true,"nationality":true,"age_in_years":true,"resident_city":true,"age_birth_year":true,"resident_state":true,"document_number":true,"issuing_country":true,"resident_address":true,"resident_country":true,"issuing_authority":true,"driving_privileges":true,"issuing_jurisdiction":true,"resident_postal_code":true,"signature_usual_mark":true,"administrative_number":true,"portrait_capture_date":true,"un_distinguishing_sign":true,"given_name_national_character":true,"family_name_national_character":true}}""")
+        JSONObject(
+            """{"request":{"org.iso.18013.5.1.mDL":{"org.iso.18013.5.1":{"height":true,"weight":true,"portrait":true,"birth_date":true,"eye_colour":true,"given_name":true,"issue_date":true,"age_over_18":true,"age_over_21":true,"birth_place":true,"expiry_date":true,"family_name":true,"hair_colour":true,"nationality":true,"age_in_years":true,"resident_city":true,"age_birth_year":true,"resident_state":true,"document_number":true,"issuing_country":true,"resident_address":true,"resident_country":true,"issuing_authority":true,"driving_privileges":true,"issuing_jurisdiction":true,"resident_postal_code":true,"signature_usual_mark":true,"administrative_number":true,"portrait_capture_date":true,"un_distinguishing_sign":true,"given_name_national_character":true,"family_name_national_character":true}},"eu.europa.ec.eudi.pid.1":{"eu.europa.ec.eudi.pid.1":{"gender":true,"portrait":true,"birth_city":true,"birth_date":true,"given_name":true,"age_over_13":true,"age_over_16":true,"age_over_18":true,"age_over_21":true,"age_over_60":true,"age_over_65":true,"age_over_68":true,"birth_place":true,"birth_state":true,"expiry_date":true,"family_name":true,"nationality":true,"age_in_years":true,"birth_country":true,"issuance_date":true,"resident_city":true,"age_birth_year":true,"resident_state":true,"document_number":true,"issuing_country":true,"resident_street":true,"given_name_birth":true,"resident_address":true,"resident_country":true,"family_name_birth":true,"issuing_authority":true,"issuing_jurisdiction":true,"resident_postal_code":true,"administrative_number":true,"portrait_capture_date":true,"resident_house_number":true}},"org.iso.18013.5.1.reservation":{"org.iso.18013.5.reservation.1":{"guests":true,"location":true,"birth_date":true,"car_rental":true,"given_name":true,"expiry_date":true,"family_name":true,"num_of_rooms":true,"check_in_date":true,"issuance_date":true,"check_out_date":true,"reservation_id":true,"issuing_country":true,"reservation_date":true,"issuing_authority":true,"booking_service_name":true,"service_provider_name":true}},"org.iso.23220.2.photoid.1":{"org.iso.23220.photoid.1":{"gender":true,"portrait":true,"person_id":true,"birth_city":true,"birth_date":true,"given_name":true,"age_over_18":true,"birth_place":true,"birth_state":true,"expiry_date":true,"family_name":true,"nationality":true,"age_in_years":true,"birth_country":true,"issuance_date":true,"resident_city":true,"age_birth_year":true,"resident_state":true,"document_number":true,"issuing_country":true,"resident_street":true,"given_name_birth":true,"resident_address":true,"resident_country":true,"family_name_birth":true,"issuing_authority":true,"issuing_jurisdiction":true,"resident_postal_code":true,"administrative_number":true,"portrait_capture_date":true,"resident_house_number":true,"travel_document_number":true}}}}}"""
+        )
     }
 
     @Test
-    fun createOpenIdV4SessionTranscript(){
+    fun createOpenIdV4SessionTranscript() {
         val sessionTranscript = OpenID4VP(
             "clientId",
             "responseUri",
             "authorizationRequestNonce",
             "mdocGeneratedNonce"
         ).createSessionTranscript()
-        val parser= CBorParser(sessionTranscript).toJson()
+        val parser = CBorParser(sessionTranscript).toJson()
         println(parser)
     }
 
@@ -35,7 +37,8 @@ class ResponseGeneratorTest {
     @Test
     fun createResponseTest() {
         ResponseGenerator(mockSessionsTranscript)
-            .createResponse(arrayOf(DocRequested(mockNew, "alias", DocType.MDL.value)),
+            .createResponse(
+                arrayOf(DocRequested(mockNew, "alias", DocType.MDL.value)),
                 mockFieldRequestedAndAccepted.toString(),
                 object : Response {
                     override fun onResponseGenerated(response: ByteArray) {

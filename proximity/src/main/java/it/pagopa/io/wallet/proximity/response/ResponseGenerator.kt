@@ -198,9 +198,6 @@ class ResponseGenerator(
                 }
             }
         }
-        dataElements.forEachIndexed { i, each ->
-            CborLogger.i("dataElement $i", each.toString())
-        }
         val deviceSigned = setDeviceNamespaces(
             transcript,
             alias,
@@ -231,8 +228,6 @@ class ResponseGenerator(
             put("issuerSigned", issuerSigned)
             put("deviceSigned", deviceSigned)
         }
-        CborLogger.i("issuerSigned", issuerSigned.toString())
-        CborLogger.i("mapBuilder", mapBuilder.end().toString())
         responseGenerator.addDocument(Cbor.encode(mapBuilder.end().build()))
     }
 
