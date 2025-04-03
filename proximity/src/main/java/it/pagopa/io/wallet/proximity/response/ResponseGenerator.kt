@@ -1,6 +1,7 @@
 package it.pagopa.io.wallet.proximity.response
 
 import android.util.Base64
+import androidx.annotation.VisibleForTesting
 import com.android.identity.cbor.Bstr
 import com.android.identity.cbor.Cbor
 import com.android.identity.cbor.CborArray
@@ -23,6 +24,7 @@ import it.pagopa.io.wallet.proximity.request.DocRequested
 import org.json.JSONObject
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.collections.filter
 import kotlin.collections.forEach
 import kotlin.collections.iterator
 
@@ -153,15 +155,11 @@ class ResponseGenerator(
             .build()
     }
 
-    private fun addDocToResponse(
-        responseGenerator: DeviceResponseGenerator,
-        issuerSignedObj: IssuerSigned?,
-        fieldsRequested: JSONObject,
-        transcript: ByteArray,
-        alias: String,
-        docType: String
-    ) {
-        if (issuerSignedObj == null) return
+    @VisibleForTesting
+    fun createDataElements(
+        issuerSignedObj: IssuerSigned,
+        fieldsRequested: JSONObject
+    ): ArrayList<DocumentRequest.DataElement> {
         val dataElements = ArrayList<DocumentRequest.DataElement>()
         val alreadyAddedArray = arrayListOf<String>()
         CborLogger.i("fieldsRequested", fieldsRequested.toString())
@@ -198,6 +196,19 @@ class ResponseGenerator(
                 }
             }
         }
+        return dataElements
+    }
+
+    private fun addDocToResponse(
+        responseGenerator: DeviceResponseGenerator,
+        issuerSignedObj: IssuerSigned?,
+        fieldsRequested: JSONObject,
+        transcript: ByteArray,
+        alias: String,
+        docType: String
+    ) {
+        if (issuerSignedObj == null) return
+        val dataElements = this.createDataElements(issuerSignedObj, fieldsRequested)
         val deviceSigned = setDeviceNamespaces(
             transcript,
             alias,

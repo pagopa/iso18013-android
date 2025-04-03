@@ -1,6 +1,8 @@
 package it.pagopa.io.wallet.proximity
 
 import it.pagopa.io.wallet.cbor.model.DocType
+import it.pagopa.io.wallet.cbor.model.Document
+import it.pagopa.io.wallet.cbor.model.IssuerSigned
 import it.pagopa.io.wallet.cbor.parser.CBorParser
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator
@@ -49,5 +51,37 @@ class ResponseGeneratorTest {
                         println("ERROR: $message")
                     }
                 })
+    }
+
+    @OptIn(ExperimentalEncodingApi::class)
+    @Test
+    fun `create data elements test`() {
+        val disclosedDocument = Document.fromByteArray(Base64.decode(mockNew))
+        val docToJson = disclosedDocument.toJson(true)
+        println(docToJson)
+        val doc = DocRequested(
+            Base64.encode(disclosedDocument.issuerSigned!!.rawValue!!),
+            "alias",
+            disclosedDocument.docType!!
+        )
+        val bytes = Base64.decode(doc.issuerSignedContent)
+        val issuerSigned = IssuerSigned.issuerSignedFromByteArray(bytes)
+        val dataElements = ResponseGenerator(mockSessionsTranscript)
+            .createDataElements(
+                issuerSigned!!,
+                mockFieldRequestedAndAccepted.getJSONObject("request")
+            )
+        val jsonNameSpaces = docToJson
+            .getJSONObject("issuerSigned")
+            .getJSONObject("nameSpaces")
+        println("NAME_SPACES:")
+        println(jsonNameSpaces)
+        val array = jsonNameSpaces.get("org.iso.18013.5.1") as ArrayList<*>
+        array.forEach {
+            val elIdentifier = (it as JSONObject).getString("elementIdentifier")
+            assert(dataElements.any {
+                it.dataElementName == elIdentifier
+            })
+        }
     }
 }
