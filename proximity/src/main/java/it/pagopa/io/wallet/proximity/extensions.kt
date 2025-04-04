@@ -2,28 +2,18 @@ package it.pagopa.io.wallet.proximity
 
 import org.json.JSONObject
 
-internal fun Array<JSONObject?>.toRequest(): JSONObject{
+internal fun Array<JSONObject?>.toRequest(): JSONObject {
     val jsonToSend = JSONObject()
     this.forEach {
         if (it != null) {
             val start = it.getJSONObject("values")
-            val docTypeNameSpace = start.keys().asSequence().first()
             val docType = it.getString("docType")
-            val nameSpaces = start.getJSONObject(docTypeNameSpace)
             if (!jsonToSend.has("request")) {
                 jsonToSend.put("request", JSONObject().apply {
-                    put(docType, JSONObject().apply {
-                        nameSpaces.keys().forEach {
-                            put(it, true)
-                        }
-                    })
+                    put(docType, start)
                 })
             } else {
-                jsonToSend.getJSONObject("request").put(docType, JSONObject().apply {
-                    nameSpaces.keys().forEach {
-                        put(it, true)
-                    }
-                })
+                jsonToSend.getJSONObject("request").put(docType, start)
             }
             jsonToSend.put("isAuthenticated", it.getBoolean("isAuthenticated"))
         }

@@ -227,6 +227,23 @@ interface Response {
 
  /**
   * It creates a mdoc response in ByteArray format respect documents requested and disclosed
+  * @param fieldRequestedAndAccepted a JSON with values to share (I.E.:{
+ "org.iso.18013.5.1.mDL": {
+ "org.iso.18013.5.1": {
+ "portrait": true,
+ "birth_date": true,
+ "given_name": true,
+ "issue_date": true,
+ "expiry_date": true,
+ "family_name": true,
+ "document_number": true,
+ "issuing_country": true,
+ "issuing_authority": true,
+ "driving_privileges": true,
+ "un_distinguishing_sign": true
+ }
+ }
+ })
   * @return[Response.onResponseGenerated] if ByteArray is created without Exceptions, else
   * [Response.onError] if disclosedDocumentsArray is Empty with "no doc found" message or if an
   * [Exception] was reached with [Throwable.message].
