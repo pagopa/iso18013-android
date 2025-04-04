@@ -171,9 +171,10 @@ class QrEngagement private constructor(
                 deviceRequestBytes,
                 sessionTranscript
             ).parse().docRequests
-            val b64 =
-                Base64.encodeToString(deviceRequestBytes, Base64.URL_SAFE or Base64.NO_PADDING)
+            val b64 = kotlin.io.encoding.Base64.encode(deviceRequestBytes)
             ProximityLogger.i("DEVICE REQUEST", b64)
+            val b64Session = kotlin.io.encoding.Base64.encode(sessionTranscript)
+            ProximityLogger.i("SESSION TRANSCRIPT", b64Session)
             val requestWrapperList = arrayListOf<JSONObject?>()
             listRequested.forEachIndexed { j, each ->
                 (each toReaderAuthWith this@QrEngagement.readerTrustStore).let {

@@ -57,8 +57,8 @@ class MasterViewViewModel(
         }
     }
 
-    private fun acceptFields(request: String, notAccepted: Array<String> = arrayOf()): String {
-        val originalReq = JSONObject(request).optJSONObject("request")
+    private infix fun String.acceptFieldsExcept(notAccepted: Array<String> = arrayOf()): String {
+        val originalReq = JSONObject(this).optJSONObject("request")
         val jsonAccepted = JSONObject()
         originalReq?.keys()?.forEach {
             originalReq.optJSONObject(it)?.let { json ->
@@ -148,7 +148,8 @@ class MasterViewViewModel(
         this.loader.value = resources.getString(R.string.sending_doc)
         viewModelScope.launch(Dispatchers.IO) {
             val disclosedDocuments = ArrayList<Document>()
-            val req = acceptFields(this@MasterViewViewModel.request, arrayOf("signature_usual_mark"))
+            val req =
+                this@MasterViewViewModel.request acceptFieldsExcept arrayOf()
             JSONObject(req).keys().forEach {
                 when {
                     DocType(it) == DocType.MDL -> disclosedDocuments.add(getMdl()!!)

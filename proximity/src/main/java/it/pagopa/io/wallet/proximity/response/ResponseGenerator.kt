@@ -80,7 +80,9 @@ class ResponseGenerator(
             val deviceResponse = DeviceResponseGenerator(Constants.DEVICE_RESPONSE_STATUS_OK)
             CborLogger.i("Fields requested initially:", fieldRequestedAndAccepted)
             val fieldsRequested = JSONObject(fieldRequestedAndAccepted)
-            documents.map {
+            documents.filter {
+                fieldsRequested.keys().asSequence().contains(it.docType)
+            }.map {
                 val bytes = Base64.decode(it.issuerSignedContent, Base64.DEFAULT)
                 Triple(IssuerSigned.issuerSignedFromByteArray(bytes), it.alias, it.docType)
             }.forEach { (doc, alias, docType) ->
@@ -158,40 +160,26 @@ class ResponseGenerator(
     @VisibleForTesting
     fun createDataElements(
         issuerSignedObj: IssuerSigned,
-        fieldsRequested: JSONObject
+        fieldsRequested: JSONObject,
+        docType: String
     ): ArrayList<DocumentRequest.DataElement> {
         val dataElements = ArrayList<DocumentRequest.DataElement>()
-        val alreadyAddedArray = arrayListOf<String>()
-        CborLogger.i("fieldsRequested", fieldsRequested.toString())
-        fieldsRequested.keys().forEach { nameSpacesIdentifier ->
-            val nameSpacesObj = fieldsRequested.optJSONObject(nameSpacesIdentifier)
-            nameSpacesObj?.keys()?.forEach { nameSpaceLastId ->
-                val json = nameSpacesObj.optJSONObject(nameSpaceLastId)
-                json?.keys()?.forEach { nameSpaceValue ->
-                    CborLogger.i("nameSpaceValue", nameSpaceValue)
-                    val isRequested = json.optBoolean(nameSpaceValue) == true
-                    if (isRequested) {
-                        CborLogger.i("isRequested", "true")
-                        issuerSignedObj.nameSpaces?.keys?.forEach { nameSpaceKey ->
-                            CborLogger.i(
-                                "nameSpaceKey",
-                                issuerSignedObj.nameSpaces?.get(nameSpaceKey)?.toString().orEmpty()
+        val nameSpacesObj = fieldsRequested.optJSONObject(docType)
+        nameSpacesObj?.keys()?.forEach { nameSpace ->
+            val json = nameSpacesObj.optJSONObject(nameSpace)
+            json?.keys()?.forEach { elementIdentifier ->
+                val isRequested = json.optBoolean(elementIdentifier) == true
+                if (isRequested) {
+                    issuerSignedObj.nameSpaces?.get(nameSpace)?.filter {
+                        it.elementIdentifier == elementIdentifier
+                    }?.forEach {
+                        dataElements.add(
+                            DocumentRequest.DataElement(
+                                nameSpace,
+                                it.elementIdentifier!!,
+                                false
                             )
-                            issuerSignedObj.nameSpaces?.get(nameSpaceKey)?.filter {
-                                it.elementIdentifier == nameSpaceValue
-                            }?.forEach {
-                                if (!alreadyAddedArray.contains(it.elementIdentifier!!)) {
-                                    dataElements.add(
-                                        DocumentRequest.DataElement(
-                                            nameSpaceKey,
-                                            it.elementIdentifier!!,
-                                            false
-                                        )
-                                    )
-                                    alreadyAddedArray.add(it.elementIdentifier!!)
-                                }
-                            }
-                        }
+                        )
                     }
                 }
             }
@@ -208,7 +196,8 @@ class ResponseGenerator(
         docType: String
     ) {
         if (issuerSignedObj == null) return
-        val dataElements = this.createDataElements(issuerSignedObj, fieldsRequested)
+        val dataElements = this.createDataElements(issuerSignedObj, fieldsRequested, docType)
+        CborLogger.i("dataElements", dataElements.toString())
         val deviceSigned = setDeviceNamespaces(
             transcript,
             alias,
