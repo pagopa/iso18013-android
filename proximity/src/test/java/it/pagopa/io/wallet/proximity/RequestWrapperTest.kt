@@ -27,11 +27,19 @@ class RequestWrapperTest {
         assert(jsonToSend.keys().asSequence().count() == 2)
         assert(!jsonToSend.getBoolean("isAuthenticated"))
         val request = jsonToSend.getJSONObject("request")
-        assert(request.getJSONObject(DocType.EU_PID.value).keys().asSequence().map {
-            request.getJSONObject(DocType.EU_PID.value).getBoolean(it)
+        val euPidJsonInside = request
+            .getJSONObject(DocType.EU_PID.value)
+            .getJSONObject(DocType.EU_PID.nameSpacesValue)
+        val mdlJsonInside = request
+            .getJSONObject(DocType.MDL.value)
+            .getJSONObject(DocType.MDL.nameSpacesValue)
+        println(euPidJsonInside)
+        println(mdlJsonInside)
+        assert(euPidJsonInside.keys().asSequence().map {
+            !euPidJsonInside.getBoolean(it)
         }.first())
-        assert(request.getJSONObject(DocType.MDL.value).keys().asSequence().map {
-            request.getJSONObject(DocType.MDL.value).getBoolean(it)
+        assert(mdlJsonInside.keys().asSequence().map {
+            !mdlJsonInside.getBoolean(it)
         }.first())
     }
 }
