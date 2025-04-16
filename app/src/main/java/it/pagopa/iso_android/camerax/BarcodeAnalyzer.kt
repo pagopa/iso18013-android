@@ -25,7 +25,7 @@ class BarcodeAnalyzer(
 
             scanner.process(image)
                 .addOnSuccessListener { barcodes ->
-                    if (barcodes.size > 0) {
+                    if (barcodes.isNotEmpty()) {
                         callback(barcodes[0].rawValue)
                     }
                 }

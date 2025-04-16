@@ -57,6 +57,27 @@ class MasterViewViewModel(
         }
     }
 
+    private infix fun String.acceptFieldsExcept(notAccepted: Array<String> = arrayOf()): String {
+        val originalReq = JSONObject(this).optJSONObject("request")
+        val jsonAccepted = JSONObject()
+        originalReq?.keys()?.forEach {
+            originalReq.optJSONObject(it)?.let { json ->
+                val keyJson = JSONObject()
+                json.keys().forEach { key ->
+                    json.optJSONObject(key)?.let { internalJson ->
+                        val internalNewJson = JSONObject()
+                        internalJson.keys().forEach { dataKey ->
+                            if (!notAccepted.contains(dataKey))
+                                internalNewJson.put(dataKey, true)
+                        }
+                        keyJson.put(key, internalNewJson)
+                    }
+                }
+                jsonAccepted.put(it, keyJson)
+            }
+        }
+        return jsonAccepted.toString()
+    }
 
     private fun manageRequestFromDeviceUi(
         sessionsTranscript: ByteArray
@@ -65,28 +86,46 @@ class MasterViewViewModel(
             append("${resources.getString(R.string.share_info_title)}:\n")
         }
         val req = JSONObject(request).optJSONObject("request")
-        ProximityLogger.i("CERT is valid:", "${JSONObject(request).optBoolean("isAuthenticated")}")
         if (req?.has(DocType.MDL.value) == true || req?.has(DocType.EU_PID.value) == true) {
             req.optJSONObject(DocType.MDL.value)?.let { mdlJson ->
                 sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
                 mdlJson.keys().forEach { key ->
-                    if (mdlJson.optBoolean(key) == true)
-                        sb.append("$key;\n")
+                    if (key == "isAuthenticated")
+                        ProximityLogger.i("CERT is valid:", "${mdlJson.optBoolean(key)}")
+                    mdlJson.optJSONObject(key)?.let { internalJson ->
+                        sb.append("$key:\n")
+                        internalJson.keys().forEach { dataKey ->
+                            sb.append("$dataKey;\n")
+                        }
+                    }
                 }
             }
             req.optJSONObject(DocType.EU_PID.value)?.let { euPidJson ->
                 sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
                 euPidJson.keys().forEach { key ->
-                    if (euPidJson.optBoolean(key) == true)
-                        sb.append("$key;\n")
+                    if (key == "isAuthenticated")
+                        ProximityLogger.i("CERT is valid:", "${euPidJson.optBoolean(key)}")
+                    euPidJson.optJSONObject(key)?.let { internalJson ->
+                        sb.append("$key:\n")
+                        internalJson.keys().forEach { dataKey ->
+                            sb.append("$dataKey;\n")
+                        }
+                    }
                 }
             }
         } else {
             req?.keys()?.forEach {
+                sb.append("\n${it}:\n\n")
                 req.optJSONObject(it)?.let { json ->
                     json.keys().forEach { key ->
-                        if (json.optBoolean(key) == true)
-                            sb.append("$key;\n")
+                        if (key == "isAuthenticated")
+                            ProximityLogger.i("CERT is valid:", "${json.optBoolean(key)}")
+                        json.optJSONObject(key)?.let { internalJson ->
+                            sb.append("$key:\n")
+                            internalJson.keys().forEach { dataKey ->
+                                sb.append("$dataKey;\n")
+                            }
+                        }
                     }
                 }
             }
@@ -118,8 +157,9 @@ class MasterViewViewModel(
         this.loader.value = resources.getString(R.string.sending_doc)
         viewModelScope.launch(Dispatchers.IO) {
             val disclosedDocuments = ArrayList<Document>()
-            val req = JSONObject(request).optJSONObject("request")
-            req?.keys()?.forEach {
+            val req =
+                this@MasterViewViewModel.request acceptFieldsExcept arrayOf()
+            JSONObject(req).keys().forEach {
                 when {
                     DocType(it) == DocType.MDL -> disclosedDocuments.add(getMdl()!!)
                     DocType(it) == DocType.EU_PID -> disclosedDocuments.add(getEuPid()!!)
@@ -143,7 +183,7 @@ class MasterViewViewModel(
                 sessionsTranscript = sessionsTranscript
             ).createResponse(
                 documents = docRequested.toTypedArray(),
-                fieldRequestedAndAccepted = req?.toString() ?: "{}",
+                fieldRequestedAndAccepted = req,
                 response = object : ResponseGenerator.Response {
                     override fun onResponseGenerated(response: ByteArray) {
                         this@MasterViewViewModel.loader.value = null

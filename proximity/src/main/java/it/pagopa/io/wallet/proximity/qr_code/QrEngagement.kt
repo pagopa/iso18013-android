@@ -1,11 +1,11 @@
 package it.pagopa.io.wallet.proximity.qr_code
 
 import android.content.Context
-import android.net.Uri
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
 import android.util.Base64
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import com.android.identity.android.mdoc.deviceretrieval.DeviceRetrievalHelper
 import com.android.identity.android.mdoc.engagement.QrEngagementHelper
 import com.android.identity.android.mdoc.transport.DataTransport
@@ -16,7 +16,6 @@ import com.android.identity.mdoc.engagement.EngagementParser
 import com.android.identity.mdoc.request.DeviceRequestParser
 import com.android.identity.util.Constants
 import com.android.identity.util.Logger
-import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.document.reader_auth.ReaderTrustStore
 import it.pagopa.io.wallet.proximity.request.RequestWrapper
@@ -171,22 +170,26 @@ class QrEngagement private constructor(
                 deviceRequestBytes,
                 sessionTranscript
             ).parse().docRequests
-            val b64 =
-                Base64.encodeToString(deviceRequestBytes, Base64.URL_SAFE or Base64.NO_PADDING)
-            ProximityLogger.i("DEVICE REQUEST", b64)
+            //DOING B64 calculation only if we are in debug
+            if (ProximityLogger.enabled) {
+                val b64 = kotlin.io.encoding.Base64.encode(deviceRequestBytes)
+                ProximityLogger.i("DEVICE REQUEST", b64)
+                val b64Session = kotlin.io.encoding.Base64.encode(sessionTranscript)
+                ProximityLogger.i("SESSION TRANSCRIPT", b64Session)
+            }
             val requestWrapperList = arrayListOf<JSONObject?>()
             listRequested.forEachIndexed { j, each ->
                 (each toReaderAuthWith this@QrEngagement.readerTrustStore).let {
                     requestWrapperList.add(
                         RequestWrapper(
                             each.itemsRequest,
-                            it?.readerSignIsValid == true
+                            it?.isSuccess() == true
                         ).prepare().toJson()
                     )
                 }
             }
             val jsonToSend = requestWrapperList.toTypedArray().toRequest()
-            CborLogger.i("REQ_JSON", jsonToSend.toString())
+            ProximityLogger.i("REQ_JSON", jsonToSend.toString())
             listener?.onNewDeviceRequest(
                 if (jsonToSend.keys().asSequence().toMutableList().isEmpty())
                     null
@@ -235,7 +238,7 @@ class QrEngagement private constructor(
     }
 
     fun connect(mDocString: String) {
-        val uri = Uri.parse(mDocString)
+        val uri = mDocString.toUri()
         if (!uri.scheme.equals("mdoc"))
             throw IllegalArgumentException("mdoc string must contain mdoc:")
         val ba = Base64.decode(
@@ -295,7 +298,9 @@ class QrEngagement private constructor(
      * it does nothing if [DeviceRetrievalHelperWrapper] was lost
      */
     fun sendResponse(response: ByteArray) {
+        ProximityLogger.i("RESPONSE", "deviceRetrievalHelper:$deviceRetrievalHelper")
         if (deviceRetrievalHelper == null) return
+        ProximityLogger.i("RESPONSE", "SENDING")
         deviceRetrievalHelper!!.sendResponse(
             response,
             Constants.SESSION_DATA_STATUS_SESSION_TERMINATION

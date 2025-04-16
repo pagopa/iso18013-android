@@ -61,7 +61,7 @@ class CborViewViewModel : ViewModel() {
                                             val bArray: ByteArray? =
                                                 when (currentJson.get("elementValue")) {
                                                     is ByteArray -> currentJson.get("elementValue") as ByteArray
-                                                    is String -> Base64.getDecoder()
+                                                    is String -> Base64.getUrlDecoder()
                                                         .decode(currentJson.get("elementValue") as String)
 
                                                     else -> null
