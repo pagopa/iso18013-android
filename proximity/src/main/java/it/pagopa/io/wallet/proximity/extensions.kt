@@ -12,10 +12,18 @@ internal fun Array<JSONObject?>.toRequest(): JSONObject {
                 jsonToSend.put("request", JSONObject().apply {
                     put(docType, start)
                 })
+                jsonToSend
+                    .getJSONObject("request")
+                    .getJSONObject(docType)
+                    .put("isAuthenticated", it.getBoolean("isAuthenticated"))
             } else {
-                jsonToSend.getJSONObject("request").put(docType, start)
+                jsonToSend
+                    .getJSONObject("request")
+                    .put(docType, start)
+                jsonToSend.getJSONObject("request")
+                    .getJSONObject(docType)
+                    .put("isAuthenticated", it.getBoolean("isAuthenticated"))
             }
-            jsonToSend.put("isAuthenticated", it.getBoolean("isAuthenticated"))
         }
     }
     return jsonToSend

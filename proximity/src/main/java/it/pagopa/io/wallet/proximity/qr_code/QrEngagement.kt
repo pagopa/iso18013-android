@@ -16,7 +16,6 @@ import com.android.identity.mdoc.engagement.EngagementParser
 import com.android.identity.mdoc.request.DeviceRequestParser
 import com.android.identity.util.Constants
 import com.android.identity.util.Logger
-import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.document.reader_auth.ReaderTrustStore
 import it.pagopa.io.wallet.proximity.request.RequestWrapper
@@ -171,23 +170,26 @@ class QrEngagement private constructor(
                 deviceRequestBytes,
                 sessionTranscript
             ).parse().docRequests
-            val b64 = kotlin.io.encoding.Base64.encode(deviceRequestBytes)
-            ProximityLogger.i("DEVICE REQUEST", b64)
-            val b64Session = kotlin.io.encoding.Base64.encode(sessionTranscript)
-            ProximityLogger.i("SESSION TRANSCRIPT", b64Session)
+            //DOING B64 calculation only if we are in debug
+            if (ProximityLogger.enabled) {
+                val b64 = kotlin.io.encoding.Base64.encode(deviceRequestBytes)
+                ProximityLogger.i("DEVICE REQUEST", b64)
+                val b64Session = kotlin.io.encoding.Base64.encode(sessionTranscript)
+                ProximityLogger.i("SESSION TRANSCRIPT", b64Session)
+            }
             val requestWrapperList = arrayListOf<JSONObject?>()
             listRequested.forEachIndexed { j, each ->
                 (each toReaderAuthWith this@QrEngagement.readerTrustStore).let {
                     requestWrapperList.add(
                         RequestWrapper(
                             each.itemsRequest,
-                            it?.readerSignIsValid == true
+                            it?.isSuccess() == true
                         ).prepare().toJson()
                     )
                 }
             }
             val jsonToSend = requestWrapperList.toTypedArray().toRequest()
-            CborLogger.i("REQ_JSON", jsonToSend.toString())
+            ProximityLogger.i("REQ_JSON", jsonToSend.toString())
             listener?.onNewDeviceRequest(
                 if (jsonToSend.keys().asSequence().toMutableList().isEmpty())
                     null
@@ -296,9 +298,9 @@ class QrEngagement private constructor(
      * it does nothing if [DeviceRetrievalHelperWrapper] was lost
      */
     fun sendResponse(response: ByteArray) {
-        CborLogger.i("RESPONSE", "deviceRetrievalHelper:$deviceRetrievalHelper")
+        ProximityLogger.i("RESPONSE", "deviceRetrievalHelper:$deviceRetrievalHelper")
         if (deviceRetrievalHelper == null) return
-        CborLogger.i("RESPONSE", "SENDING")
+        ProximityLogger.i("RESPONSE", "SENDING")
         deviceRetrievalHelper!!.sendResponse(
             response,
             Constants.SESSION_DATA_STATUS_SESSION_TERMINATION

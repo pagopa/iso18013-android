@@ -19,7 +19,7 @@ internal fun CBORObject.parse(): Any? {
 
     return when (this.type) {
         CBORType.Boolean, CBORType.SimpleValue -> isTrue
-        CBORType.ByteString -> Base64.getEncoder().encodeToString(GetByteString())
+        CBORType.ByteString -> Base64.getUrlEncoder().encodeToString(GetByteString())
         CBORType.TextString -> AsString()
         CBORType.Array -> values.map { it.parse() }.toList()
         CBORType.Map -> keys.associate { it.parse() to this[it].parse() }

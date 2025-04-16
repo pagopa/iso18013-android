@@ -64,13 +64,14 @@ class MasterViewViewModel(
             originalReq.optJSONObject(it)?.let { json ->
                 val keyJson = JSONObject()
                 json.keys().forEach { key ->
-                    val internalJson = json.getJSONObject(key)
-                    val internalNewJson = JSONObject()
-                    internalJson.keys().forEach { dataKey ->
-                        if (!notAccepted.contains(dataKey))
-                            internalNewJson.put(dataKey, true)
+                    json.optJSONObject(key)?.let { internalJson ->
+                        val internalNewJson = JSONObject()
+                        internalJson.keys().forEach { dataKey ->
+                            if (!notAccepted.contains(dataKey))
+                                internalNewJson.put(dataKey, true)
+                        }
+                        keyJson.put(key, internalNewJson)
                     }
-                    keyJson.put(key, internalNewJson)
                 }
                 jsonAccepted.put(it, keyJson)
             }
@@ -85,25 +86,30 @@ class MasterViewViewModel(
             append("${resources.getString(R.string.share_info_title)}:\n")
         }
         val req = JSONObject(request).optJSONObject("request")
-        ProximityLogger.i("CERT is valid:", "${JSONObject(request).optBoolean("isAuthenticated")}")
         if (req?.has(DocType.MDL.value) == true || req?.has(DocType.EU_PID.value) == true) {
             req.optJSONObject(DocType.MDL.value)?.let { mdlJson ->
                 sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
                 mdlJson.keys().forEach { key ->
-                    val internalJson = mdlJson.getJSONObject(key)
-                    sb.append("$key:\n")
-                    internalJson.keys().forEach { dataKey ->
-                        sb.append("$dataKey;\n")
+                    if (key == "isAuthenticated")
+                        ProximityLogger.i("CERT is valid:", "${mdlJson.optBoolean(key)}")
+                    mdlJson.optJSONObject(key)?.let { internalJson ->
+                        sb.append("$key:\n")
+                        internalJson.keys().forEach { dataKey ->
+                            sb.append("$dataKey;\n")
+                        }
                     }
                 }
             }
             req.optJSONObject(DocType.EU_PID.value)?.let { euPidJson ->
                 sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
                 euPidJson.keys().forEach { key ->
-                    val internalJson = euPidJson.getJSONObject(key)
-                    sb.append("$key:\n")
-                    internalJson.keys().forEach { dataKey ->
-                        sb.append("$dataKey;\n")
+                    if (key == "isAuthenticated")
+                        ProximityLogger.i("CERT is valid:", "${euPidJson.optBoolean(key)}")
+                    euPidJson.optJSONObject(key)?.let { internalJson ->
+                        sb.append("$key:\n")
+                        internalJson.keys().forEach { dataKey ->
+                            sb.append("$dataKey;\n")
+                        }
                     }
                 }
             }
@@ -112,10 +118,13 @@ class MasterViewViewModel(
                 sb.append("\n${it}:\n\n")
                 req.optJSONObject(it)?.let { json ->
                     json.keys().forEach { key ->
-                        val internalJson = json.getJSONObject(key)
-                        sb.append("$key:\n")
-                        internalJson.keys().forEach { dataKey ->
-                            sb.append("$dataKey;\n")
+                        if (key == "isAuthenticated")
+                            ProximityLogger.i("CERT is valid:", "${json.optBoolean(key)}")
+                        json.optJSONObject(key)?.let { internalJson ->
+                            sb.append("$key:\n")
+                            internalJson.keys().forEach { dataKey ->
+                                sb.append("$dataKey;\n")
+                            }
                         }
                     }
                 }

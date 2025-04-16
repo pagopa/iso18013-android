@@ -24,8 +24,11 @@ class RequestWrapperTest {
         requestWrapperList.addAll(listOf(req, req1))
         val jsonToSend = requestWrapperList.toTypedArray().toRequest()
         println(jsonToSend)
-        assert(jsonToSend.keys().asSequence().count() == 2)
-        assert(!jsonToSend.getBoolean("isAuthenticated"))
+        assert(jsonToSend.keys().asSequence().count() == 1)
+        assert(
+            !jsonToSend.getJSONObject("request").getJSONObject(DocType.EU_PID.value)
+                .getBoolean("isAuthenticated")
+        )
         val request = jsonToSend.getJSONObject("request")
         val euPidJsonInside = request
             .getJSONObject(DocType.EU_PID.value)
