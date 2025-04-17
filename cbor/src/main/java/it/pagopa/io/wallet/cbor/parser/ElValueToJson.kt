@@ -85,7 +85,7 @@ internal class ElValueToJson(private val elementValue: Any?) {
                 array
             }
 
-            else -> elementValue
+            else -> null
         }
     }
 
