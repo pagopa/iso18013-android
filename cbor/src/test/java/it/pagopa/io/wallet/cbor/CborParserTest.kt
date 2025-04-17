@@ -1,7 +1,5 @@
 package it.pagopa.io.wallet.cbor
 
-import com.upokecenter.cbor.CBORObject
-import it.pagopa.io.wallet.cbor.helper.toModelMDoc
 import it.pagopa.io.wallet.cbor.impl.MDoc
 import it.pagopa.io.wallet.cbor.parser.CBorParser
 import org.json.JSONObject
