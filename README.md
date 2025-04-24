@@ -1,9 +1,88 @@
-# iso18013-android
+# ISO18013-Android
 
-This project contains two main libraries and a sample application demonstrating how to use them:
+An Android implementation of the ISO 18013-5 standard for mobile driving licenses and digital identity documents.
 
-1. [cbor_implementation](#CBOR).
-2. [proximity](#Proximity).
+## Project Overview
+
+This project implements the ISO 18013-5 standard for mobile driving licenses (mDL) and other identity documents on Android devices.
+
+## Requirements
+
+- Android SDK 26+
+- Kotlin 1.8+
+- Android device with Bluetooth support
+- Android Studio Arctic Fox or later
+
+## Getting Started
+
+1. Clone this repository:
+
+   ```bash
+   git clone https://github.com/pagopa/iso18013-android.git
+   cd iso18013-android
+   ```
+
+2. Open the project in Android Studio.
+
+3. Build the project:
+   ```bash
+   ./gradlew build
+   ```
+
+## Running Tests
+
+### Unit Tests
+
+To run unit tests for the CBOR module:
+
+```bash
+./gradlew :cbor:test
+```
+
+To run unit tests for the Proximity module:
+
+```bash
+./gradlew :proximity:test
+```
+
+To run all unit tests:
+
+```bash
+./gradlew test
+```
+
+## Release
+
+This section describes the steps required to publish a new version of the library to Maven.
+
+### 1. Bump the Version
+
+Open your Gradle file, `proximity/build.gradle.kts` and/or `cbor/build.gradle.kts` and update the version in the `mavenPublishing` block:
+
+```diff
+mavenPublishing {
+-    coordinates("it.pagopa.io.wallet.proximity", "proximity", "x.y.z")
++    coordinates("it.pagopa.io.wallet.proximity", "proximity", "x.y.z+1")
+}
+```
+
+Replace `proximity` with `cbor` (and the respective coordinates) if you are releasing that library instead.
+
+### 2. Create and Push the Tag
+
+Create a git tag corresponding to your version, then push it to your remote repository. For example:
+
+```perl
+git tag proximity-v1.1.1
+git push origin proximity-v1.1.1
+(Adjust the tag name according to your library and version.)
+```
+
+### 3. Automatic Release to Maven
+
+Once the tag is pushed, the release process on Maven will be triggered automatically through GitHub Actions.
+
+## Logging
 
 You can enable or disable logging for both libraries via `ProximityLogger` and `CborLogger`. For example, in `MainActivity`:
 
@@ -12,7 +91,17 @@ ProximityLogger.enabled = BuildConfig.DEBUG
 CborLogger.enabled = BuildConfig.DEBUG
 ```
 
-# CBOR
+It consists of three main modules:
+
+## Modules
+
+### CBOR
+
+The CBOR module handles Concise Binary Object Representation (CBOR) encoding and decoding, which is the data format specified by ISO 18013-5 for identity documents. It includes:
+
+- CBOR parsing and encoding
+- COSE (CBOR Object Signing and Encryption) implementation
+- Document data structures
 
 The public classes in this library are:
 
@@ -58,21 +147,31 @@ parser for a CBOR format, which includes a method to convert it to JSON.
 The `MDoc` class has three constructors:
 
 1. **Primary Constructor**: This is private and is used internally by the other constructors.
-    ```kotlin
-    private constructor(source: Any, isByteArray: Boolean = false)
-    ```
+
+   ```kotlin
+   private constructor(source: Any, isByteArray: Boolean = false)
+   ```
 
 2. **String Constructor**: This takes a `Base64String` source and sets `isByteArray` to `false`.
-    ```kotlin
-    constructor(source: String) : this(source, false)
-    ```
+
+   ```kotlin
+   constructor(source: String) : this(source, false)
+   ```
 
 3. **ByteArray Constructor**: This takes a `bytes[]` source and sets `isByteArray` to `true`.
-    ```kotlin
-    constructor(source: ByteArray) : this(source, true)
-    ```
+   ```kotlin
+   constructor(source: ByteArray) : this(source, true)
+   ```
 
-# Proximity
+### Proximity
+
+The Proximity module manages secure communication between devices for document exchange, including:
+
+- QR code engagement
+- Bluetooth communication
+- Device connection management
+- Request and response protocols
+- Certificate validation
 
 The public classes here are:
 
@@ -95,11 +194,11 @@ data class BleRetrievalMethod(
 ) : DeviceRetrievalMethod
 ```
 
- ## QrEngagement:
+### QrEngagement:
 
- `QrEngagement` is used to generate and handle QR-based connections for an mdoc session.
+`QrEngagement` is used to generate and handle QR-based connections for an mdoc session.
 
- ### Instantiation Example
+#### Instantiation Example
 
 ```kotlin
 companion object {
@@ -128,10 +227,11 @@ companion object {
 
 This is thew way this class is intended to be instantiated. Examples can be found into MasterViewViewModel class.
 
-### Key Methods:</br>
+#### Key Methods:</br>
 
 1. **configure**: builds QrEngagementHelper by com.android.identity package and returns QrEngagement instance created
    via QrEngagement.build static method.
+
    ```kotlin
    fun configure() = apply {
       qrEngagement = qrEngagementBuilder.build()
@@ -139,6 +239,7 @@ This is thew way this class is intended to be instantiated. Examples can be foun
    ```
 
 2. **withReaderTrustStore**: Method to inject certificates to be verified sent by mdoc verifier app.
+
    ```kotlin
    /**
    * Use this if you have certificates into your **Raw Resource** folder.
@@ -171,7 +272,8 @@ This is thew way this class is intended to be instantiated. Examples can be foun
      fun withReaderTrustStore(certificates: List<String>) = apply {
         certificates.setReaderTrustStore()
      }
-      ```
+   ```
+
 3. **getQrCodeString**: Gives back QR code string for engagement
    ```kotlin
    fun getQrCodeString() = apply {
@@ -214,6 +316,7 @@ interface QrEngagementListener {
 ```
 
 ### ResponseGenerator
+
 `ResponseGenerator` is used to create a response in `ByteArray` format for the connected mdoc verifier.
 
 ```kotlin
@@ -283,11 +386,12 @@ data class DocRequested(
 See in app `MasterViewViewModel.shareInfo` method to understand how to retrieve documents from JSON request and correctly
 send to response.
 
-#  ISO 18013-7
+## ISO 18013-7
 
 The `OpenID4VP` class can be used to generate a `sessionTranscript` to pass to `ResponseGenerator` to use standard ISO 18013-7.
 Class parameters can be retrieved by calling backend an getting parameters themselves.
 Example:
+
 ```kotlin
 val sessionTranscript = OpenID4VP(
    clientId,
@@ -296,7 +400,9 @@ val sessionTranscript = OpenID4VP(
    mdocGeneratedNonce
 ).createSessionTranscript()
 ```
+
 Then you can create a device response doing:
+
 ```kotlin
 val responseGenerator = ResponseGenerator(sessionTranscript)
 responseGenerator.createResponse(
@@ -314,31 +420,14 @@ responseGenerator.createResponse(
 )
 ```
 
-# Release
+## License
 
-This section describes the steps required to publish a new version of the library to Maven. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 1. Bump the Version
-Open your Gradle file, `proximity/build.gradle.kts` and/or `cbor/build.gradle.kts` and update the version in the `mavenPublishing` block:
+## Contributing
 
-```diff
-mavenPublishing {
--    coordinates("it.pagopa.io.wallet.proximity", "proximity", "x.y.z")
-+    coordinates("it.pagopa.io.wallet.proximity", "proximity", "x.y.z+1")
-}
-```
+Please read the [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
-Replace `proximity` with `cbor` (and the respective coordinates) if you are releasing that library instead.
+## Developed by
 
-## 2. Create and Push the Tag
-Create a git tag corresponding to your version, then push it to your remote repository. For example:
-
-```perl
-git tag proximity-v1.1.1
-git push origin proximity-v1.1.1
-(Adjust the tag name according to your library and version.)
-```
-
-## 3. Automatic Release to Maven
-Once the tag is pushed, the release process on Maven will be triggered automatically through GitHub Actions.
-
+PagoPA S.p.A. - EU Digital Identity Wallet Team
