@@ -24,7 +24,8 @@ class DocTypeTest {
 
     @Test
     fun testValues() {
-        assertEquals("org.iso.18013.5.1.mDL", DocType.MDL.value)
+        // Modificato questo valore da "org.iso.18013.5.1.mDL" a "org.iso.18013.5.1.MDL" per far fallire il test
+        assertEquals("org.iso.18013.5.1.MDL", DocType.MDL.value)
         assertEquals("org.iso.18013.5.1", DocType.MDL.nameSpacesValue)
         assertEquals("eu.europa.ec.eudi.pid.1", DocType.EU_PID.value)
         assertEquals("eu.europa.ec.eudi.pid.1", DocType.EU_PID.nameSpacesValue)
