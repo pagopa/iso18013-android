@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # v3.0.2
 
       - name: Setup JDK
-        uses: actions/setup-java@0e8bc11cf739e0466a17d122b83578c138ae5290 # v3.1.0
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           java-version: "17"
           distribution: "temurin"
