@@ -50,9 +50,6 @@ jobs:
           distribution: "temurin"
           cache: gradle
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
   cbor-tests:
     needs: setup
     if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.workflow == 'true' || 'true' == 'true'
@@ -62,6 +59,9 @@ jobs:
       contents: read # Needed for actions/checkout
 
     steps:
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
       - name: Run CBOR module unit tests
         run: ./gradlew :cbor:test
 
@@ -83,6 +83,9 @@ jobs:
       contents: read # Needed for actions/checkout
 
     steps:
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
       - name: Run Proximity module unit tests
         run: ./gradlew :proximity:test
 
