@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-    contents: read # Needed for actions/checkout
+      contents: read # Needed for actions/checkout
 
     outputs:
       cbor: ${{ steps.filter.outputs.cbor }}
@@ -29,9 +29,13 @@ jobs:
               - '.github/workflows/proximity-unit-tests.yml'
 
   setup:
-    runs-on: ubuntu-latest
     needs: filter
     if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.proximity == 'true'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read # Needed for actions/checkout
+
     outputs:
       cbor: ${{ needs.filter.outputs.cbor }}
       proximity: ${{ needs.filter.outputs.proximity }}
@@ -53,6 +57,10 @@ jobs:
     needs: setup
     if: needs.filter.outputs.cbor == 'true'
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read # Needed for actions/checkout
+
     steps:
       - name: Run CBOR module unit tests
         run: ./gradlew :cbor:test
@@ -70,6 +78,10 @@ jobs:
     needs: setup
     if: needs.filter.outputs.proximity == 'true'
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read # Needed for actions/checkout
+
     steps:
       - name: Run Proximity module unit tests
         run: ./gradlew :proximity:test
