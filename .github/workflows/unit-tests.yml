@@ -30,7 +30,7 @@ jobs:
 
   setup:
     needs: filter
-    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true' || 'true' == 'true'
+    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true'
     runs-on: ubuntu-latest
 
     permissions:
@@ -55,7 +55,7 @@ jobs:
 
   cbor-tests:
     needs: setup
-    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.workflow == 'true' || 'true' == 'true'
+    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.workflow == 'true'
     runs-on: ubuntu-latest
 
     permissions:
@@ -79,7 +79,7 @@ jobs:
 
   proximity-tests:
     needs: setup
-    if: needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true' || 'true' == 'true'
+    if: needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true'
     runs-on: ubuntu-latest
 
     steps:
