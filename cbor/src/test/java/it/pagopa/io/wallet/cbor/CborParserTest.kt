@@ -1,6 +1,7 @@
 package it.pagopa.io.wallet.cbor
 
 import it.pagopa.io.wallet.cbor.impl.MDoc
+import it.pagopa.io.wallet.cbor.model.COSEHeaderAlgorithm
 import it.pagopa.io.wallet.cbor.parser.CBorParser
 import org.json.JSONObject
 import org.junit.Test
@@ -184,5 +185,13 @@ class CborParserTest {
         }) { ex ->
             assert(ex != null)
         }
+    }
+
+    @Test
+    fun `cose header test`() {
+        val toTest = COSEHeaderAlgorithm.fromInt(1)
+        assert(toTest == COSEHeaderAlgorithm.ALG.valueName)
+        val toTest2 = COSEHeaderAlgorithm.fromInt(-11234)
+        assert(toTest2 == "-11234")
     }
 }
