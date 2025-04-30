@@ -419,15 +419,3 @@ responseGenerator.createResponse(
     }
 )
 ```
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Contributing
-
-Please read the [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## Developed by
-
-PagoPA S.p.A. - EU Digital Identity Wallet Team
