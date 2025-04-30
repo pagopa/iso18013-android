@@ -23,14 +23,14 @@ jobs:
           filters: |
             cbor:
               - 'cbor/**'
-              - '.github/workflows/cbor-unit-tests.yml'
             proximity:
               - 'proximity/**'
-              - '.github/workflows/proximity-unit-tests.yml'
+            workflow:
+              - '.github/workflows/unit-tests.yml'
 
   setup:
     needs: filter
-    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.proximity == 'true'
+    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true'
     runs-on: ubuntu-latest
 
     permissions:
@@ -55,7 +55,7 @@ jobs:
 
   cbor-tests:
     needs: setup
-    if: needs.filter.outputs.cbor == 'true'
+    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.workflow == 'true'
     runs-on: ubuntu-latest
 
     permissions:
@@ -76,7 +76,7 @@ jobs:
 
   proximity-tests:
     needs: setup
-    if: needs.filter.outputs.proximity == 'true'
+    if: needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true'
     runs-on: ubuntu-latest
 
     permissions:
