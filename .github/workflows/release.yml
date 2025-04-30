@@ -1,17 +1,10 @@
 name: Publish Libraries to Maven Central
 
 on:
-  workflow_dispatch:
-    inputs:
-      usePublishAndRelease:
-        description: "Use publishAndReleaseToMavenCentral instead of publishAllPublicationsToMavenCentralRepository"
-        required: false
-        type: boolean
-        default: true
   push:
     tags:
-      - "cbor-v*" # Example: cbor-v1.0.0
-      - "proximity-v*" # Example: proximity-v1.0.0
+      - 'cbor-v*'       # Example: cbor-v1.0.0
+      - 'proximity-v*'  # Example: proximity-v1.0.0
 
 jobs:
   publish:
@@ -24,8 +17,8 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@0ab4596768b603586c0de567f2430c30f5b0d2b0 # v3
         with:
-          distribution: "temurin"
-          java-version: "17"
+          distribution: 'temurin'
+          java-version: '17'
 
       - name: Configure GPG
         env:
@@ -59,14 +52,4 @@ jobs:
           fi
 
       - name: Publish ${{ steps.module.outputs.module }} library
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            echo "Triggering publishAndReleaseToMavenCentral due to push event."
-            ./gradlew :${{ steps.module.outputs.module }}:publishAndReleaseToMavenCentral
-          elif [ "${{ github.event.inputs.usePublishAndRelease }}" = "true" ]; then
-            echo "Triggering publishAndReleaseToMavenCentral due to workflow_dispatch input."
-            ./gradlew :${{ steps.module.outputs.module }}:publishAndReleaseToMavenCentral
-          else
-            echo "Triggering publishAllPublicationsToMavenCentralRepository as fallback."
-            ./gradlew :${{ steps.module.outputs.module }}:publishAllPublicationsToMavenCentralRepository
-          fi
+        run: ./gradlew :${{ steps.module.outputs.module }}:publishAllPublicationsToMavenCentralRepository
