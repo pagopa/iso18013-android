@@ -41,7 +41,7 @@ jobs:
         uses: dorny/test-reporter@6e6a65b7a0bd2c9197df7d0ae36ac5cee784230c # v2.0.0
         with:
           name: Proximity Tests JUnit Report
-          path: cbor/build/test-results/**/*.xml
+          path: proximity/build/test-results/**/*.xml
           reporter: java-junit
           fail-on-error: "true" # Fail workflow if reporter encounters an error
           path-replace-backslashes: "true" # Recommended for cross-platform compatibility
