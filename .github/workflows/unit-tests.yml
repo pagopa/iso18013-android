@@ -79,6 +79,9 @@ jobs:
     if: needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true' || 'true' == 'true'
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read # Needed for actions/checkout
+
     steps:
       - name: Run Proximity module unit tests
         run: ./gradlew :proximity:test
