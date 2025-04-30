@@ -37,9 +37,11 @@ jobs:
       - name: Run Proximity module unit tests
         run: ./gradlew :proximity:test
 
-      - name: Generate test reports
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - name: Report test results
+        uses: dorny/test-reporter@6e6a65b7a0bd2c9197df7d0ae36ac5cee784230c # v2.0.0
         with:
-          name: proximity-test-reports
-          path: proximity/build/reports/tests/
+          name: Proximity Tests JUnit Report
+          path: cbor/build/test-results/**/*.xml
+          reporter: java-junit
+          fail-on-error: "true" # Fail workflow if reporter encounters an error
+          path-replace-backslashes: "true" # Recommended for cross-platform compatibility
