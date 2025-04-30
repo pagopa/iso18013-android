@@ -23,10 +23,16 @@ jobs:
             cbor:
               - 'cbor/**'
               - '.github/workflows/cbor-unit-tests.yml'
+            proximity:
+              - 'proximity/**'
+              - '.github/workflows/proximity-unit-tests.yml'
+
       - name: Checkout repository
+        if: steps.filter.outputs.cbor == 'true' || steps.filter.outputs.proximity == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup JDK
+        if: steps.filter.outputs.cbor == 'true' || steps.filter.outputs.proximity == 'true'
         uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           java-version: "17"
@@ -34,16 +40,33 @@ jobs:
           cache: gradle
 
       - name: Grant execute permission for gradlew
+        if: steps.filter.outputs.cbor == 'true' || steps.filter.outputs.proximity == 'true'
         run: chmod +x ./gradlew
 
-      - name: Run CBOR module unit tests
+      - name: cbor tests
+        if: steps.filter.outputs.cbor == 'true'
         run: ./gradlew :cbor:test
 
       - name: Report test results
+        if: steps.filter.outputs.cbor == 'true'
         uses: dorny/test-reporter@6e6a65b7a0bd2c9197df7d0ae36ac5cee784230c # v2.0.0
         with:
           name: CBOR Tests JUnit Report
           path: cbor/build/test-results/**/*.xml
+          reporter: java-junit
+          fail-on-error: "true" # Fail workflow if reporter encounters an error
+          path-replace-backslashes: "true" # Recommended for cross-platform compatibility
+
+      - name: proximity tests
+        if: steps.filter.outputs.proximity == 'true'
+        run: ./gradlew :proximity:test
+
+      - name: Report test results
+        if: steps.filter.outputs.proximity == 'true'
+        uses: dorny/test-reporter@6e6a65b7a0bd2c9197df7d0ae36ac5cee784230c # v2.0.0
+        with:
+          name: Proximity Tests JUnit Report
+          path: proximity/build/test-results/**/*.xml
           reporter: java-junit
           fail-on-error: "true" # Fail workflow if reporter encounters an error
           path-replace-backslashes: "true" # Recommended for cross-platform compatibility
