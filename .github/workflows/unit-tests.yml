@@ -30,7 +30,7 @@ jobs:
 
   setup:
     needs: filter
-    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true'
+    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true' || 'true' == 'true'
     runs-on: ubuntu-latest
 
     permissions:
@@ -55,7 +55,7 @@ jobs:
 
   cbor-tests:
     needs: setup
-    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.workflow == 'true'
+    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.workflow == 'true' || 'true' == 'true'
     runs-on: ubuntu-latest
 
     permissions:
@@ -76,11 +76,8 @@ jobs:
 
   proximity-tests:
     needs: setup
-    if: needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true'
+    if: needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true' || 'true' == 'true'
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read # Needed for actions/checkout
 
     steps:
       - name: Run Proximity module unit tests
