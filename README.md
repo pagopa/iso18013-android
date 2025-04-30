@@ -67,6 +67,7 @@ mavenPublishing {
 ```
 
 Replace `proximity` with `cbor` (and the respective coordinates) if you are releasing that library instead.
+Commit the changes to the remote repository with a commit message like `chore: Release proximity/cbor vx.y.z`.
 
 ### 2. Create and Push the Tag
 
