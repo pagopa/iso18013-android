@@ -1,5 +1,6 @@
 package it.pagopa.io.wallet.cbor.parser
 
+import androidx.annotation.VisibleForTesting
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -9,7 +10,8 @@ import org.json.JSONObject
  * [elementValue] could be a primitive or a JSON OBJECT or a JSON ARRAY,
  * that's why we need this converter*/
 internal class ElValueToJson(private val elementValue: Any?) {
-
+    @VisibleForTesting
+    var forceScraping = false
     private fun convertToValidJson(elementValue: String): Any {
         // Check if the input is already valid JSON (object or array)
         try {
@@ -89,6 +91,27 @@ internal class ElValueToJson(private val elementValue: Any?) {
         }
     }
 
+    private fun Any?.scrape(): Any? {
+        return try {
+            JSONObject(this.toString())
+        } catch (_: Exception) {
+            // not a JSONObject, trying JSON ARRAY
+            try {
+                JSONArray(this.toString())
+            } catch (_: Exception) {
+                // If is not a jsonObject or array, try to transform if it is an elementValue
+                if (this.toString().contains("=") && this.toString()
+                        .contains("{") && this.toString().contains("}") ||
+                    this.toString().contains("=") && this.toString()
+                        .contains("[") && this.toString().contains("]")
+                )
+                    convertToValidJson(this.toString())
+                else
+                    this
+            }
+        }
+    }
+
     /**
      * First of all we will try to parse known types by [it.pagopa.io.wallet.cbor.helper.parse] method with [toJSON] method,
      * in Failure case we will try a scraping to have a valid elementValue.
@@ -96,27 +119,11 @@ internal class ElValueToJson(private val elementValue: Any?) {
      * */
     private fun Any?.elementValueToJson(): Any? {
         if (this == null) return null
+        if (forceScraping) return this.scrape()
         this.toJSON()?.let {
             return it
         } ?: run {
-            return try {
-                JSONObject(this.toString())
-            } catch (_: Exception) {
-                // not a JSONObject, trying JSON ARRAY
-                try {
-                    JSONArray(this.toString())
-                } catch (_: Exception) {
-                    // If is not a jsonObject or array, try to transform if it is an elementValue
-                    if (this.toString().contains("=") && this.toString()
-                            .contains("{") && this.toString().contains("}") ||
-                        this.toString().contains("=") && this.toString()
-                            .contains("[") && this.toString().contains("]")
-                    )
-                        convertToValidJson(this.toString())
-                    else
-                        this
-                }
-            }
+            return this.scrape()
         }
     }
 
