@@ -145,11 +145,9 @@ class CborParserTest {
 """.trimIndent()
     }
 
-    @OptIn(ExperimentalEncodingApi::class)
     @Test
     fun `test documents json element identifier separated`() {
-        val rawCbor = kotlin.io.encoding.Base64.decode(mockTest)
-        CBorParser(rawCbor).documentsCborToJson(true, { json ->
+        CBorParser(mockTest).documentsCborToJson(true, { json ->
             assert(json != null)
             println(json)
             assert(json == correctJson)
