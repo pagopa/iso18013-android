@@ -50,6 +50,9 @@ jobs:
           distribution: "temurin"
           cache: gradle
 
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
   cbor-tests:
     needs: setup
     if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.workflow == 'true' || 'true' == 'true'
@@ -59,9 +62,6 @@ jobs:
       contents: read # Needed for actions/checkout
 
     steps:
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
-
       - name: Run CBOR module unit tests
         run: ./gradlew :cbor:test
 
@@ -79,13 +79,19 @@ jobs:
     if: needs.filter.outputs.proximity == 'true' || needs.filter.outputs.workflow == 'true' || 'true' == 'true'
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read # Needed for actions/checkout
-
     steps:
+      - name: Checkout repository
+          uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup JDK
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: gradle
+
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
-
       - name: Run Proximity module unit tests
         run: ./gradlew :proximity:test
 
