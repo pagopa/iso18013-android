@@ -8,6 +8,10 @@ on:
 jobs:
   filter:
     runs-on: ubuntu-latest
+
+    permissions:
+    contents: read # Needed for actions/checkout
+
     outputs:
       cbor: ${{ steps.filter.outputs.cbor }}
       proximity: ${{ steps.filter.outputs.proximity }}
