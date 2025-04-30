@@ -2,21 +2,18 @@ name: CBOR - Unit Tests
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
     types: [opened, synchronize, reopened]
 
 jobs:
-  test:
-    name: Run Unit Tests
+  filter:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read # Needed for actions/checkout
-      actions: write # Needed for actions/upload-artifact
-
+    outputs:
+      cbor: ${{ steps.filter.outputs.cbor }}
+      proximity: ${{ steps.filter.outputs.proximity }}
     steps:
-      - name: Filter CBOR path
+      - name: Filter CBOR and Proximity paths
+        id: filter
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         with:
           filters: |
@@ -27,12 +24,18 @@ jobs:
               - 'proximity/**'
               - '.github/workflows/proximity-unit-tests.yml'
 
+  setup:
+    runs-on: ubuntu-latest
+    needs: filter
+    if: needs.filter.outputs.cbor == 'true' || needs.filter.outputs.proximity == 'true'
+    outputs:
+      cbor: ${{ needs.filter.outputs.cbor }}
+      proximity: ${{ needs.filter.outputs.proximity }}
+    steps:
       - name: Checkout repository
-        if: steps.filter.outputs.cbor == 'true' || steps.filter.outputs.proximity == 'true'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup JDK
-        if: steps.filter.outputs.cbor == 'true' || steps.filter.outputs.proximity == 'true'
         uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
         with:
           java-version: "17"
@@ -40,33 +43,38 @@ jobs:
           cache: gradle
 
       - name: Grant execute permission for gradlew
-        if: steps.filter.outputs.cbor == 'true' || steps.filter.outputs.proximity == 'true'
         run: chmod +x ./gradlew
 
-      - name: cbor tests
-        if: steps.filter.outputs.cbor == 'true'
+  cbor-tests:
+    needs: setup
+    if: needs.filter.outputs.cbor == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run CBOR module unit tests
         run: ./gradlew :cbor:test
 
-      - name: Report test results
-        if: steps.filter.outputs.cbor == 'true'
+      - name: Report CBOR test results
         uses: dorny/test-reporter@6e6a65b7a0bd2c9197df7d0ae36ac5cee784230c # v2.0.0
         with:
           name: CBOR Tests JUnit Report
           path: cbor/build/test-results/**/*.xml
           reporter: java-junit
-          fail-on-error: "true" # Fail workflow if reporter encounters an error
-          path-replace-backslashes: "true" # Recommended for cross-platform compatibility
+          fail-on-error: true
+          path-replace-backslashes: true
 
-      - name: proximity tests
-        if: steps.filter.outputs.proximity == 'true'
+  proximity-tests:
+    needs: setup
+    if: needs.filter.outputs.proximity == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Proximity module unit tests
         run: ./gradlew :proximity:test
 
-      - name: Report test results
-        if: steps.filter.outputs.proximity == 'true'
+      - name: Report Proximity test results
         uses: dorny/test-reporter@6e6a65b7a0bd2c9197df7d0ae36ac5cee784230c # v2.0.0
         with:
           name: Proximity Tests JUnit Report
           path: proximity/build/test-results/**/*.xml
           reporter: java-junit
-          fail-on-error: "true" # Fail workflow if reporter encounters an error
-          path-replace-backslashes: "true" # Recommended for cross-platform compatibility
+          fail-on-error: true
+          path-replace-backslashes: true
