@@ -1,5 +1,14 @@
 package it.pagopa.io.wallet.cbor.model
 
+import com.upokecenter.cbor.CBORObject
+import it.pagopa.io.wallet.cbor.extensions.extractAlg
+import it.pagopa.io.wallet.cbor.extensions.extractContentType
+import it.pagopa.io.wallet.cbor.extensions.extractCrit
+import it.pagopa.io.wallet.cbor.extensions.extractX5U
+import it.pagopa.io.wallet.cbor.extensions.toB64
+import it.pagopa.io.wallet.cbor.extensions.toCertificates
+import java.util.Base64
+
 /**An enum class to specify the correct [IssuerAuth.UnprotectedHeader] while parsing to
  * [org.json.JSONObject] the [com.upokecenter.cbor.CBORObject] representing the document*/
 internal enum class COSEHeaderAlgorithm(
@@ -22,5 +31,23 @@ internal enum class COSEHeaderAlgorithm(
         fun fromInt(from: Int) = entries.firstOrNull {
             it.value == from
         }?.valueName ?: from.toString()
+
+        fun cborValueFromString(value: String, cborBytes: ByteArray): Any {
+            return entries.firstOrNull {
+                it.valueName == value
+            }?.let {
+                val cbor = CBORObject.DecodeFromBytes(cborBytes)
+                when (it) {
+                    ALG -> cbor.extractAlg()
+                    CRIT -> cbor.extractCrit()
+                    CONTENT_TYPE -> cbor.extractContentType()
+                    KID, IV, PARTIAL_IV, X5T, COUNTER_SIGNATURE -> cbor.toB64()
+                    X5CHAIN, X5BAG -> cbor.toCertificates()
+                    X5U -> cbor.extractX5U()
+                }
+            } ?: run {
+                Base64.getUrlEncoder().encodeToString(cborBytes)
+            }
+        }
     }
 }

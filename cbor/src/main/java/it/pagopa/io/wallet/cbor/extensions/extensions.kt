@@ -3,11 +3,14 @@ package it.pagopa.io.wallet.cbor.extensions
 import com.android.identity.crypto.EcSignature
 import com.android.identity.document.NameSpacedData
 import com.upokecenter.cbor.CBORObject
+import com.upokecenter.cbor.CBORType
+import it.pagopa.io.wallet.cbor.CborLogger
 import org.bouncycastle.asn1.ASN1InputStream
-import java.io.ByteArrayInputStream
-import java.io.IOException
 import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.ASN1Sequence
+import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.util.Base64
 
 internal fun EcSignature.Companion.isDer(derEncodedSignature: ByteArray): Boolean {
     val asn1 = try {
@@ -56,4 +59,39 @@ internal fun CBORObject.asNameSpacedData(): NameSpacedData {
         }
     }
     return builder.build()
+}
+
+internal fun CBORObject.extractAlg() = this.AsInt32()
+internal fun CBORObject.extractCrit() = this.values.map { it.AsString() }
+internal fun CBORObject.extractContentType() = this.AsString()
+internal fun CBORObject.extractX5U() = this.AsString()
+internal fun CBORObject.toB64() = Base64.getUrlEncoder().encodeToString(this.GetByteString())
+internal fun CBORObject.toCertificates(): List<String> {
+    val base64Certificates = mutableListOf<String>()
+    try {
+        if (this.type == CBORType.Array) {
+            // Handle the case where the CBOR object is an array of byte strings
+            for (i in 0 until this.size()) {
+                // Extract each byte string from the array
+                val certBytes = this[i].GetByteString()
+                val encodedCert = Base64.getUrlEncoder().encodeToString(certBytes)
+                base64Certificates.add(encodedCert)
+            }
+        } else if (this.type == CBORType.ByteString) {
+            // Handle the case where the CBOR object is a single ByteString containing multiple certificates
+            val encodedCert = Base64.getUrlEncoder().encodeToString(this.GetByteString())
+            base64Certificates.add(encodedCert)
+        } else {
+            CborLogger.e(
+                "Parsing Unprotected header",
+                "Unexpected CBOR type: ${this.type}"
+            )
+        }
+    } catch (e: Exception) {
+        CborLogger.e(
+            "Parsing Unprotected header",
+            "Error parsing certificates: ${e.message}"
+        )
+    }
+    return base64Certificates
 }

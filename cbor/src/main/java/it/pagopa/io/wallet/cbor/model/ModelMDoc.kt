@@ -8,7 +8,6 @@ import it.pagopa.io.wallet.cbor.exception.MandatoryFieldNotFound
 import it.pagopa.io.wallet.cbor.helper.oneDocument
 import it.pagopa.io.wallet.cbor.helper.parseIssuerSigned
 import it.pagopa.io.wallet.cbor.helper.toModelMDoc
-import it.pagopa.io.wallet.cbor.model.COSEHeaderAlgorithm
 import it.pagopa.io.wallet.cbor.parser.ElValueToJson
 import org.json.JSONArray
 import org.json.JSONObject
@@ -278,7 +277,10 @@ data class IssuerAuth(
         protectedHeader = cborArray[0].GetByteString()
         if (cborArray[1].type != CBORType.Map) return this
         unprotectedHeader = cborArray[1].keys.map {
-            UnprotectedHeader(COSEHeaderAlgorithm.fromInt(it.AsInt32()), cborArray[1][it].GetByteString())
+            UnprotectedHeader(
+                COSEHeaderAlgorithm.fromInt(it.AsInt32()),
+                cborArray[1][it].EncodeToBytes()
+            )
         }
         if (cborArray[2].type != CBORType.ByteString) return this
         payload = Payload(
@@ -311,7 +313,7 @@ data class IssuerAuth(
 
     data class UnprotectedHeader(val headerAlgorithm: String, private val value: ByteArray) {
         fun toJson() = JSONObject().apply {
-            put(headerAlgorithm, Base64.getUrlEncoder().encodeToString(value))
+            put(headerAlgorithm, COSEHeaderAlgorithm.cborValueFromString(headerAlgorithm, value))
         }
     }
 }
