@@ -1,26 +1,25 @@
 [versions]
 agp = "8.9.1"
-desugar_jdk_libs = "2.1.5"
 json = "20220924"
 kotlin = "2.0.20"
 coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
-kotlinxSerializationJson = "1.8.0"
+kotlinxSerializationJson = "1.7.3"
 lifecycleRuntimeKtx = "2.8.7"
 activityCompose = "1.10.1"
-composeBom = "2025.04.00"
-kotlinx-io = "0.6.0"
+composeBom = "2025.02.00"
+kotlinx-io = "0.4.0"
 mockitoCore = "5.12.0"
 mockitoKotlin = "4.1.0"
-navigationCompose = "2.8.9"
-playServicesBasement = "18.7.0"
+navigationCompose = "2.8.8"
+playServicesBasement = "18.5.0"
 kotlinx-datetime = "0.6.0"
 appcompat = "1.7.0"
 material = "1.12.0"
 mockk = "1.13.12"
-cameraX = "1.4.2"
+cameraX = "1.4.1"
 qrcodeKotlin = "4.2.0"
 qrCodeScanner = "17.3.0"
 cbor = "4.5.6"
@@ -36,7 +35,6 @@ zxing-core = "3.5.3"
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
-desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 json = { module = "org.json:json", version.ref = "json" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
