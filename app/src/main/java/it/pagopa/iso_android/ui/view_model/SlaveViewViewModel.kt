@@ -31,8 +31,8 @@ class SlaveViewViewModel(
                 ProximityLogger.i("ProximityLogger", "onConnecting")
             }
 
-            override fun onError(msg: String) {
-                ProximityLogger.i("ProximityLogger", "onCommunicationError: $msg")
+            override fun onError(error: Throwable) {
+                ProximityLogger.i("ProximityLogger", "onCommunicationError: ${error.message}")
             }
 
             override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {

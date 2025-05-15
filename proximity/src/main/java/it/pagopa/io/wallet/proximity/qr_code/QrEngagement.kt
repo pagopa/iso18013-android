@@ -147,7 +147,7 @@ class QrEngagement private constructor(
 
         override fun onError(error: Throwable) {
             ProximityLogger.e(this.javaClass.name, "QR onError: ${error.message}")
-            listener?.onError("$error")
+            listener?.onError(error)
         }
     }
 
@@ -212,7 +212,7 @@ class QrEngagement private constructor(
                 this.javaClass.name,
                 "DeviceRetrievalHelper Listener (QR): onError -> ${error.message}"
             )
-            listener?.onError("$error")
+            listener?.onError(error)
         }
     }
 

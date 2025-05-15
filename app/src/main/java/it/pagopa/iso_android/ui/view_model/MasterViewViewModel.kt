@@ -234,10 +234,10 @@ class MasterViewViewModel(
                 this@MasterViewViewModel.loader.value = "Connecting"
             }
 
-            override fun onError(msg: String) {
+            override fun onError(error: Throwable) {
                 ProximityLogger.e(
                     this@MasterViewViewModel.javaClass.name,
-                    "onCommunicationError: $msg"
+                    "onCommunicationError: ${error.message}"
                 )
                 this@MasterViewViewModel.loader.value = null
             }
