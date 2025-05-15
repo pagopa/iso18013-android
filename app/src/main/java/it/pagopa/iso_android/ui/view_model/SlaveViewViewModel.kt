@@ -27,11 +27,11 @@ class SlaveViewViewModel(
 
     fun attachListenerAndObserve() {
         qrCodeEngagement.withListener(object : QrEngagementListener {
-            override fun onConnecting() {
+            override fun onDeviceConnecting() {
                 ProximityLogger.i("ProximityLogger", "onConnecting")
             }
 
-            override fun onCommunicationError(msg: String) {
+            override fun onError(msg: String) {
                 ProximityLogger.i("ProximityLogger", "onCommunicationError: $msg")
             }
 
@@ -40,12 +40,12 @@ class SlaveViewViewModel(
                 //this@SlaveViewViewModel.loader.value = null
             }
 
-            override fun onDeviceRetrievalHelperReady(deviceRetrievalHelper: DeviceRetrievalHelperWrapper) {
+            override fun onDeviceConnected(deviceRetrievalHelper: DeviceRetrievalHelperWrapper) {
                 ProximityLogger.i("ProximityLogger", "onDeviceRetrievalHelperReady")
                 this@SlaveViewViewModel.deviceConnected = deviceRetrievalHelper
             }
 
-            override fun onNewDeviceRequest(request: String?, sessionsTranscript: ByteArray) {
+            override fun onDocumentRequestReceived(request: String?, sessionsTranscript: ByteArray) {
                 ProximityLogger.i("request", request.orEmpty())
             }
         })
