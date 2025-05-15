@@ -186,22 +186,10 @@ class MasterViewViewModel(
                 fieldRequestedAndAccepted = req,
                 response = object : ResponseGenerator.Response {
                     override fun onResponseGenerated(response: ByteArray) {
-                        this@MasterViewViewModel.loader.value = null
                         qrCodeEngagement.sendResponse(response)
                         ProximityLogger.i(
                             "RESPONSE TO SEND",
                             Base64.encodeToString(response, Base64.NO_WRAP)
-                        )
-                        this@MasterViewViewModel.dialog.value = AppDialog(
-                            title = resources.getString(R.string.data),
-                            description = resources.getString(R.string.sent),
-                            button = AppDialog.DialogButton(
-                                "${resources.getString(R.string.perfect)}!!",
-                                onClick = {
-                                    dialog.value = null
-                                    _shouldGoBack.value = true
-                                }
-                            )
                         )
                     }
 
@@ -246,10 +234,31 @@ class MasterViewViewModel(
                 this@MasterViewViewModel.loader.value = "Connecting"
             }
 
-            override fun onCommunicationError(msg: String) {}
+            override fun onCommunicationError(msg: String) {
+                ProximityLogger.e(
+                    this@MasterViewViewModel.javaClass.name,
+                    "onCommunicationError: $msg"
+                )
+                this@MasterViewViewModel.loader.value = null
+            }
+
             override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {
                 ProximityLogger.i(this@MasterViewViewModel.javaClass.name, "onDeviceDisconnected")
                 this@MasterViewViewModel.loader.value = null
+                if (transportSpecificTermination) {
+                    this@MasterViewViewModel.dialog.value = AppDialog(
+                        title = resources.getString(R.string.data),
+                        description = resources.getString(R.string.sent),
+                        button = AppDialog.DialogButton(
+                            "${resources.getString(R.string.perfect)}!!",
+                            onClick = {
+                                dialog.value = null
+                                _shouldGoBack.value = true
+                            }
+                        )
+                    )
+                    this@MasterViewViewModel.loader.value = null
+                }
             }
 
             override fun onDeviceRetrievalHelperReady(deviceRetrievalHelper: DeviceRetrievalHelperWrapper) {
