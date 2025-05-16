@@ -109,7 +109,7 @@ class QrEngagement private constructor(
     private val qrEngagementListener = object : QrEngagementHelper.Listener {
         override fun onDeviceConnecting() {
             ProximityLogger.d(this.javaClass.name, "QR Engagement: Device Connecting")
-            listener?.onConnecting()
+            listener?.onDeviceConnecting()
         }
 
         override fun onDeviceConnected(transport: DataTransport) {
@@ -138,7 +138,7 @@ class QrEngagement private constructor(
             ).build()
             deviceRetrievalHelper = DeviceRetrievalHelperWrapper(deviceRetrievalHelperBuilt)
             qrEngagement.close()
-            listener?.onDeviceRetrievalHelperReady(
+            listener?.onDeviceConnected(
                 requireNotNull(
                     deviceRetrievalHelper
                 )
@@ -147,7 +147,7 @@ class QrEngagement private constructor(
 
         override fun onError(error: Throwable) {
             ProximityLogger.e(this.javaClass.name, "QR onError: ${error.message}")
-            listener?.onCommunicationError("$error")
+            listener?.onError(error)
         }
     }
 
@@ -190,7 +190,7 @@ class QrEngagement private constructor(
             }
             val jsonToSend = requestWrapperList.toTypedArray().toRequest()
             ProximityLogger.i("REQ_JSON", jsonToSend.toString())
-            listener?.onNewDeviceRequest(
+            listener?.onDocumentRequestReceived(
                 if (jsonToSend.keys().asSequence().toMutableList().isEmpty())
                     null
                 else
@@ -212,7 +212,7 @@ class QrEngagement private constructor(
                 this.javaClass.name,
                 "DeviceRetrievalHelper Listener (QR): onError -> ${error.message}"
             )
-            listener?.onCommunicationError("$error")
+            listener?.onError(error)
         }
     }
 
@@ -268,7 +268,7 @@ class QrEngagement private constructor(
             ba,
             engagement.originInfos
         ).build()
-        listener?.onDeviceRetrievalHelperReady(DeviceRetrievalHelperWrapper(deviceRetrievalHelper))
+        listener?.onDeviceConnected(DeviceRetrievalHelperWrapper(deviceRetrievalHelper))
     }
 
     /**
