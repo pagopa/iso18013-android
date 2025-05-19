@@ -8,6 +8,7 @@ import it.pagopa.io.wallet.cbor.CborLogger
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.ASN1Sequence
+import org.json.JSONArray
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.util.Base64
@@ -66,7 +67,7 @@ internal fun CBORObject.extractCrit() = this.values.map { it.AsString() }
 internal fun CBORObject.extractContentType() = this.AsString()
 internal fun CBORObject.extractX5U() = this.AsString()
 internal fun CBORObject.toB64() = Base64.getUrlEncoder().encodeToString(this.GetByteString())
-internal fun CBORObject.toCertificates(): List<String> {
+internal fun CBORObject.toCertificates(): JSONArray {
     val base64Certificates = mutableListOf<String>()
     try {
         if (this.type == CBORType.Array) {
@@ -93,5 +94,9 @@ internal fun CBORObject.toCertificates(): List<String> {
             "Error parsing certificates: ${e.message}"
         )
     }
-    return base64Certificates
+    val arrayBack = JSONArray()
+    base64Certificates.forEach {
+        arrayBack.put(it)
+    }
+    return arrayBack
 }
