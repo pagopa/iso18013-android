@@ -8,6 +8,7 @@ import it.pagopa.io.wallet.cbor.CborLogger
 import org.bouncycastle.asn1.ASN1InputStream
 import org.bouncycastle.asn1.ASN1Integer
 import org.bouncycastle.asn1.ASN1Sequence
+import org.json.JSONArray
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.util.Base64
@@ -66,8 +67,8 @@ internal fun CBORObject.extractCrit() = this.values.map { it.AsString() }
 internal fun CBORObject.extractContentType() = this.AsString()
 internal fun CBORObject.extractX5U() = this.AsString()
 internal fun CBORObject.toB64() = Base64.getUrlEncoder().encodeToString(this.GetByteString())
-internal fun CBORObject.toCertificates(): List<String> {
-    val base64Certificates = mutableListOf<String>()
+internal fun CBORObject.toCertificates(): JSONArray {
+    val base64Certificates = JSONArray()
     try {
         if (this.type == CBORType.Array) {
             // Handle the case where the CBOR object is an array of byte strings
@@ -75,12 +76,12 @@ internal fun CBORObject.toCertificates(): List<String> {
                 // Extract each byte string from the array
                 val certBytes = this[i].GetByteString()
                 val encodedCert = Base64.getUrlEncoder().encodeToString(certBytes)
-                base64Certificates.add(encodedCert)
+                base64Certificates.put(encodedCert)
             }
         } else if (this.type == CBORType.ByteString) {
             // Handle the case where the CBOR object is a single ByteString containing multiple certificates
             val encodedCert = Base64.getUrlEncoder().encodeToString(this.GetByteString())
-            base64Certificates.add(encodedCert)
+            base64Certificates.put(encodedCert)
         } else {
             CborLogger.e(
                 "Parsing Unprotected header",
