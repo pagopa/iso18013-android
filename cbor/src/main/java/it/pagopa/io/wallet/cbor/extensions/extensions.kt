@@ -68,7 +68,7 @@ internal fun CBORObject.extractContentType() = this.AsString()
 internal fun CBORObject.extractX5U() = this.AsString()
 internal fun CBORObject.toB64() = Base64.getUrlEncoder().encodeToString(this.GetByteString())
 internal fun CBORObject.toCertificates(): JSONArray {
-    val base64Certificates = mutableListOf<String>()
+    val base64Certificates = JSONArray()
     try {
         if (this.type == CBORType.Array) {
             // Handle the case where the CBOR object is an array of byte strings
@@ -76,12 +76,12 @@ internal fun CBORObject.toCertificates(): JSONArray {
                 // Extract each byte string from the array
                 val certBytes = this[i].GetByteString()
                 val encodedCert = Base64.getUrlEncoder().encodeToString(certBytes)
-                base64Certificates.add(encodedCert)
+                base64Certificates.put(encodedCert)
             }
         } else if (this.type == CBORType.ByteString) {
             // Handle the case where the CBOR object is a single ByteString containing multiple certificates
             val encodedCert = Base64.getUrlEncoder().encodeToString(this.GetByteString())
-            base64Certificates.add(encodedCert)
+            base64Certificates.put(encodedCert)
         } else {
             CborLogger.e(
                 "Parsing Unprotected header",
@@ -94,9 +94,5 @@ internal fun CBORObject.toCertificates(): JSONArray {
             "Error parsing certificates: ${e.message}"
         )
     }
-    val arrayBack = JSONArray()
-    base64Certificates.forEach {
-        arrayBack.put(it)
-    }
-    return arrayBack
+    return base64Certificates
 }
