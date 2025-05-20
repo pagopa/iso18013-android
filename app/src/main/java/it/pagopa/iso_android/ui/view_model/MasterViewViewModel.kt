@@ -230,14 +230,14 @@ class MasterViewViewModel(
 
     private fun attachListenerAndObserve() {
         qrCodeEngagement.withListener(object : QrEngagementListener {
-            override fun onConnecting() {
+            override fun onDeviceConnecting() {
                 this@MasterViewViewModel.loader.value = "Connecting"
             }
 
-            override fun onCommunicationError(msg: String) {
+            override fun onError(error: Throwable) {
                 ProximityLogger.e(
                     this@MasterViewViewModel.javaClass.name,
-                    "onCommunicationError: $msg"
+                    "onCommunicationError: ${error.message}"
                 )
                 this@MasterViewViewModel.loader.value = null
             }
@@ -261,11 +261,11 @@ class MasterViewViewModel(
                 }
             }
 
-            override fun onDeviceRetrievalHelperReady(deviceRetrievalHelper: DeviceRetrievalHelperWrapper) {
+            override fun onDeviceConnected(deviceRetrievalHelper: DeviceRetrievalHelperWrapper) {
                 this@MasterViewViewModel.deviceConnected = deviceRetrievalHelper
             }
 
-            override fun onNewDeviceRequest(
+            override fun onDocumentRequestReceived(
                 request: String?,
                 sessionsTranscript: ByteArray
             ) {
