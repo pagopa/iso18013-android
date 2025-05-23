@@ -22,6 +22,7 @@ import it.pagopa.io.wallet.proximity.request.RequestWrapper
 import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.retrieval.connectionMethods
 import it.pagopa.io.wallet.proximity.retrieval.transportOptions
+import it.pagopa.io.wallet.proximity.session_data.SessionDataStatus
 import it.pagopa.io.wallet.proximity.toRequest
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -274,22 +275,11 @@ class QrEngagement private constructor(
     /**
      * Use this method to send a generic error message
      */
-    fun sendErrorResponse() {
+    fun sendErrorResponse(sessionDataStatus: SessionDataStatus) {
         if (deviceRetrievalHelper == null) return
         deviceRetrievalHelper!!.sendResponse(
             null,
-            Constants.SESSION_DATA_STATUS_ERROR_CBOR_DECODING
-        )
-    }
-
-    /**
-     * Use this method to send a generic error message
-     */
-    fun sendErrorResponseNoData() {
-        if (deviceRetrievalHelper == null) return
-        deviceRetrievalHelper!!.sendResponse(
-            null,
-            Constants.DEVICE_RESPONSE_STATUS_GENERAL_ERROR
+            sessionDataStatus.value
         )
     }
 

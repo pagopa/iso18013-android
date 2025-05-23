@@ -13,6 +13,7 @@ import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
 import it.pagopa.io.wallet.proximity.qr_code.QrEngagementListener
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator
+import it.pagopa.io.wallet.proximity.session_data.SessionDataStatus
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 import it.pagopa.iso_android.R
 import it.pagopa.iso_android.qr_code.QrCode
@@ -197,10 +198,11 @@ class MasterViewViewModel(
                         this@MasterViewViewModel.loader.value = null
                         dialogFailure(message)
                         val isNoDocFound = message == "no doc found"
-                        if (isNoDocFound)
-                            qrCodeEngagement.sendErrorResponse()
+                        val toSend = if (isNoDocFound)
+                            SessionDataStatus.ERROR_SESSION_ENCRYPTION
                         else
-                            qrCodeEngagement.sendErrorResponseNoData()
+                            SessionDataStatus.ERROR_CBOR_DECODING
+                        qrCodeEngagement.sendErrorResponse(toSend)
                     }
                 }
             )
@@ -272,7 +274,7 @@ class MasterViewViewModel(
                 ProximityLogger.i("request", request.toString())
                 this@MasterViewViewModel.request = request.orEmpty()
                 if (request == null) {
-                    qrCodeEngagement.sendErrorResponse()
+                    qrCodeEngagement.sendErrorResponse(SessionDataStatus.ERROR_CBOR_DECODING)
                     _shouldGoBack.value = true
                 } else
                     manageRequestFromDeviceUi(sessionsTranscript)
