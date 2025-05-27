@@ -66,7 +66,7 @@ internal fun CBORObject.extractAlg() = this.AsInt32()
 internal fun CBORObject.extractCrit() = this.values.map { it.AsString() }
 internal fun CBORObject.extractContentType() = this.AsString()
 internal fun CBORObject.extractX5U() = this.AsString()
-internal fun CBORObject.toB64() = Base64.getUrlEncoder().encodeToString(this.GetByteString())
+internal fun CBORObject.toB64() = Base64.getUrlEncoder().withoutPadding().encodeToString(this.GetByteString())
 internal fun CBORObject.toCertificates(): JSONArray {
     val base64Certificates = JSONArray()
     try {
@@ -75,12 +75,12 @@ internal fun CBORObject.toCertificates(): JSONArray {
             for (i in 0 until this.size()) {
                 // Extract each byte string from the array
                 val certBytes = this[i].GetByteString()
-                val encodedCert = Base64.getUrlEncoder().encodeToString(certBytes)
+                val encodedCert = Base64.getUrlEncoder().withoutPadding().encodeToString(certBytes)
                 base64Certificates.put(encodedCert)
             }
         } else if (this.type == CBORType.ByteString) {
             // Handle the case where the CBOR object is a single ByteString containing multiple certificates
-            val encodedCert = Base64.getUrlEncoder().encodeToString(this.GetByteString())
+            val encodedCert = Base64.getUrlEncoder().withoutPadding().encodeToString(this.GetByteString())
             base64Certificates.put(encodedCert)
         } else {
             CborLogger.e(
