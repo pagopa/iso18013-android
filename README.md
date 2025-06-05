@@ -420,3 +420,21 @@ responseGenerator.createResponse(
     }
 )
 ```
+
+## Permissions
+
+To use the Proximity module, you need to declare the following permissions in your `AndroidManifest.xml` as it uses Bluetooth according to the [official Android documentation](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions):
+
+```xml
+    <!-- Required for Bluetooth on Android >=12 or SDK >=31 and must be required at runtime -->
+    <!-- We defined the neverForLocation flag as we do not derive it from the Bluetooth -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <!-- Required for Bluetooth on Android <=11 SDK <= 30 ACCESS_FINE_LOCATION must be requested at runtime -->
+    <uses-permission android:name="android.permission.BLUETOOTH"
+                     android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+                     android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
+```

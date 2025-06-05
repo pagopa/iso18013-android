@@ -103,7 +103,11 @@ fun HomeView(
                         )
                     )
                 else
-                    onNavigate.invoke(HomeDestination.Master)
+                    manyPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION
+                        )
+                    )
             }
         }, rightBtnText = "do as Slave", rightBtnAction = {
             whereToGo.value = HomeDestination.Slave
