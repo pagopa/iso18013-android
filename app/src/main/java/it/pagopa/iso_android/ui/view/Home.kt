@@ -21,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import it.pagopa.io.wallet.proximity.bluetooth.BluetoothUtils
+import it.pagopa.io.wallet.proximity.nfc.NfcChecks
 import it.pagopa.iso_android.navigation.HomeDestination
 import it.pagopa.iso_android.ui.AppDialog
 import it.pagopa.iso_android.ui.BasePreview
@@ -28,10 +30,11 @@ import it.pagopa.iso_android.ui.BigText
 import it.pagopa.iso_android.ui.CenteredComposable
 import it.pagopa.iso_android.ui.GenericDialog
 import it.pagopa.iso_android.ui.MediumText
+import it.pagopa.iso_android.ui.PopUpMenu
+import it.pagopa.iso_android.ui.PopUpMenuItem
 import it.pagopa.iso_android.ui.SmallText
 import it.pagopa.iso_android.ui.TwoButtonsInARow
 import it.pagopa.iso_android.ui.preview.ThemePreviews
-import it.pagopa.io.wallet.proximity.bluetooth.BluetoothUtils
 
 @Composable
 fun HomeView(
@@ -41,6 +44,7 @@ fun HomeView(
     val context = LocalContext.current
     var whereToGo = remember { mutableStateOf<HomeDestination>(HomeDestination.Master) }
     val dialog = remember { mutableStateOf<AppDialog?>(null) }
+    var showPopupMenu = remember { mutableStateOf(false) }
     val manyPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissionsMap ->
@@ -55,6 +59,22 @@ fun HomeView(
                 "Ho bisogno del permesso al bluetooth per procedere..",
                 Toast.LENGTH_LONG
             ).show()
+    }
+
+    fun bluetoothCheck(onDone: () -> Unit) {
+        if (!BluetoothUtils.isBluetoothEnabled(context))
+            Toast.makeText(context, "Prima accendi il bluetooth", Toast.LENGTH_LONG).show()
+        else {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
+                manyPermissionLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.BLUETOOTH_CONNECT,
+                        Manifest.permission.BLUETOOTH_ADVERTISE
+                    )
+                )
+            else
+                onDone.invoke()
+        }
     }
     BackHandler {
         onBack.invoke()
@@ -90,20 +110,30 @@ fun HomeView(
                 color = MaterialTheme.colorScheme.primary
             )
         }
-        TwoButtonsInARow(leftBtnText = "do as Master", leftBtnAction = {
+        PopUpMenu(showPopupMenu, listOf(PopUpMenuItem("Qr code") {
             whereToGo.value = HomeDestination.Master
-            if (!BluetoothUtils.isBluetoothEnabled(context))
-                Toast.makeText(context, "Prima accendi il bluetooth", Toast.LENGTH_LONG).show()
+            bluetoothCheck {
+                onNavigate.invoke(HomeDestination.Master)
+            }
+        }, PopUpMenuItem("Nfc") {
+            val nfcChecks = NfcChecks(context)
+            if (nfcChecks.isNfcAvailable()) {
+                whereToGo.value = HomeDestination.MasterNfc
+                bluetoothCheck {
+                    onNavigate.invoke(HomeDestination.MasterNfc)
+                }
+            } else
+                nfcChecks.openNfcSettings()
+        }))
+        TwoButtonsInARow(leftBtnText = "do as Master", leftBtnAction = {
+            val nfcChecks = NfcChecks(context)
+            if (nfcChecks.hasNfcFeature())
+                showPopupMenu.value = true
             else {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
-                    manyPermissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.BLUETOOTH_CONNECT,
-                            Manifest.permission.BLUETOOTH_ADVERTISE
-                        )
-                    )
-                else
+                whereToGo.value = HomeDestination.Master
+                bluetoothCheck {
                     onNavigate.invoke(HomeDestination.Master)
+                }
             }
         }, rightBtnText = "do as Slave", rightBtnAction = {
             whereToGo.value = HomeDestination.Slave

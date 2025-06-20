@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.compose.rememberNavController
 import it.pagopa.io.wallet.cbor.CborLogger
+import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.iso_android.navigation.IsoAndroidPocNavHost
 import it.pagopa.iso_android.navigation.menu.DrawerBody
 import it.pagopa.iso_android.navigation.menu.TopBar
@@ -33,7 +34,6 @@ import it.pagopa.iso_android.navigation.menu.drawerScreens
 import it.pagopa.iso_android.navigation.navigateIfDifferent
 import it.pagopa.iso_android.ui.preview.ThemePreviews
 import it.pagopa.iso_android.ui.theme.IsoAndroidPocTheme
-import it.pagopa.io.wallet.proximity.ProximityLogger
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,7 +57,8 @@ private fun MainActivity?.MainApp(showMenuPreview: MutableState<Boolean>? = null
             mutableStateOf(false)
         }
         val navController = rememberNavController()
-        Scaffold(modifier = Modifier.fillMaxSize(),
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopBar(
                     image = topBarImage.value,
@@ -75,14 +76,16 @@ private fun MainActivity?.MainApp(showMenuPreview: MutableState<Boolean>? = null
                 modifier = Modifier
                     .padding(innerPadding),
                 visible = showMenu.value,
-                enter = slideInHorizontally(animationSpec = spring(
-                    stiffness = Spring.StiffnessMedium,
-                    visibilityThreshold = IntOffset.VisibilityThreshold
-                ), initialOffsetX = { -it / 2 }),
-                exit = slideOutHorizontally(animationSpec = tween(
-                    durationMillis = 1000,
-                    easing = FastOutSlowInEasing
-                ), targetOffsetX = { -it })
+                enter = slideInHorizontally(
+                    animationSpec = spring(
+                        stiffness = Spring.StiffnessMedium,
+                        visibilityThreshold = IntOffset.VisibilityThreshold
+                    ), initialOffsetX = { -it / 2 }),
+                exit = slideOutHorizontally(
+                    animationSpec = tween(
+                        durationMillis = 1000,
+                        easing = FastOutSlowInEasing
+                    ), targetOffsetX = { -it })
             ) {
                 DrawerBody(
                     menuItems = drawerScreens,

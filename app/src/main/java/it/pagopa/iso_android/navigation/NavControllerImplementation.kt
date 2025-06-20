@@ -1,5 +1,8 @@
 package it.pagopa.iso_android.navigation
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.PaddingValues
@@ -35,9 +38,20 @@ import it.pagopa.iso_android.ui.view_model.SignAndVerifyViewViewModel
 import it.pagopa.iso_android.ui.view_model.SlaveViewViewModel
 import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
 import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
+import it.pagopa.io.wallet.proximity.nfc.NfcEngagementService
 import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
+import it.pagopa.iso_android.nfc.AppNfcEngagementService
+import it.pagopa.iso_android.ui.view.NfcEngagementView
+import it.pagopa.iso_android.ui.view_model.NfcEngagementViewModel
 
 private const val AnimDurationMillis = 700
+
+
+fun Context.getActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.getActivity()
+    else -> null
+}
 
 @Composable
 fun MainActivity?.IsoAndroidPocNavHost(
@@ -87,6 +101,28 @@ fun MainActivity?.IsoAndroidPocNavHost(
                 context.resources
             )
             MasterView(viewModel = viewModel, onBack = {
+                backLogic(showMenu) {
+                    navController.popBackStack()
+                }
+            })
+        }
+        customAnimatedComposable<HomeDestination.MasterNfc> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
+            val context = LocalContext.current
+            NfcEngagementService.enable(
+                context.getActivity()!!,
+                AppNfcEngagementService::class.java
+            )
+            val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
+                DocManager.getInstance(
+                    context = context,
+                    storageDirectory =context.noBackupFilesDir,
+                    prefix = "SECURE_STORAGE",
+                    alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
+                ),
+                context.resources
+            )
+            NfcEngagementView(viewModel = viewModel, onBack = {
                 backLogic(showMenu) {
                     navController.popBackStack()
                 }

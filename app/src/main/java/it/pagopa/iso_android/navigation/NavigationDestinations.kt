@@ -10,6 +10,9 @@ sealed class HomeDestination {
     data object Master : HomeDestination()
 
     @Serializable
+    data object MasterNfc : HomeDestination()
+
+    @Serializable
     data object Slave : HomeDestination()
 
     @Serializable

@@ -1,11 +1,11 @@
-package it.pagopa.io.wallet.proximity.qr_code
+package it.pagopa.io.wallet.proximity.engagement
 
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 
 /**
  * Interface to listen all the events that can occur during the communication with the other device (mdocReader)
  * */
-interface QrEngagementListener {
+interface EngagementListener {
     /**Device is connecting with mdocReader*/
     fun onDeviceConnecting()
 
