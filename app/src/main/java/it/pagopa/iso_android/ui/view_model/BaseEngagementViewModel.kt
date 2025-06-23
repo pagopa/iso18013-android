@@ -32,7 +32,7 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
     val shouldGoBack = _shouldGoBack.asStateFlow()
     val dialog = mutableStateOf<AppDialog?>(null)
     protected lateinit var request: String
-    var deviceConnected: DeviceRetrievalHelperWrapper? = null
+    protected var deviceConnected: DeviceRetrievalHelperWrapper? = null
 
     private infix fun String.acceptFieldsExcept(notAccepted: Array<String> = arrayOf()): String {
         val originalReq = JSONObject(this).optJSONObject("request")
@@ -172,6 +172,7 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                 }
             }
         }
+        this.loader.value = null
         this.dialogText = sb.toString()
         dialog.value = AppDialog(
             title = resources.getString(R.string.warning),

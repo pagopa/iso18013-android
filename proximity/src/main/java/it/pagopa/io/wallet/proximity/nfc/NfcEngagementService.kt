@@ -8,6 +8,8 @@ import android.nfc.cardemulation.HostApduService
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Base64
+import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.engagement.EngagementListener
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 
@@ -189,5 +191,9 @@ abstract class NfcEngagementService : HostApduService() {
 
     override fun processCommandApdu(
         commandApdu: ByteArray, extras: Bundle?
-    ): ByteArray? = this.nfcEngagement.nfcEngagement.nfcProcessCommandApdu(commandApdu)
+    ): ByteArray? {
+        if (ProximityLogger.enabled)
+            ProximityLogger.i("APDU_COMMAND", Base64.encodeToString(commandApdu, Base64.DEFAULT))
+        return this.nfcEngagement.nfcEngagement.nfcProcessCommandApdu(commandApdu)
+    }
 }

@@ -3,8 +3,10 @@ package it.pagopa.io.wallet.proximity.retrieval
 import com.android.identity.android.mdoc.transport.DataTransportOptions
 import com.android.identity.mdoc.connectionmethod.ConnectionMethod
 import com.android.identity.mdoc.connectionmethod.ConnectionMethodBle
+import com.android.identity.mdoc.connectionmethod.ConnectionMethodNfc
 import com.android.identity.util.UUID
 import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
+import it.pagopa.io.wallet.proximity.nfc.NfcRetrievalMethod
 
 internal val DeviceRetrievalMethod.connectionMethod: List<ConnectionMethod>
     get() = when (this) {
@@ -25,13 +27,39 @@ internal val DeviceRetrievalMethod.connectionMethod: List<ConnectionMethod>
             }
         }
 
+        is NfcRetrievalMethod -> mutableListOf<ConnectionMethod>().apply {
+            if (this@connectionMethod.useBluetooth) {
+                val randomUUID = UUID.randomUUID()
+                add(
+                    ConnectionMethodBle(
+                        true,
+                        false,
+                        randomUUID,
+                        null
+                    )
+                )
+            } else {
+                add(
+                    ConnectionMethodNfc(
+                        commandDataFieldMaxLength,
+                        responseDataFieldMaxLength
+                    )
+                )
+            }
+        }
+
         else -> throw IllegalArgumentException("Unsupported connection method")
     }
 
 internal val List<DeviceRetrievalMethod>.transportOptions: DataTransportOptions
     get() = DataTransportOptions.Builder().apply {
         for (m in this@transportOptions) {
-            if (m is BleRetrievalMethod) setBleClearCache(m.clearBleCache)
+            if (m is BleRetrievalMethod)
+                setBleClearCache(m.clearBleCache)
+            else if (m is NfcRetrievalMethod) {
+                if (m.useBluetooth)
+                    setBleClearCache(true)
+            }
         }
     }.build()
 

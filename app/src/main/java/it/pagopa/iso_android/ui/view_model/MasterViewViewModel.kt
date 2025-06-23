@@ -29,6 +29,7 @@ class MasterViewViewModel(
             alias = "SECURE_STORAGE_KEY_${qrCodeEngagement.context.noBackupFilesDir}"
         )
     }
+
     override fun getEuPid() = docManager.gelAllEuPidDocuments().firstOrNull()
     override fun getMdl() = docManager.gelAllMdlDocuments().firstOrNull()
     override val engagement = this.qrCodeEngagement
@@ -59,6 +60,7 @@ class MasterViewViewModel(
                     "onCommunicationError: ${error.message}"
                 )
                 this@MasterViewViewModel.loader.value = null
+                _shouldGoBack.value = true
             }
 
             override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {
@@ -81,6 +83,7 @@ class MasterViewViewModel(
             }
 
             override fun onDeviceConnected(deviceRetrievalHelper: DeviceRetrievalHelperWrapper) {
+                this@MasterViewViewModel.loader.value = "Connected"
                 this@MasterViewViewModel.deviceConnected = deviceRetrievalHelper
             }
 

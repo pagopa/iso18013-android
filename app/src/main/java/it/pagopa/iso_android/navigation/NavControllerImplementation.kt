@@ -116,7 +116,7 @@ fun MainActivity?.IsoAndroidPocNavHost(
             val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
                 DocManager.getInstance(
                     context = context,
-                    storageDirectory =context.noBackupFilesDir,
+                    storageDirectory = context.noBackupFilesDir,
                     prefix = "SECURE_STORAGE",
                     alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
                 ),

@@ -24,13 +24,18 @@ class NfcEngagementViewModel(
             NfcEngagementEventBus.events.collect { event ->
                 when (event) {
                     is NfcEngagementEvent.Connecting -> loader.value = "Connecting..."
-                    is NfcEngagementEvent.Connected -> deviceConnected = event.device
+                    is NfcEngagementEvent.Connected -> {
+                        loader.value = "Connected"
+                        deviceConnected = event.device
+                    }
+
                     is NfcEngagementEvent.Error -> {
                         ProximityLogger.e(
                             this@NfcEngagementViewModel.javaClass.name,
                             "onCommunicationError: ${event.error.message}"
                         )
                         loader.value = null
+                        _shouldGoBack.value = true
                     }
 
                     is NfcEngagementEvent.DocumentRequestReceived -> {
@@ -42,26 +47,25 @@ class NfcEngagementViewModel(
                     }
 
                     is NfcEngagementEvent.Disconnected -> {
-
                         ProximityLogger.i(
                             this@NfcEngagementViewModel.javaClass.name,
                             "onDeviceDisconnected"
                         )
                         this@NfcEngagementViewModel.loader.value = null
-                        //if (event.transportSpecificTermination) {
-                        this@NfcEngagementViewModel.dialog.value = AppDialog(
-                            title = resources.getString(R.string.data),
-                            description = resources.getString(R.string.sent),
-                            button = AppDialog.DialogButton(
-                                "${resources.getString(R.string.perfect)}!!",
-                                onClick = {
-                                    dialog.value = null
-                                    _shouldGoBack.value = true
-                                }
+                        if (event.transportSpecificTermination) {
+                            this@NfcEngagementViewModel.dialog.value = AppDialog(
+                                title = resources.getString(R.string.data),
+                                description = resources.getString(R.string.sent),
+                                button = AppDialog.DialogButton(
+                                    "${resources.getString(R.string.perfect)}!!",
+                                    onClick = {
+                                        dialog.value = null
+                                        _shouldGoBack.value = true
+                                    }
+                                )
                             )
-                        )
-                        this@NfcEngagementViewModel.loader.value = null
-                        // }
+                            this@NfcEngagementViewModel.loader.value = null
+                        }
                     }
                 }
             }

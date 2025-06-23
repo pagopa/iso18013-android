@@ -96,6 +96,7 @@ internal class NfcEngagement(
          */
         fun build(context: Context): NfcEngagement {
             return NfcEngagement(context).apply {
+                this.retrievalMethods = listOf(NfcRetrievalMethod())
                 this@apply.nfcEngagementBuilder = NfcEngagementHelper.Builder(
                     context,
                     eDevicePrivateKey.publicKey,
