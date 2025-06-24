@@ -28,24 +28,12 @@ internal val DeviceRetrievalMethod.connectionMethod: List<ConnectionMethod>
         }
 
         is NfcRetrievalMethod -> mutableListOf<ConnectionMethod>().apply {
-            if (this@connectionMethod.useBluetooth) {
-                val randomUUID = UUID.randomUUID()
-                add(
-                    ConnectionMethodBle(
-                        true,
-                        false,
-                        randomUUID,
-                        null
-                    )
+            add(
+                ConnectionMethodNfc(
+                    commandDataFieldMaxLength,
+                    responseDataFieldMaxLength
                 )
-            } else {
-                add(
-                    ConnectionMethodNfc(
-                        commandDataFieldMaxLength,
-                        responseDataFieldMaxLength
-                    )
-                )
-            }
+            )
         }
 
         else -> throw IllegalArgumentException("Unsupported connection method")
@@ -56,10 +44,6 @@ internal val List<DeviceRetrievalMethod>.transportOptions: DataTransportOptions
         for (m in this@transportOptions) {
             if (m is BleRetrievalMethod)
                 setBleClearCache(m.clearBleCache)
-            else if (m is NfcRetrievalMethod) {
-                if (m.useBluetooth)
-                    setBleClearCache(true)
-            }
         }
     }.build()
 
