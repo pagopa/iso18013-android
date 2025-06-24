@@ -11,7 +11,6 @@ import android.os.Looper
 import android.util.Base64
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.engagement.EngagementListener
-import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 
 /**
@@ -77,7 +76,7 @@ import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 abstract class NfcEngagementService : HostApduService() {
     private lateinit var nfcEngagement: NfcEngagement
     open val readerTrustStore: List<Any> = listOf()
-    open val retrievalMethods: List<DeviceRetrievalMethod> = listOf(NfcRetrievalMethod())
+    open val retrievalMethods: List<NfcRetrievalMethod> = listOf(NfcRetrievalMethod())
 
     companion object {
 
