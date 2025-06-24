@@ -9,6 +9,7 @@
         android:category="other">
         <!-- NFC Type 4 Tag -->
         <aid-filter android:name="D2760000850101" />
+        <aid-filter android:name="A0000002480400" />
     </aid-group>
 
 </host-apdu-service>
