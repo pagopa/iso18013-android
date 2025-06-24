@@ -6,7 +6,6 @@ import com.android.identity.android.mdoc.engagement.NfcEngagementHelper
 import com.android.identity.android.mdoc.transport.DataTransport
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.engagement.Engagement
-import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.retrieval.connectionMethods
 import it.pagopa.io.wallet.proximity.retrieval.transportOptions
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
@@ -95,7 +94,7 @@ internal class NfcEngagement(
          * To observe all events call [withListener] method.
          * To close the connection call [close] method.
          */
-        fun build(context: Context, retrievalMethods: List<DeviceRetrievalMethod>): NfcEngagement {
+        fun build(context: Context, retrievalMethods: List<NfcRetrievalMethod>): NfcEngagement {
             return NfcEngagement(context).apply {
                 this@apply.retrievalMethods = retrievalMethods
                 this@apply.nfcEngagementBuilder = NfcEngagementHelper.Builder(
