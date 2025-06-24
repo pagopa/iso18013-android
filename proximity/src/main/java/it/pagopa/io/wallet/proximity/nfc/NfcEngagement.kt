@@ -14,7 +14,7 @@ internal class NfcEngagement(
     context: Context
 ) : Engagement(context) {
     private lateinit var nfcEngagementBuilder: NfcEngagementHelper.Builder
-    lateinit var nfcEngagement: NfcEngagementHelper
+    lateinit var nfcEngagementHelper: NfcEngagementHelper
     override val nfcEngagementListener = object : NfcEngagementHelper.Listener {
         override fun onTwoWayEngagementDetected() {
             ProximityLogger.i(this@NfcEngagement.tag, "Two way engagement detected")
@@ -36,7 +36,7 @@ internal class NfcEngagement(
             }
             ProximityLogger.d(
                 this@NfcEngagement.tag,
-                "OnDeviceConnected via NFC: qrEngagement=$nfcEngagement"
+                "OnDeviceConnected via NFC: qrEngagement=$nfcEngagementHelper"
             )
             val deviceRetrievalHelperBuilt = DeviceRetrievalHelper.Builder(
                 this@NfcEngagement.context,
@@ -45,11 +45,11 @@ internal class NfcEngagement(
                 eDevicePrivateKey,
             ).useForwardEngagement(
                 transport,
-                nfcEngagement.deviceEngagement,
-                nfcEngagement.handover,
+                nfcEngagementHelper.deviceEngagement,
+                nfcEngagementHelper.handover,
             ).build()
             deviceRetrievalHelper = DeviceRetrievalHelperWrapper(deviceRetrievalHelperBuilt)
-            nfcEngagement.close()
+            nfcEngagementHelper.close()
             listener?.onDeviceConnected(
                 requireNotNull(
                     deviceRetrievalHelper
@@ -71,7 +71,7 @@ internal class NfcEngagement(
         try {
             if (deviceRetrievalHelper != null)
                 deviceRetrievalHelper!!.disconnect()
-            nfcEngagement.close()
+            nfcEngagementHelper.close()
         } catch (exception: RuntimeException) {
             ProximityLogger.e(this.javaClass.name, "Error closing NFC engagement $exception")
         }
@@ -82,7 +82,7 @@ internal class NfcEngagement(
      * @return [NfcEngagement] instance created via [NfcEngagement.build] static method
      * */
     override fun configure() = apply {
-        nfcEngagement = nfcEngagementBuilder.build()
+        nfcEngagementHelper = nfcEngagementBuilder.build()
     }
 
 
@@ -94,14 +94,14 @@ internal class NfcEngagement(
          * To observe all events call [withListener] method.
          * To close the connection call [close] method.
          */
-        fun build(context: Context): NfcEngagement {
+        fun build(context: Context, retrievalMethods: List<NfcRetrievalMethod>): NfcEngagement {
             return NfcEngagement(context).apply {
-                this.retrievalMethods = listOf(NfcRetrievalMethod())
+                this@apply.retrievalMethods = retrievalMethods
                 this@apply.nfcEngagementBuilder = NfcEngagementHelper.Builder(
                     context,
-                    eDevicePrivateKey.publicKey,
-                    retrievalMethods.transportOptions,
-                    nfcEngagementListener,
+                    this@apply.eDevicePrivateKey.publicKey,
+                    this@apply.retrievalMethods.transportOptions,
+                    this@apply.nfcEngagementListener,
                     context.mainExecutor()
                 ).apply {
                     useStaticHandover(retrievalMethods.connectionMethods)

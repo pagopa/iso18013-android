@@ -76,6 +76,7 @@ import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 abstract class NfcEngagementService : HostApduService() {
     private lateinit var nfcEngagement: NfcEngagement
     open val readerTrustStore: List<Any> = listOf()
+    open val retrievalMethods: List<NfcRetrievalMethod> = listOf(NfcRetrievalMethod())
 
     companion object {
 
@@ -137,7 +138,7 @@ abstract class NfcEngagementService : HostApduService() {
     @Suppress("UNCHECKED_CAST")
     override fun onCreate() {
         super.onCreate()
-        nfcEngagement = NfcEngagement.build(this.baseContext).configure()
+        nfcEngagement = NfcEngagement.build(this.baseContext, this.retrievalMethods).configure()
         readerTrustStore.firstOrNull()?.let {
             when (it) {
                 is ByteArray -> this.nfcEngagement.withReaderTrustStore(readerTrustStore as List<ByteArray>)
@@ -182,7 +183,7 @@ abstract class NfcEngagementService : HostApduService() {
     }
 
     override fun onDeactivated(reason: Int) {
-        nfcEngagement.nfcEngagement.nfcOnDeactivated(reason)
+        nfcEngagement.nfcEngagementHelper.nfcOnDeactivated(reason)
         val timeoutSeconds = 15
         Handler(Looper.getMainLooper()).postDelayed({
             nfcEngagement.close()
@@ -194,6 +195,6 @@ abstract class NfcEngagementService : HostApduService() {
     ): ByteArray? {
         if (ProximityLogger.enabled)
             ProximityLogger.i("APDU_COMMAND", Base64.encodeToString(commandApdu, Base64.DEFAULT))
-        return this.nfcEngagement.nfcEngagement.nfcProcessCommandApdu(commandApdu)
+        return this.nfcEngagement.nfcEngagementHelper.nfcProcessCommandApdu(commandApdu)
     }
 }
