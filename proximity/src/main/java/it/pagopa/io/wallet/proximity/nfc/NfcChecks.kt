@@ -30,4 +30,7 @@ class NfcChecks(private val context: Context) {
     fun isNfcReadyForEngagement() = this.isNfcAvailable() && this.hasCardHostEmulation()
 
     fun isSamsungDevice() = android.os.Build.MANUFACTURER.equals("samsung", ignoreCase = true)
+    fun hasNxpMifare(): Boolean {
+        return context.packageManager.hasSystemFeature("com.nxp.mifare")
+    }
 }
