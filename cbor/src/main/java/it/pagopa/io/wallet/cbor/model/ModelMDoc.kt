@@ -299,12 +299,12 @@ data class IssuerAuth(
         if (protectedHeader != null)
             put("protectedHeader", Base64.getUrlEncoder().encodeToString(protectedHeader))
         if (unprotectedHeader != null) {
-            val arrayUnprotectedHeader = JSONObject()
+            val unprotectedHeaderObj = JSONObject()
             unprotectedHeader?.forEach {
                 val (headerAlgorithm, value) = it.toPair()
-                arrayUnprotectedHeader.put(headerAlgorithm,value)
+                unprotectedHeaderObj.put(headerAlgorithm,value)
             }
-            put("unprotectedHeader", arrayUnprotectedHeader)
+            put("unprotectedHeader", unprotectedHeaderObj)
         }
         if (payload != null)
             put("payload", payload?.construct()?.toJson())
