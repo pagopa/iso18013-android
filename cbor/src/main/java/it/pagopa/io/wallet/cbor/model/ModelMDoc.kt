@@ -299,9 +299,10 @@ data class IssuerAuth(
         if (protectedHeader != null)
             put("protectedHeader", Base64.getUrlEncoder().encodeToString(protectedHeader))
         if (unprotectedHeader != null) {
-            val arrayUnprotectedHeader = JSONArray()
+            val arrayUnprotectedHeader = JSONObject()
             unprotectedHeader?.forEach {
-                arrayUnprotectedHeader.put(it.toJson())
+                val (headerAlgorithm, value) = it.toPair()
+                arrayUnprotectedHeader.put(headerAlgorithm,value)
             }
             put("unprotectedHeader", arrayUnprotectedHeader)
         }
@@ -312,9 +313,8 @@ data class IssuerAuth(
     }
 
     data class UnprotectedHeader(val headerAlgorithm: String, private val value: ByteArray) {
-        fun toJson() = JSONObject().apply {
-            put(headerAlgorithm, COSEHeaderAlgorithm.cborValueFromString(headerAlgorithm, value))
-        }
+        fun toPair() =
+            headerAlgorithm to COSEHeaderAlgorithm.cborValueFromString(headerAlgorithm, value)
     }
 }
 
