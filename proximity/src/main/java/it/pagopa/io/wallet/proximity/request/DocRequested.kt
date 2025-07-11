@@ -5,7 +5,7 @@ import kotlinx.parcelize.Parcelize
 
 @Parcelize
 data class DocRequested(
-    val issuerSignedContent: String,
+    val issuerSignedContent: ByteArray,
     val alias: String,
     val docType: String
 ) : Parcelable
