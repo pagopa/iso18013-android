@@ -100,8 +100,7 @@ class ResponseGenerator(
             documents.filter {
                 fieldsRequested.keys().asSequence().contains(it.docType)
             }.map {
-                val bytes = Base64.decode(it.issuerSignedContent, Base64.DEFAULT)
-                Triple(IssuerSigned.issuerSignedFromByteArray(bytes), it.alias, it.docType)
+                Triple(IssuerSigned.issuerSignedFromByteArray(it.issuerSignedContent), it.alias, it.docType)
             }.forEach { (doc, alias, docType) ->
                 addDocToResponse(
                     responseGenerator = deviceResponse,
