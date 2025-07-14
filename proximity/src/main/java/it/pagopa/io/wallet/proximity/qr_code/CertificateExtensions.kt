@@ -2,6 +2,7 @@ package it.pagopa.io.wallet.proximity.qr_code
 
 import android.content.Context
 import androidx.annotation.CheckResult
+import androidx.annotation.VisibleForTesting
 import com.android.identity.crypto.javaX509Certificates
 import com.android.identity.mdoc.request.DeviceRequestParser
 import it.pagopa.io.wallet.proximity.ProximityLogger
@@ -17,8 +18,11 @@ private fun InputStream.toX509Certificate(): X509Certificate? {
     return CertificateFactory.getInstance("X.509").generateCertificate(this) as? X509Certificate
 }
 
-private fun ByteArray.toX509Certificate() = ByteArrayInputStream(this).toX509Certificate()
-private fun tryGetCertificate(predicate: () -> X509Certificate?): X509Certificate? {
+@VisibleForTesting
+fun ByteArray.toX509Certificate() = ByteArrayInputStream(this).toX509Certificate()
+
+@VisibleForTesting
+fun tryGetCertificate(predicate: () -> X509Certificate?): X509Certificate? {
     return try {
         predicate.invoke()
     } catch (e: Exception) {
