@@ -1,5 +1,6 @@
 package it.pagopa.io.wallet.proximity.document.profile
 
+import it.pagopa.io.wallet.proximity.ProximityLogger
 import java.security.cert.X509Certificate
 
 class IssuerAlternativeName : ProfileValidation {
@@ -7,7 +8,11 @@ class IssuerAlternativeName : ProfileValidation {
         readerAuthCertificate: X509Certificate,
         trustCA: X509Certificate
     ): Boolean {
-        val issuerAltNames = readerAuthCertificate.issuerAlternativeNames ?: return false
+        if (readerAuthCertificate.issuerAlternativeNames == null) {
+            ProximityLogger.i(this.javaClass.name, "IssuerAlternativeNames is null")
+            return true
+        }
+        val issuerAltNames = readerAuthCertificate.issuerAlternativeNames
 
         return issuerAltNames.any { altNameList ->
             if (altNameList.size == 2 && altNameList[0] is Int) {

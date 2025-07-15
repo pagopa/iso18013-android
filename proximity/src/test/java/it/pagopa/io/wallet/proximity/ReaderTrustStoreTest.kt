@@ -8,6 +8,7 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 class ReaderTrustStoreTest {
+    //Certificate should be valid, and respect today!!
     private val verifierCertificate by lazy {
         "MIICnzCCAkSgAwIBAgIUZPWn95JGsoc26PQtH5/aG9Jjj9owCgYIKoZIzj0EAwIwgcIxCzAJBgNVBAYTAklUMQ4wDAYDVQQIEwVMYXppbzENMAsGA1UEBxMEUm9tZTE4MDYGA1UEChMvSXN0aXR1dG8gUG9saWdyYWZpY28gZSBaZWNjYSBkZWxsbyBTdGF0byBTLlAuQS4xDTALBgNVBAsTBElQWlMxJDAiBgNVBAMTG3ByZS52ZXJpZmllci53YWxsZXQuaXB6cy5pdDElMCMGCSqGSIb3DQEJARYWcHJvdG9jb2xsb0BwZWMuaXB6cy5pdDAeFw0yNTA3MTEwNzU5NTFaFw0yNTA3MTIwNzU5NTJaMGUxFDASBgNVBAoTC2VUdWl0dXMgU3JsMTMwCQYDVQQLEwJJVDAmBgNVBAsTH1Byb3hpbWl0eSBWZXJpZmljYXRpb24gRGVtbyBBcHAxGDAWBgNVBAMTD2RldmljZS11dWlkLTEyMzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABEIATyvQxowGeuxqox2FnQzadnEd9Aw0ipWEU/IxwUEmJuaw0L8iSwZh3jplgnrjE2sH6By0tnP+tlaOCY8tBjqjdDByMA4GA1UdDwEB/wQEAwIHgDASBgNVHSUECzAJBgcogYxdBQEGMAwGA1UdEwEB/wQCMAAwHQYDVR0OBBYEFP+9lUxh4Rm67v0Xla0lDgOPbYUCMB8GA1UdIwQYMBaAFDbzueiFM+S1Ubtpm73hfA+sUOP8MAoGCCqGSM49BAMCA0kAMEYCIQDlXIkl05r2ejRX0iELV+x+2jRy+qXQ0fHZvxsLTApqggIhAMTL4+2UQBRSVl8cv6ROQmm9YI2gH3DP/VepFbrelCNS"
     }
@@ -31,6 +32,7 @@ class ReaderTrustStoreTest {
             }
         )
         val verifierCertificateBa = Base64.decode(verifierCertificate)
+        //As Certificate should be valid, and respect today we cannot assert test result
         println(readerTrustStore.validateCertificationTrustPath(listOf(verifierCertificateBa.toX509Certificate()!!)))
     }
 }
