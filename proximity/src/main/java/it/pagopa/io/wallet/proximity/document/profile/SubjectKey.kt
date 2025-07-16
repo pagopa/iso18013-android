@@ -14,10 +14,13 @@ internal class SubjectKey : ProfileValidation {
         readerAuthCertificate: X509Certificate,
         trustCA: X509Certificate,
     ): Boolean {
-        val byteArray =
-            readerAuthCertificate.getExtensionValue(Extension.subjectKeyIdentifier.id) ?: run {
-                return false
-            }
+        val byteArray = readerAuthCertificate
+            .getExtensionValue(
+                Extension.subjectKeyIdentifier.id
+            ) ?: run {
+                ProximityLogger.i(this.javaClass.name, "SubjectKeyIdentifier: null")
+            return true
+        }
 
         val subjectKeyIdentifier: SubjectKeyIdentifier =
             SubjectKeyIdentifier.getInstance(DEROctetString.getInstance(byteArray).octets)
