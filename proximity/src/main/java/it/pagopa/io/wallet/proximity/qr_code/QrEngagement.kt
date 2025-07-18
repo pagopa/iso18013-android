@@ -51,7 +51,7 @@ class QrEngagement private constructor(
     }
 
     private var retrievalMethods: List<DeviceRetrievalMethod> = listOf()
-    private var readerTrustStore: ReaderTrustStore? = null
+    private var readerTrustStores: List<ReaderTrustStore?>? = null
     private lateinit var qrEngagement: QrEngagementHelper
     private lateinit var qrEngagementBuilder: QrEngagementHelper.Builder
     private var listener: QrEngagementListener? = null
@@ -61,8 +61,8 @@ class QrEngagement private constructor(
     }
 
     @JvmName("setReaderTrustStorePrivate")
-    private fun <T> List<T>.setReaderTrustStore() {
-        readerTrustStore = this.toReaderTrustStore(context)
+    private fun <T> List<List<T>>.setReaderTrustStore() {
+        readerTrustStores = this.toReaderTrustStore(context)
     }
 
     /**
@@ -71,7 +71,7 @@ class QrEngagement private constructor(
      * @param certificates a [List] of [Int] representing your raw resource
      * @return [QrEngagement]
      */
-    fun withReaderTrustStore(certificates: List<Int>) = apply {
+    fun withReaderTrustStore(certificates: List<List<Int>>) = apply {
         certificates.setReaderTrustStore()
     }
 
@@ -82,7 +82,7 @@ class QrEngagement private constructor(
      * @return [QrEngagement]
      */
     @JvmName("withReaderTrustStore1")
-    fun withReaderTrustStore(certificates: List<ByteArray>) = apply {
+    fun withReaderTrustStore(certificates: List<List<ByteArray>>) = apply {
         certificates.setReaderTrustStore()
     }
 
@@ -93,7 +93,7 @@ class QrEngagement private constructor(
      * @return [QrEngagement]
      */
     @JvmName("withReaderTrustStore2")
-    fun withReaderTrustStore(certificates: List<String>) = apply {
+    fun withReaderTrustStore(certificates: List<List<String>>) = apply {
         certificates.setReaderTrustStore()
     }
 
@@ -180,7 +180,7 @@ class QrEngagement private constructor(
             }
             val requestWrapperList = arrayListOf<JSONObject?>()
             listRequested.forEachIndexed { j, each ->
-                (each toReaderAuthWith this@QrEngagement.readerTrustStore).let {
+                (each toReaderAuthWith this@QrEngagement.readerTrustStores).let {
                     requestWrapperList.add(
                         RequestWrapper(
                             each.itemsRequest,

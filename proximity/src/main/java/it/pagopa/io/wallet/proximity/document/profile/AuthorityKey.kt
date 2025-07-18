@@ -21,19 +21,7 @@ internal class AuthorityKey : ProfileValidation {
                         readerAuthCertificate.getExtensionValue(Extension.authorityKeyIdentifier.id),
                     ).octets,
                 )
-
-            val subjectKeyIdentifier: SubjectKeyIdentifier =
-                SubjectKeyIdentifier.getInstance(
-                    DEROctetString.getInstance(
-                        trustCA.getExtensionValue(Extension.subjectKeyIdentifier.id),
-                    ).octets,
-                )
-
-            return authorityKeyIdentifier.keyIdentifier
-                .contentEquals(subjectKeyIdentifier.keyIdentifier)
-                .also {
-                    ProximityLogger.d(this.javaClass.name, "AuthorityKeyIdentifier: $it")
-                }
+            return authorityKeyIdentifier.keyIdentifier != null
         } catch (e: Throwable) {
             Log.e(this.javaClass.name, "Error", e)
             return false
