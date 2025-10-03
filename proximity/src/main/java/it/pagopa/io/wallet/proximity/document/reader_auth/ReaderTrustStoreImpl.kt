@@ -74,9 +74,10 @@ internal class ReaderTrustStoreImpl(
                 ProximityLogger.d(tag, "Profile validation failed.")
                 return false
             }
-            // CRL Validation
-            CertificateCRLValidation.verify(validatedLeaf)
-            CertificateCRLValidation.verify(trustAnchorUsed)
+            /* CRL Validation is currently disabled in order to make it work offline
+                CertificateCRLValidation.verify(validatedLeaf)
+                CertificateCRLValidation.verify(trustAnchorUsed)
+             */
             return true
         } catch (e: Exception) {
             when (e) {
