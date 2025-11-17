@@ -29,6 +29,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.json.JSONObject
 import java.security.Security
 import java.util.concurrent.Executor
+import kotlin.collections.forEachIndexed
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -128,8 +129,8 @@ abstract class Engagement(val context: Context) {
                 ProximityLogger.i("SESSION TRANSCRIPT", b64Session)
             }
             val requestWrapperList = arrayListOf<JSONObject?>()
-            listRequested.forEachIndexed { j, each ->
-                (each toReaderAuthWith this@Engagement.readerTrustStore).let {
+            listRequested.forEach{ each->
+                each.toReaderAuthWith(this@Engagement.readerTrustStore).let {
                     requestWrapperList.add(
                         RequestWrapper(
                             each.itemsRequest,

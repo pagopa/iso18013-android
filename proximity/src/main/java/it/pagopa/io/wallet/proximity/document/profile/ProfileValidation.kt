@@ -8,12 +8,14 @@ internal fun interface ProfileValidation {
         @JvmStatic
         val DEFAULT: ProfileValidation = ProfileValidationImpl(
             listOf(
+                MandatoryExtensions(),
+                SerialNumber(),
+                IssuerAlternativeName(),
                 AuthorityKey(),
                 CommonName(),
                 CriticalExtensions(),
                 KeyExtended(),
                 KeyUsage(),
-                MandatoryExtensions(),
                 Period(),
                 SignatureAlgorithm(),
                 SubjectKey(),

@@ -42,14 +42,14 @@ fun HomeView(
     onNavigate: (destination: HomeDestination) -> Unit
 ) {
     val context = LocalContext.current
-    var whereToGo = remember { mutableStateOf<HomeDestination>(HomeDestination.Master) }
+    val whereToGo = remember { mutableStateOf<HomeDestination>(HomeDestination.Master) }
     val dialog = remember { mutableStateOf<AppDialog?>(null) }
-    var showPopupMenu = remember { mutableStateOf(false) }
+    val showPopupMenu = remember { mutableStateOf(false) }
     val manyPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissionsMap ->
         val granted = permissionsMap.filter {
-            it.value == true
+            it.value
         }
         if (granted.size == permissionsMap.size)
             onNavigate.invoke(whereToGo.value)

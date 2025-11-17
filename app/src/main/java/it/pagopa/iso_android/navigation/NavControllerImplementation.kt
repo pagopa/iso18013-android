@@ -97,7 +97,7 @@ fun MainActivity?.IsoAndroidPocNavHost(
                             clearBleCache = true
                         )
                     )
-                ).withReaderTrustStore(listOf(R.raw.eudi_pid_issuer_ut)),
+                ).withReaderTrustStore(listOf(listOf(R.raw.eudi_pid_issuer_ut))),
                 context.resources
             )
             MasterView(viewModel = viewModel, onBack = {

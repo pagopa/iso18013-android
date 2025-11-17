@@ -2,6 +2,7 @@ package it.pagopa.io.wallet.proximity.qr_code
 
 import android.content.Context
 import androidx.annotation.CheckResult
+import androidx.annotation.VisibleForTesting
 import com.android.identity.crypto.javaX509Certificates
 import com.android.identity.mdoc.request.DeviceRequestParser
 import it.pagopa.io.wallet.proximity.ProximityLogger
@@ -17,8 +18,11 @@ private fun InputStream.toX509Certificate(): X509Certificate? {
     return CertificateFactory.getInstance("X.509").generateCertificate(this) as? X509Certificate
 }
 
-private fun ByteArray.toX509Certificate() = ByteArrayInputStream(this).toX509Certificate()
-private fun tryGetCertificate(predicate: () -> X509Certificate?): X509Certificate? {
+@VisibleForTesting
+fun ByteArray.toX509Certificate() = ByteArrayInputStream(this).toX509Certificate()
+
+@VisibleForTesting
+fun tryGetCertificate(predicate: () -> X509Certificate?): X509Certificate? {
     return try {
         predicate.invoke()
     } catch (e: Exception) {
@@ -70,20 +74,31 @@ internal fun <T> List<T>.toReaderTrustStore(context: Context): ReaderTrustStore 
     return ReaderTrustStore.getDefault(certs)
 }
 
-/**It converts a [DeviceRequestParser.DocRequest] into a [ReaderAuth] class
- * @param readerTrustStore: a [ReaderTrustStore] specified with one of [QrEngagement.withReaderTrustStore] method*/
-internal infix fun DeviceRequestParser.DocRequest.toReaderAuthWith(
-    readerTrustStore: ReaderTrustStore?
-): ReaderAuth? {
-    val trustStore = readerTrustStore ?: return null
-    val readerAuth = this.readerAuth ?: return null
-    val readerCertificateChain = this.readerCertificateChain ?: return null
-    if (this.readerCertificateChain?.javaX509Certificates?.isEmpty() == true) return null
+internal fun <T> List<List<T>>.toReaderTrustStore(context: Context): List<ReaderTrustStore> {
+    return this.map {
+        it.toReaderTrustStore(context)
+    }
+}
 
+/**It converts a [DeviceRequestParser.DocRequest] into a [ReaderAuth] class
+ * @param readerTrustStores: a [List<ReaderTrustStore?>] specified with one of [QrEngagement.withReaderTrustStore] method*/
+internal infix fun DeviceRequestParser.DocRequest.toReaderAuthWith(
+    readerTrustStores: List<ReaderTrustStore?>?
+): ReaderAuth? {
+    if (readerTrustStores == null)
+        return null
+    val trustStore = readerTrustStores.firstOrNull { trustStore ->
+        val readerCertificateChain = this.readerCertificateChain ?: return null
+        if (this.readerCertificateChain?.javaX509Certificates?.isEmpty() == true) return null
+        trustStore?.validateCertificationTrustPath(readerCertificateChain.javaX509Certificates) == true
+    }
+    val readerCertificateChain = this.readerCertificateChain ?: return null
+    if (trustStore == null)
+        return null
     val certChain =
         trustStore.createCertificationTrustPath(readerCertificateChain.javaX509Certificates)
             ?.takeIf { it.isNotEmpty() } ?: readerCertificateChain.javaX509Certificates
-
+    val readerAuth = this.readerAuth ?: return null
     val readerCommonName = certChain.firstOrNull()
         ?.subjectX500Principal
         ?.name

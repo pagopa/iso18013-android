@@ -40,7 +40,7 @@ class ResponseGeneratorTest {
         ResponseGenerator(
             mockSessionsTranscript
         ).createResponse(
-            arrayOf(DocRequested(mockNew, "alias", DocType.MDL.value)),
+            arrayOf(DocRequested(Base64.Default.decode(mockNew), "alias", DocType.MDL.value)),
             mockFieldRequestedAndAcceptedAll.toString(),
             object : Response {
                 override fun onResponseGenerated(response: ByteArray) {
@@ -76,12 +76,11 @@ class ResponseGeneratorTest {
             val docToJson = disclosedDocument.toJson(true)
             println(docToJson)
             val doc = DocRequested(
-                Base64.encode(disclosedDocument.issuerSigned!!.rawValue!!),
+                disclosedDocument.issuerSigned!!.rawValue!!,
                 "alias",
                 disclosedDocument.docType!!
             )
-            val bytes = Base64.decode(doc.issuerSignedContent)
-            val issuerSigned = IssuerSigned.issuerSignedFromByteArray(bytes)
+            val issuerSigned = IssuerSigned.issuerSignedFromByteArray(doc.issuerSignedContent)
             val dataElements = ResponseGenerator(mockSessionsTranscript)
                 .createDataElements(
                     issuerSigned!!,
@@ -116,12 +115,11 @@ class ResponseGeneratorTest {
             val docToJson = disclosedDocument.toJson(true)
             println(docToJson)
             val doc = DocRequested(
-                Base64.encode(disclosedDocument.issuerSigned!!.rawValue!!),
+                disclosedDocument.issuerSigned!!.rawValue!!,
                 "alias",
                 disclosedDocument.docType!!
             )
-            val bytes = Base64.decode(doc.issuerSignedContent)
-            val issuerSigned = IssuerSigned.issuerSignedFromByteArray(bytes)
+            val issuerSigned = IssuerSigned.issuerSignedFromByteArray(doc.issuerSignedContent)
             val dataElements = ResponseGenerator(mockSessionsTranscript)
                 .createDataElements(
                     issuerSigned!!,
