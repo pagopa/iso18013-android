@@ -29,7 +29,6 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.json.JSONObject
 import java.security.Security
 import java.util.concurrent.Executor
-import kotlin.collections.forEachIndexed
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -55,7 +54,7 @@ abstract class Engagement(val context: Context) {
     }
 
     protected var retrievalMethods: List<DeviceRetrievalMethod> = listOf()
-    private var readerTrustStore: ReaderTrustStore? = null
+    private var readerTrustStores: List<ReaderTrustStore?>? = null
     protected var listener: EngagementListener? = null
     protected var deviceRetrievalHelper: DeviceRetrievalHelperWrapper? = null
     protected val eDevicePrivateKey by lazy {
@@ -63,8 +62,8 @@ abstract class Engagement(val context: Context) {
     }
 
     @JvmName("setReaderTrustStorePrivate")
-    private fun <T> List<T>.setReaderTrustStore() {
-        readerTrustStore = this.toReaderTrustStore(context)
+    private fun <T> List<List<T>>.setReaderTrustStore() {
+        readerTrustStores = this.toReaderTrustStore(context)
     }
 
     /**
@@ -73,7 +72,7 @@ abstract class Engagement(val context: Context) {
      * @param certificates a [List] of [Int] representing your raw resource
      * @return [Engagement]
      */
-    fun withReaderTrustStore(certificates: List<Int>) = apply {
+    fun withReaderTrustStore(certificates: List<List<Int>>) = apply {
         certificates.setReaderTrustStore()
     }
 
@@ -84,7 +83,7 @@ abstract class Engagement(val context: Context) {
      * @return [Engagement]
      */
     @JvmName("withReaderTrustStore1")
-    fun withReaderTrustStore(certificates: List<ByteArray>) = apply {
+    fun withReaderTrustStore(certificates: List<List<ByteArray>>) = apply {
         certificates.setReaderTrustStore()
     }
 
@@ -95,7 +94,7 @@ abstract class Engagement(val context: Context) {
      * @return [Engagement]
      */
     @JvmName("withReaderTrustStore2")
-    fun withReaderTrustStore(certificates: List<String>) = apply {
+    fun withReaderTrustStore(certificates: List<List<String>>) = apply {
         certificates.setReaderTrustStore()
     }
 
@@ -130,7 +129,7 @@ abstract class Engagement(val context: Context) {
             }
             val requestWrapperList = arrayListOf<JSONObject?>()
             listRequested.forEach{ each->
-                each.toReaderAuthWith(this@Engagement.readerTrustStore).let {
+                (each toReaderAuthWith this@Engagement.readerTrustStores).let {
                     requestWrapperList.add(
                         RequestWrapper(
                             each.itemsRequest,

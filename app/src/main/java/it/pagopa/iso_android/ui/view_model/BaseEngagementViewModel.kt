@@ -74,15 +74,15 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                 disclosedDocuments.add(getMdl()!!)
                 disclosedDocuments.add(getEuPid()!!)
             }
-            val docRequested = disclosedDocuments.map {
-                DocRequested(
-                    issuerSignedContent = Base64.encodeToString(
-                        it.issuerSigned?.rawValue,
-                        Base64.DEFAULT
-                    ),
-                    alias = alias,
-                    docType = it.docType!!
-                )
+            val docRequested = disclosedDocuments.mapNotNull {
+                it.issuerSigned?.rawValue?.let { doc ->
+                    DocRequested(
+                        issuerSignedContent =
+                            doc,
+                        alias = alias,
+                        docType = it.docType!!
+                    )
+                }
             }
             ResponseGenerator(
                 sessionsTranscript = sessionsTranscript

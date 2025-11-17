@@ -5,7 +5,7 @@ import it.pagopa.io.wallet.proximity.nfc.NfcRetrievalMethod
 import it.pagopa.iso_android.R
 
 class AppNfcEngagementService : NfcEngagementService() {
-    override val readerTrustStore: List<Any> = listOf(R.raw.eudi_pid_issuer_ut)
+    override val readerTrustStore: List<List<Any>> = listOf(listOf(R.raw.eudi_pid_issuer_ut))
     override val retrievalMethods: List<NfcRetrievalMethod> = listOf(
         NfcRetrievalMethod(
             commandDataFieldMaxLength = 256L,

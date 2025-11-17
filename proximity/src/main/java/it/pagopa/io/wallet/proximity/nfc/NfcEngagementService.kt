@@ -75,7 +75,7 @@ import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
  */
 abstract class NfcEngagementService : HostApduService() {
     private lateinit var nfcEngagement: NfcEngagement
-    open val readerTrustStore: List<Any> = listOf()
+    open val readerTrustStore: List<List<Any>> = listOf()
     open val retrievalMethods: List<NfcRetrievalMethod> = listOf(NfcRetrievalMethod())
 
     companion object {
@@ -139,12 +139,16 @@ abstract class NfcEngagementService : HostApduService() {
     override fun onCreate() {
         super.onCreate()
         nfcEngagement = NfcEngagement.build(this.baseContext, this.retrievalMethods).configure()
-        readerTrustStore.firstOrNull()?.let {
-            when (it) {
-                is ByteArray -> this.nfcEngagement.withReaderTrustStore(readerTrustStore as List<ByteArray>)
-                is Int -> this.nfcEngagement.withReaderTrustStore(readerTrustStore as List<Int>)
-                is String -> this.nfcEngagement.withReaderTrustStore(readerTrustStore as List<String>)
-                else -> throw Exception("readerTrustStore type not supported")
+        readerTrustStore.firstOrNull()?.let { list ->
+            list.firstOrNull()?.let {
+                when (it) {
+                    is ByteArray -> this.nfcEngagement.withReaderTrustStore(readerTrustStore as List<List<ByteArray>>)
+                    is Int -> this.nfcEngagement.withReaderTrustStore(readerTrustStore as List<List<Int>>)
+                    is String -> this.nfcEngagement.withReaderTrustStore(readerTrustStore as List<List<String>>)
+                    else -> throw Exception("readerTrustStore type not supported")
+                }
+            } ?: run {
+                throw Exception("readerTrustStore type not supported")
             }
         }
         this.nfcEngagement.withListener(object : EngagementListener {
