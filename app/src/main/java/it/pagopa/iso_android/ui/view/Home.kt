@@ -51,7 +51,7 @@ fun HomeView(
         val granted = permissionsMap.filter {
             it.value
         }
-        if (granted.size == permissionsMap.size)
+        if (granted.size >= permissionsMap.size - 1)
             onNavigate.invoke(whereToGo.value)
         else
             Toast.makeText(
