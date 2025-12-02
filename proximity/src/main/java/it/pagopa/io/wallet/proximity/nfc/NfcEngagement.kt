@@ -13,9 +13,9 @@ import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 internal class NfcEngagement(
     context: Context
 ) : Engagement(context) {
-    private lateinit var nfcEngagementBuilder: NfcEngagementHelper.Builder
-    lateinit var nfcEngagementHelper: NfcEngagementHelper
-    override val nfcEngagementListener = object : NfcEngagementHelper.Listener {
+    private lateinit var nfcEngagementBuilder: NfcEngagementHelperRefactor.Builder
+    lateinit var nfcEngagementHelper: NfcEngagementHelperRefactor
+    override val nfcEngagementListener = object : NfcEngagementHelperRefactor.Listener {
         override fun onTwoWayEngagementDetected() {
             ProximityLogger.i(this@NfcEngagement.tag, "Two way engagement detected")
         }
@@ -49,7 +49,6 @@ internal class NfcEngagement(
                 nfcEngagementHelper.handover,
             ).build()
             deviceRetrievalHelper = DeviceRetrievalHelperWrapper(deviceRetrievalHelperBuilt)
-            nfcEngagementHelper.close()
             listener?.onDeviceConnected(
                 requireNotNull(
                     deviceRetrievalHelper
@@ -59,6 +58,7 @@ internal class NfcEngagement(
 
         override fun onError(error: Throwable) {
             ProximityLogger.e(this@NfcEngagement.tag, "Error: ${error.message}")
+            nfcEngagementHelper.close()
             listener?.onError(error)
         }
 
@@ -72,6 +72,7 @@ internal class NfcEngagement(
             if (deviceRetrievalHelper != null)
                 deviceRetrievalHelper!!.disconnect()
             nfcEngagementHelper.close()
+            deviceRetrievalHelper = null
         } catch (exception: RuntimeException) {
             ProximityLogger.e(this.javaClass.name, "Error closing NFC engagement $exception")
         }
@@ -96,20 +97,26 @@ internal class NfcEngagement(
          */
         fun build(context: Context, retrievalMethods: List<NfcRetrievalMethod>): NfcEngagement {
             return NfcEngagement(context).apply {
-                this@apply.retrievalMethods = retrievalMethods
-                this@apply.nfcEngagementBuilder = NfcEngagementHelper.Builder(
+                this@apply.retrievalMethods = retrievalMethods.map {
+                    it.useBluetooth = NfcEngagementEventBus.bluetoothOn
+                    it
+                }
+                this@apply.nfcEngagementBuilder = NfcEngagementHelperRefactor.Builder(
                     context,
                     this@apply.eDevicePrivateKey.publicKey,
                     this@apply.retrievalMethods.transportOptions,
                     this@apply.nfcEngagementListener,
-                    context.mainExecutor()
+                    context.mainExecutor(),
+                    usingBle = NfcEngagementEventBus.bluetoothOn
                 ).apply {
-                    if (retrievalMethods.any { it.useBluetooth }) {
-                        // With Bluetooth: use static handover to transfer connection info
-                        // Take only the FIRST connection method to avoid "too many advertisers" error (BLE limit ~3-5)
-                        val allConnectionMethods = retrievalMethods.connectionMethods
-                        val singleConnectionMethod = allConnectionMethods.take(1)
-                        useStaticHandover(singleConnectionMethod)
+                    if (NfcEngagementEventBus.bluetoothOn) {
+                        val originalMethods = retrievalMethods.connectionMethods
+                        ProximityLogger.i(
+                            "NfcEngagement",
+                            "Original connection methods (${originalMethods.size}): $originalMethods"
+                        )
+                        // Non chiamare combine() qui perché viene già fatto dentro useStaticHandover()
+                        useStaticHandover(originalMethods)
                     } else {
                         // NFC-only mode: use negotiated handover to establish the initial NDEF communication
                         // The actual data transfer will be handled by ApduManager using mDL AID

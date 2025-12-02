@@ -64,12 +64,8 @@ internal val List<DeviceRetrievalMethod>.transportOptions: DataTransportOptions
                     setBleClearCache(true)
             }
         }
+        setBleUseL2CAP(false)
     }.build()
 
 internal val List<DeviceRetrievalMethod>.connectionMethods: List<ConnectionMethod>
-    get() {
-        val methods = flatMap { it.connectionMethod }
-        // Restituisci solo metodi unici combinando quelli simili
-        // Questo previene la creazione di più BLE advertiser con lo stesso UUID
-        return ConnectionMethod.combine(methods)
-    }
+    get() = flatMap { it.connectionMethod }

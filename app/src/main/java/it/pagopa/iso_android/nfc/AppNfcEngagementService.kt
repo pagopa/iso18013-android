@@ -4,7 +4,6 @@ import it.pagopa.io.wallet.cbor.document_manager.DocManager
 import it.pagopa.io.wallet.cbor.model.Document
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementService
 import it.pagopa.io.wallet.proximity.nfc.NfcRetrievalMethod
-import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.iso_android.R
 
 class AppNfcEngagementService : NfcEngagementService() {
@@ -17,17 +16,13 @@ class AppNfcEngagementService : NfcEngagementService() {
         ).gelAllDocuments().toTypedArray()
     }
     override val alias: String by lazy { "SECURE_STORAGE_KEY_${baseContext.noBackupFilesDir}" }
-    // Set to true for Bluetooth handover after NFC engagement
-    // The reader requires NDEF handover with Bluetooth transport
-    override val useBluetooth: Boolean = true
     override val readerTrustStore: List<List<Any>> by lazy {
         listOf(listOf(R.raw.eudi_pid_issuer_ut))
     }
     override val retrievalMethods: List<NfcRetrievalMethod> = listOf(
         NfcRetrievalMethod(
             commandDataFieldMaxLength = 256L,
-            responseDataFieldMaxLength = 256L,
-            useBluetooth = useBluetooth
+            responseDataFieldMaxLength = 256L
         )
     )
 }

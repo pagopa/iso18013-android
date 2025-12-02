@@ -79,7 +79,6 @@ import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 abstract class NfcEngagementService : HostApduService() {
     abstract val docs: Array<Document>
     private var manager: ApduManager? = null
-    open val useBluetooth: Boolean = true
     abstract val alias: String
     private val nfcEngagement: NfcEngagement by lazy {
         NfcEngagement.build(this.baseContext, this.retrievalMethods).configure()
@@ -209,7 +208,7 @@ abstract class NfcEngagementService : HostApduService() {
     override fun processCommandApdu(
         commandApdu: ByteArray, extras: Bundle?
     ): ByteArray? {
-        val useBt = retrievalMethods.any { it.useBluetooth }
+        val useBt = NfcEngagementEventBus.bluetoothOn
         ProximityLogger.d(
             "NfcEngagementService",
             "processCommandApdu: useBluetooth=$useBt, apduSize=${commandApdu.size}"

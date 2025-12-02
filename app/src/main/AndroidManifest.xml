@@ -48,7 +48,6 @@
             android:label="@string/nfc_engagement_service_desc"
             android:permission="android.permission.BIND_NFC_SERVICE">
             <intent-filter>
-                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
                 <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
@@ -58,22 +57,6 @@
                 android:resource="@xml/nfc_engagement_apdu_service" />
         </service>
 
-        <!-- NFC Exchange Service: For direct mDL data transfer -->
-        <!-- FALLBACK: Handles mDL AID if reader doesn't use NDEF handover -->
-        <service
-            android:name=".nfc.AppNfcExchangeService"
-            android:exported="true"
-            android:label="@string/nfc_exchange_service_desc"
-            android:permission="android.permission.BIND_NFC_SERVICE">
-            <intent-filter>
-                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
-                <category android:name="android.intent.category.DEFAULT"/>
-            </intent-filter>
-
-            <meta-data
-                android:name="android.nfc.cardemulation.host_apdu_service"
-                android:resource="@xml/nfc_exchange_apdu_service" />
-        </service>
         <activity
             android:name="it.pagopa.iso_android.MainActivity"
             android:configChanges="keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout|uiMode"

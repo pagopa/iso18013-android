@@ -5,7 +5,6 @@ import android.os.Build
 import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import com.android.identity.android.mdoc.deviceretrieval.DeviceRetrievalHelper
-import com.android.identity.android.mdoc.engagement.NfcEngagementHelper
 import com.android.identity.android.mdoc.engagement.QrEngagementHelper
 import com.android.identity.android.mdoc.transport.DataTransport
 import com.android.identity.crypto.Crypto
@@ -17,6 +16,7 @@ import com.android.identity.util.Constants
 import com.android.identity.util.Logger
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.document.reader_auth.ReaderTrustStore
+import it.pagopa.io.wallet.proximity.nfc.NfcEngagementHelperRefactor
 import it.pagopa.io.wallet.proximity.qr_code.toReaderAuthWith
 import it.pagopa.io.wallet.proximity.qr_code.toReaderTrustStore
 import it.pagopa.io.wallet.proximity.request.RequestWrapper
@@ -99,7 +99,7 @@ abstract class Engagement(val context: Context) {
     }
 
     open val qrEngagementListener: QrEngagementHelper.Listener? = null
-    open val nfcEngagementListener: NfcEngagementHelper.Listener? = null
+    open val nfcEngagementListener: NfcEngagementHelperRefactor.Listener? = null
 
     @OptIn(ExperimentalEncodingApi::class)
     protected val deviceRetrievalHelperListener = object : DeviceRetrievalHelper.Listener {
@@ -128,7 +128,7 @@ abstract class Engagement(val context: Context) {
                 ProximityLogger.i("SESSION TRANSCRIPT", b64Session)
             }
             val requestWrapperList = arrayListOf<JSONObject?>()
-            listRequested.forEach{ each->
+            listRequested.forEach { each ->
                 (each toReaderAuthWith this@Engagement.readerTrustStores).let {
                     requestWrapperList.add(
                         RequestWrapper(

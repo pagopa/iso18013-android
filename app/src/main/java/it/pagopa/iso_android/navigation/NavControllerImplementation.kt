@@ -38,10 +38,10 @@ import it.pagopa.iso_android.ui.view_model.SignAndVerifyViewViewModel
 import it.pagopa.iso_android.ui.view_model.SlaveViewViewModel
 import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
 import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
+import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEventBus
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementService
 import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
 import it.pagopa.iso_android.nfc.AppNfcEngagementService
-import it.pagopa.iso_android.nfc.AppNfcExchangeService
 import it.pagopa.iso_android.ui.view.NfcEngagementView
 import it.pagopa.iso_android.ui.view_model.NfcEngagementViewModel
 
@@ -110,6 +110,7 @@ fun MainActivity?.IsoAndroidPocNavHost(
         customAnimatedComposable<HomeDestination.MasterNfc> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val context = LocalContext.current
+            NfcEngagementEventBus.bluetoothOn = true
             NfcEngagementService.enable(
                 context.getActivity()!!,
                 AppNfcEngagementService::class.java
@@ -133,9 +134,10 @@ fun MainActivity?.IsoAndroidPocNavHost(
         customAnimatedComposable<HomeDestination.MasterNfcExchange> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val context = LocalContext.current
+            NfcEngagementEventBus.bluetoothOn = false
             NfcEngagementService.enable(
                 context.getActivity()!!,
-                AppNfcExchangeService::class.java
+                AppNfcEngagementService::class.java
             )
             val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
                 DocManager.getInstance(

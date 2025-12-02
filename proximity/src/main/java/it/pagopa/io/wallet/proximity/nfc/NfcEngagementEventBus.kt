@@ -16,4 +16,6 @@ object NfcEngagementEventBus {
     fun tryEmit(event: NfcEngagementEvent) {
         _events.tryEmit(event)
     }
+
+    var bluetoothOn = true
 }
