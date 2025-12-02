@@ -40,6 +40,8 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.IsoPocAndroid"
         tools:targetApi="31">
+        <!-- NFC Engagement Service: For NFC handover to Bluetooth -->
+        <!-- ENABLED: Handles NDEF AID and establishes Bluetooth connection -->
         <service
             android:name=".nfc.AppNfcEngagementService"
             android:exported="true"
@@ -55,6 +57,23 @@
                 android:name="android.nfc.cardemulation.host_apdu_service"
                 android:resource="@xml/nfc_engagement_apdu_service" />
         </service>
+
+        <!-- NFC Exchange Service: For direct mDL data transfer -->
+        <!-- FALLBACK: Handles mDL AID if reader doesn't use NDEF handover -->
+        <service
+            android:name=".nfc.AppNfcExchangeService"
+            android:exported="true"
+            android:label="@string/nfc_exchange_service_desc"
+            android:permission="android.permission.BIND_NFC_SERVICE">
+            <intent-filter>
+                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+
+            <meta-data
+                android:name="android.nfc.cardemulation.host_apdu_service"
+                android:resource="@xml/nfc_exchange_apdu_service" />
+        </service>
         <activity
             android:name="it.pagopa.iso_android.MainActivity"
             android:configChanges="keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout|uiMode"
@@ -63,7 +82,6 @@
             android:windowSoftInputMode="adjustPan|adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

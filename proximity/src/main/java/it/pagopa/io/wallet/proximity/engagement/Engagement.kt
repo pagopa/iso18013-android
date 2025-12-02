@@ -54,7 +54,7 @@ abstract class Engagement(val context: Context) {
     }
 
     protected var retrievalMethods: List<DeviceRetrievalMethod> = listOf()
-    private var readerTrustStores: List<ReaderTrustStore?>? = null
+    var readerTrustStores: List<ReaderTrustStore?>? = null
     protected var listener: EngagementListener? = null
     protected var deviceRetrievalHelper: DeviceRetrievalHelperWrapper? = null
     protected val eDevicePrivateKey by lazy {

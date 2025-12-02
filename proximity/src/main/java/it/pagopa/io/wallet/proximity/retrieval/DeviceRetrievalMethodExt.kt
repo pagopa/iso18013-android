@@ -8,19 +8,21 @@ import com.android.identity.util.UUID
 import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
 import it.pagopa.io.wallet.proximity.nfc.NfcRetrievalMethod
 
+// Genera un UUID BLE una sola volta per la sessione
+private val bleSessionUuid: UUID by lazy { UUID.randomUUID() }
+
 internal val DeviceRetrievalMethod.connectionMethod: List<ConnectionMethod>
     get() = when (this) {
         is BleRetrievalMethod -> {
             if (!peripheralServerMode && !centralClientMode) emptyList()
             else {
                 mutableListOf<ConnectionMethod>().apply {
-                    val randomUUID = UUID.randomUUID()
                     add(
                         ConnectionMethodBle(
                             peripheralServerMode,
                             centralClientMode,
-                            if (peripheralServerMode) randomUUID else null,
-                            if (centralClientMode) randomUUID else null
+                            if (peripheralServerMode) bleSessionUuid else null,
+                            if (centralClientMode) bleSessionUuid else null
                         )
                     )
                 }
@@ -29,13 +31,14 @@ internal val DeviceRetrievalMethod.connectionMethod: List<ConnectionMethod>
 
         is NfcRetrievalMethod -> mutableListOf<ConnectionMethod>().apply {
             if (this@connectionMethod.useBluetooth) {
-                val randomUUID = UUID.randomUUID()
+                // Solo peripheral server mode per NFC-based BLE handover
+                // Usa lo stesso UUID della sessione
                 add(
                     ConnectionMethodBle(
-                        true,
-                        false,
-                        randomUUID,
-                        null
+                        supportsPeripheralServerMode = true,
+                        supportsCentralClientMode = false,
+                        peripheralServerModeUuid = bleSessionUuid,
+                        centralClientModeUuid = null  // Deve essere null se non supporta central client
                     )
                 )
             } else {
@@ -64,4 +67,9 @@ internal val List<DeviceRetrievalMethod>.transportOptions: DataTransportOptions
     }.build()
 
 internal val List<DeviceRetrievalMethod>.connectionMethods: List<ConnectionMethod>
-    get() = flatMap { it.connectionMethod }
+    get() {
+        val methods = flatMap { it.connectionMethod }
+        // Restituisci solo metodi unici combinando quelli simili
+        // Questo previene la creazione di più BLE advertiser con lo stesso UUID
+        return ConnectionMethod.combine(methods)
+    }

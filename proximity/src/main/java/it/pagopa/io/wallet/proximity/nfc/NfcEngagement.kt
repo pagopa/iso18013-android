@@ -104,7 +104,17 @@ internal class NfcEngagement(
                     this@apply.nfcEngagementListener,
                     context.mainExecutor()
                 ).apply {
-                    useStaticHandover(retrievalMethods.connectionMethods)
+                    if (retrievalMethods.any { it.useBluetooth }) {
+                        // With Bluetooth: use static handover to transfer connection info
+                        // Take only the FIRST connection method to avoid "too many advertisers" error (BLE limit ~3-5)
+                        val allConnectionMethods = retrievalMethods.connectionMethods
+                        val singleConnectionMethod = allConnectionMethods.take(1)
+                        useStaticHandover(singleConnectionMethod)
+                    } else {
+                        // NFC-only mode: use negotiated handover to establish the initial NDEF communication
+                        // The actual data transfer will be handled by ApduManager using mDL AID
+                        useNegotiatedHandover()
+                    }
                 }
             }
         }

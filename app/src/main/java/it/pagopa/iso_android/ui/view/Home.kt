@@ -132,6 +132,21 @@ fun HomeView(
                     ).show()
                 }
             }
+        }, PopUpMenuItem("Only Nfc") {
+            val nfcChecks = NfcChecks(context)
+            if (!nfcChecks.isNfcAvailable())
+                nfcChecks.openNfcSettings()
+            else {
+                if (nfcChecks.isNfcReadyForEngagement()) {
+                    whereToGo.value = HomeDestination.MasterNfcExchange
+                    onNavigate.invoke(HomeDestination.MasterNfcExchange)
+                } else {
+                    Toast.makeText(
+                        context, "Sorry, but your device has not card emulation feature",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
         }))
         TwoButtonsInARow(leftBtnText = "do as Master", leftBtnAction = {
             val nfcChecks = NfcChecks(context)

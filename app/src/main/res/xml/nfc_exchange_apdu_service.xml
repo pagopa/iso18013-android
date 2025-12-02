@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NFC Exchange Service: NFC-only data transfer without Bluetooth handover -->
+<host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/nfc_exchange_service_desc"
+    android:requireDeviceUnlock="true"
+    android:apduServiceBanner="@drawable/ic_launcher_foreground">
+
+    <aid-group
+        android:description="@string/exchange_aid_group_desc"
+        android:category="payment">
+        <!-- mDL Data Transfer AID ONLY - for direct NFC data exchange -->
+        <aid-filter android:name="A0000002480400" />
+    </aid-group>
+
+</host-apdu-service>
+

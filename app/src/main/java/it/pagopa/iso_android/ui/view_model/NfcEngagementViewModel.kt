@@ -35,7 +35,6 @@ class NfcEngagementViewModel(
                             "onCommunicationError: ${event.error.message}"
                         )
                         loader.value = null
-                        _shouldGoBack.value = true
                     }
 
                     is NfcEngagementEvent.DocumentRequestReceived -> {

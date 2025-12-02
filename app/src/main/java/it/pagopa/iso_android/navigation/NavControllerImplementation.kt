@@ -41,6 +41,7 @@ import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementService
 import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
 import it.pagopa.iso_android.nfc.AppNfcEngagementService
+import it.pagopa.iso_android.nfc.AppNfcExchangeService
 import it.pagopa.iso_android.ui.view.NfcEngagementView
 import it.pagopa.iso_android.ui.view_model.NfcEngagementViewModel
 
@@ -112,6 +113,29 @@ fun MainActivity?.IsoAndroidPocNavHost(
             NfcEngagementService.enable(
                 context.getActivity()!!,
                 AppNfcEngagementService::class.java
+            )
+            val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
+                DocManager.getInstance(
+                    context = context,
+                    storageDirectory = context.noBackupFilesDir,
+                    prefix = "SECURE_STORAGE",
+                    alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
+                ),
+                context.resources
+            )
+            NfcEngagementView(viewModel = viewModel, onBack = {
+                backLogic(showMenu) {
+                    navController.popBackStack()
+                }
+            })
+        }
+
+        customAnimatedComposable<HomeDestination.MasterNfcExchange> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
+            val context = LocalContext.current
+            NfcEngagementService.enable(
+                context.getActivity()!!,
+                AppNfcExchangeService::class.java
             )
             val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
                 DocManager.getInstance(
