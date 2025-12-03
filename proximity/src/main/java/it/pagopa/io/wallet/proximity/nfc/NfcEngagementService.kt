@@ -75,9 +75,9 @@ import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
  * @constructor
  */
 abstract class NfcEngagementService : HostApduService() {
-    abstract val docs: Array<Document>
+    open val docs: Array<Document> = arrayOf()
     private var manager: ApduManager? = null
-    abstract val alias: String
+    open val alias: String =""
     private val nfcEngagement: NfcEngagement by lazy {
         NfcEngagement.build(this.baseContext, listOf(NfcRetrievalMethod())).configure()
     }

@@ -1,20 +1,9 @@
 package it.pagopa.iso_android.nfc
 
-import it.pagopa.io.wallet.cbor.document_manager.DocManager
-import it.pagopa.io.wallet.cbor.model.Document
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementService
 import it.pagopa.iso_android.R
 
 class AppNfcEngagementService : NfcEngagementService() {
-    override val docs: Array<Document> by lazy {
-        DocManager.getInstance(
-            context = baseContext,
-            storageDirectory = baseContext.noBackupFilesDir,
-            prefix = "SECURE_STORAGE",
-            alias = "SECURE_STORAGE_KEY_${baseContext.noBackupFilesDir}"
-        ).gelAllDocuments().toTypedArray()
-    }
-    override val alias: String by lazy { "SECURE_STORAGE_KEY_${baseContext.noBackupFilesDir}" }
     override val readerTrustStore: List<List<Any>> by lazy {
         listOf(listOf(R.raw.eudi_pid_issuer_ut))
     }
