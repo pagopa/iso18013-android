@@ -54,13 +54,41 @@ internal class ApduManager(
         if (selectedAid.contentEquals(NfcUtil.AID_FOR_MDL_DATA_TRANSFER)) {
             ProximityLogger.d(tag, "handleSelectByAid: mDL data transfer AID selected")
             resetApduDataRetrievalState()
-            return NfcUtil.STATUS_WORD_OK
+            val fci = buildFciTemplate(selectedAid)
+            ProximityLogger.d(tag, "handleSelectByAid: Returning FCI, size=${fci.size}")
+            
+            val response = ByteArray(fci.size + 2)
+            System.arraycopy(fci, 0, response, 0, fci.size)
+            response[fci.size] = 0x90.toByte()
+            response[fci.size + 1] = 0x00.toByte()
+            
+            return response
         }
         ProximityLogger.d(
             tag,
             "handleSelectByAid: Unexpected AID selected in APDU:${Utils.bytesToHex(apdu)}"
         )
         return NfcUtil.STATUS_WORD_FILE_NOT_FOUND
+    }
+    
+    /**
+     * It builds FCI (File Control Information) Template respect ISO 18013-5
+     * 
+     * FCI Template structure:
+     * - Tag 6F (FCI Template)
+     *   - Tag 84 (DF Name = AID)
+     *   - Tag A5 (FCI Proprietary Template) - optional
+     *     - Tag 9F38 (Processing Options Data Object List - PDOL) - optional
+     */
+    private fun buildFciTemplate(aid: ByteArray): ByteArray {
+        // Tag 84: DF Name (AID)
+        val dfName = byteArrayOf(0x84.toByte(), aid.size.toByte()) + aid
+        
+        // Tag 6F: FCI Template
+        val fciLength = dfName.size
+        val fci = byteArrayOf(0x6F.toByte(), fciLength.toByte()) + dfName
+        
+        return fci
     }
 
     // ENVELOPE (INS=C3)

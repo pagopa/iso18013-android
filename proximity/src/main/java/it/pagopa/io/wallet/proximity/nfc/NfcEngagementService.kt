@@ -8,10 +8,8 @@ import android.nfc.cardemulation.HostApduService
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Base64
 import com.android.identity.android.util.NfcUtil
 import it.pagopa.io.wallet.cbor.model.Document
-import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.engagement.EngagementListener
 import it.pagopa.io.wallet.proximity.nfc.apdu.ApduManager
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
@@ -81,10 +79,9 @@ abstract class NfcEngagementService : HostApduService() {
     private var manager: ApduManager? = null
     abstract val alias: String
     private val nfcEngagement: NfcEngagement by lazy {
-        NfcEngagement.build(this.baseContext, this.retrievalMethods).configure()
+        NfcEngagement.build(this.baseContext, listOf(NfcRetrievalMethod())).configure()
     }
     open val readerTrustStore: List<List<Any>> = listOf()
-    open val retrievalMethods: List<NfcRetrievalMethod> = listOf(NfcRetrievalMethod())
 
     companion object {
 
@@ -111,7 +108,6 @@ abstract class NfcEngagementService : HostApduService() {
          */
         @JvmStatic
         fun disable(activity: Activity) {
-            // unset preferred Nfc Engagement Service
             unsetAsPreferredNfcEngagementService(activity)
         }
 
@@ -208,73 +204,37 @@ abstract class NfcEngagementService : HostApduService() {
     override fun processCommandApdu(
         commandApdu: ByteArray, extras: Bundle?
     ): ByteArray? {
-        val useBt = NfcEngagementEventBus.bluetoothOn
-        ProximityLogger.d(
-            "NfcEngagementService",
-            "processCommandApdu: useBluetooth=$useBt, apduSize=${commandApdu.size}"
-        )
-
-        if (useBt) {
-            ProximityLogger.d(
-                "NfcEngagementService",
-                "Delegating to NfcEngagementHelper (Bluetooth mode)"
-            )
+        if (NfcEngagementEventBus.bluetoothOn)
             return this.nfcEngagement.nfcEngagementHelper.nfcProcessCommandApdu(commandApdu)
-        }
-
-        if (manager == null) {
-            ProximityLogger.i("NfcEngagementService", "Creating ApduManager (NFC-only mode)")
+        if (manager == null)
             manager = ApduManager(nfcEngagement, docs, alias)
-        }
-
-        val commandType = NfcUtil.nfcGetCommandType(commandApdu)
-        if (ProximityLogger.enabled)
-            ProximityLogger.i("APDU_COMMAND", Base64.encodeToString(commandApdu, Base64.DEFAULT))
-        ProximityLogger.i("CMD TYPE", commandType.toString())
-
-        return when (commandType) {
+        return when (NfcUtil.nfcGetCommandType(commandApdu)) {
             NfcUtil.COMMAND_TYPE_SELECT_BY_AID -> {
                 manager?.let {
                     val selectedAid = commandApdu.copyOfRange(5, 12)
                     if (selectedAid.contentEquals(NfcUtil.AID_FOR_TYPE_4_TAG_NDEF_APPLICATION)) {
-                        ProximityLogger.d(
-                            "NfcEngagementService",
-                            "NDEF AID detected, delegating to NfcEngagementHelper"
-                        )
-                        this.nfcEngagement.nfcEngagementHelper.nfcProcessCommandApdu(commandApdu)
-                    } else {
-                        ProximityLogger.d(
-                            "NfcEngagementService",
-                            "MDL AID detected, using ApduManager"
-                        )
+                        //NDEF AID detected but NFC-only mode is forced - rejecting
+                        NfcUtil.STATUS_WORD_FILE_NOT_FOUND
+                    } else if (selectedAid.contentEquals(NfcUtil.AID_FOR_MDL_DATA_TRANSFER)) {
+                        //MDL AID detected, using ApduManager for NFC-only
                         it.handleSelectByAid(commandApdu)
+                    } else {
+                        //Unknown AID, rejecting
+                        NfcUtil.STATUS_WORD_FILE_NOT_FOUND
                     }
                 } ?: run {
-                    ProximityLogger.d(
-                        "NfcEngagementService",
-                        "Manager null, fallback to NfcEngagementHelper"
-                    )
-                    this.nfcEngagement.nfcEngagementHelper.nfcProcessCommandApdu(commandApdu)
+                    //Manager null in NFC-only mode - this shouldn't happen
+                    NfcUtil.STATUS_WORD_FILE_NOT_FOUND
                 }
             }
 
-            NfcUtil.COMMAND_TYPE_ENVELOPE -> {
-                ProximityLogger.d("NfcEngagementService", "ENVELOPE command, using ApduManager")
-                manager?.handleEnvelope(commandApdu)
-            }
+            NfcUtil.COMMAND_TYPE_ENVELOPE -> manager?.handleEnvelope(commandApdu)
+                ?: NfcUtil.STATUS_WORD_FILE_NOT_FOUND
 
-            NfcUtil.COMMAND_TYPE_RESPONSE -> {
-                ProximityLogger.d("NfcEngagementService", "GET RESPONSE command, using ApduManager")
-                manager?.handleGetResponse(commandApdu)
-            }
+            NfcUtil.COMMAND_TYPE_RESPONSE -> manager?.handleGetResponse(commandApdu)
+                ?: NfcUtil.STATUS_WORD_FILE_NOT_FOUND
 
-            else -> {
-                ProximityLogger.d(
-                    "NfcEngagementService",
-                    "Unknown command type, delegating to NfcEngagementHelper"
-                )
-                this.nfcEngagement.nfcEngagementHelper.nfcProcessCommandApdu(commandApdu)
-            }
+            else -> NfcUtil.STATUS_WORD_FILE_NOT_FOUND
         }
     }
 }

@@ -20,8 +20,6 @@ import com.android.identity.mdoc.engagement.EngagementGenerator
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.nfc.apdu.Utils
 import kotlinx.coroutines.Job
-import java.io.ByteArrayOutputStream
-import java.io.IOException
 import java.util.concurrent.Executor
 
 /**
@@ -52,8 +50,6 @@ class NfcEngagementHelperRefactor private constructor(
     private val context: Context,
     private val eDeviceKey: EcPublicKey,
     private val options: DataTransportOptions,
-    private val negotiatedHandoverWtInt: Int,
-    private val negotiatedHandoverMaxNumWaitingTimeExtensions: Int,
     private val listener: Listener,
     private val executor: Executor,
     private val usingBle: Boolean = true
@@ -87,8 +83,6 @@ class NfcEngagementHelperRefactor private constructor(
     private var handoverSelectMessage: ByteArray? = null
     private var handoverRequestMessage: ByteArray? = null
 
-    private var mUsingNegotiatedHandover = false
-
     private var negotiatedHandoverState = NEGOTIATED_HANDOVER_STATE_NOT_STARTED
     private var selectedNfcFile: ByteArray? = null
     private var peerConnected = false
@@ -113,7 +107,6 @@ class NfcEngagementHelperRefactor private constructor(
             ProximityLogger.i(TAG, "Closed $numTransportsClosed transports")
             transports.clear()
         }
-        negotiatedHandoverState = NEGOTIATED_HANDOVER_STATE_NOT_STARTED
         selectedNfcFile = null
         transportsSetupTimestamp = 0
     }
@@ -173,7 +166,7 @@ class NfcEngagementHelperRefactor private constructor(
             transport.setListener(object : DataTransport.Listener {
                 override fun onConnecting() {
                     ProximityLogger.i(TAG, "onConnecting for $transport")
-                    peerIsConnecting(transport)
+                    peerIsConnecting()
                 }
 
                 override fun onConnected() {
@@ -288,48 +281,6 @@ class NfcEngagementHelperRefactor private constructor(
         return NfcUtil.STATUS_WORD_FILE_NOT_FOUND
     }
 
-    private fun calculateNegotiatedHandoverInitialNdefMessage(): ByteArray {
-        // From 18013-5: When Negotiated Handover is used, the mdoc shall include the
-        // "urn:nfc:sn:handover" service in a Service Parameter record in the Initial NDEF
-        // message provided to the mdoc reader
-
-        // From Connection Handover 1.5 section 4.1.2: For Negotiated Handover in
-        // Reader/Writer Mode, handover messages SHALL be exchanged as described for the
-        // Single response communication mode in [TNEP]. The Service name URI for the
-        // service announced in the Service Parameter record SHALL be "urn:nfc:sn:handover"
-
-        // From Tag NDEF Exchange Protocol 1.0 section 4.1.2: The Service Parameter Record
-        // is a short NDEF Record that does not include an ID field, but its Type field
-        // contains the NFC Forum Well Known Type (see [RTD]) “Tp”.
-        //
-        val serviceNameUriUtf8 = "urn:nfc:sn:handover".toByteArray()
-        val baos = ByteArrayOutputStream()
-        try {
-            // The payload of the record is defined in Tag NDEF Exchange Protocol 1.0 section 4.1.2:
-            baos.write(0x10) // TNEP version: 1.0
-            baos.write(serviceNameUriUtf8.size)
-            baos.write(serviceNameUriUtf8)
-            baos.write(0x00) // TNEP Communication Mode: Single Response communication mode
-            baos.write(negotiatedHandoverWtInt) // Minimum Waiting Time
-            baos.write(negotiatedHandoverMaxNumWaitingTimeExtensions) // Maximum Number of Waiting Time Extensions
-            baos.write(0xff) // Maximum NDEF Message Size (upper 8 bits)
-            baos.write(0xff) // Maximum NDEF Message Size (lower 8 bits)
-        } catch (e: IOException) {
-            throw IllegalStateException(e)
-        }
-        val payload = baos.toByteArray()
-        val record = NdefRecord(
-            NdefRecord.TNF_WELL_KNOWN,
-            "Tp".toByteArray(),
-            null,
-            payload
-        )
-        val arrayOfRecords = arrayOfNulls<NdefRecord>(1)
-        arrayOfRecords[0] = record
-        val message = NdefMessage(arrayOfRecords)
-        return message.toByteArray()
-    }
-
     private fun handleSelectFile(apdu: ByteArray): ByteArray {
         if (apdu.size < 7) {
             ProximityLogger.i(TAG, "handleSelectFile: unexpected APDU length " + apdu.size)
@@ -341,7 +292,6 @@ class NfcEngagementHelperRefactor private constructor(
         if (fileId == NfcUtil.CAPABILITY_CONTAINER_FILE_ID) {
             // This is defined in NFC Forum Type 4 Tag Technical Specification v1.2 table 6
             // and section 4.7.3 NDEF-File_Ctrl_TLV
-            val fileWriteAccessCondition = if (mUsingNegotiatedHandover) 0x00 else 0xff.toByte()
             selectedNfcFile = byteArrayOf(
                 0x00.toByte(),
                 0x0f.toByte(),
@@ -357,84 +307,69 @@ class NfcEngagementHelperRefactor private constructor(
                 0x7f.toByte(),
                 0xff.toByte(),
                 0x00.toByte(),  // file read access condition (allow read)
-                fileWriteAccessCondition // file write access condition (allow/disallow write)
+                0xff.toByte() // file write access condition (allow/disallow write)
             )
             ProximityLogger.i(TAG, "handleSelectFile: CAPABILITY file selected")
         } else if (fileId == NfcUtil.NDEF_FILE_ID) {
-            if (mUsingNegotiatedHandover) {
+            ProximityLogger.i(
+                TAG, "handleSelectFile: NDEF file selected and using static "
+                        + "handover - setting up transports"
+            )
+            val cmsFromTransports = setupTransports(
+                staticHandoverConnectionMethods!!
+            )
+
+            ProximityLogger.i(
+                TAG,
+                "handleSelectFile: Creating handover message with ${cmsFromTransports.size} connection method(s)"
+            )
+            for ((index, cm) in cmsFromTransports.withIndex()) {
+                ProximityLogger.i(TAG, "handleSelectFile: Connection method #${index + 1}: $cm")
+            }
+            val hsMessage = NfcUtil.createNdefMessageHandoverSelect(
+                cmsFromTransports,
+                deviceEngagement,
+                options
+            )
+            ProximityLogger.dHex(TAG, "handleSelectFile: Handover Select", hsMessage)
+
+            // Log dettagliato dei record NDEF
+            try {
+                val ndefMsg = NdefMessage(hsMessage)
                 ProximityLogger.i(
                     TAG,
-                    "handleSelectFile: NDEF file selected and using negotiated handover"
+                    "handleSelectFile: Handover Select contains ${ndefMsg.records.size} NDEF record(s)"
                 )
-                val message = calculateNegotiatedHandoverInitialNdefMessage()
-                ProximityLogger.dHex(TAG, "handleSelectFile: Initial NDEF message", message)
-                val fileContents = ByteArray(message.size + 2)
-                fileContents[0] = (message.size / 256).toByte()
-                fileContents[1] = (message.size and 0xff).toByte()
-                System.arraycopy(message, 0, fileContents, 2, message.size)
-                selectedNfcFile = fileContents
-                negotiatedHandoverState = NEGOTIATED_HANDOVER_STATE_EXPECT_SERVICE_SELECT
-            } else {
-                ProximityLogger.i(
-                    TAG, "handleSelectFile: NDEF file selected and using static "
-                            + "handover - setting up transports"
-                )
-                val cmsFromTransports = setupTransports(
-                    staticHandoverConnectionMethods!!
-                )
-
-                ProximityLogger.i(
-                    TAG,
-                    "handleSelectFile: Creating handover message with ${cmsFromTransports.size} connection method(s)"
-                )
-                for ((index, cm) in cmsFromTransports.withIndex()) {
-                    ProximityLogger.i(TAG, "handleSelectFile: Connection method #${index + 1}: $cm")
-                }
-                val hsMessage = NfcUtil.createNdefMessageHandoverSelect(
-                    cmsFromTransports,
-                    deviceEngagement,
-                    options
-                )
-                ProximityLogger.dHex(TAG, "handleSelectFile: Handover Select", hsMessage)
-
-                // Log dettagliato dei record NDEF
-                try {
-                    val ndefMsg = NdefMessage(hsMessage)
+                for ((index, record) in ndefMsg.records.withIndex()) {
+                    val typeStr = String(record.type)
+                    val idStr = if (record.id != null) String(record.id) else "null"
                     ProximityLogger.i(
                         TAG,
-                        "handleSelectFile: Handover Select contains ${ndefMsg.records.size} NDEF record(s)"
-                    )
-                    for ((index, record) in ndefMsg.records.withIndex()) {
-                        val typeStr = String(record.type)
-                        val idStr = if (record.id != null) String(record.id) else "null"
-                        ProximityLogger.i(
-                            TAG,
-                            "  Record #${index + 1}: TNF=${record.tnf}, Type='$typeStr', ID='$idStr', PayloadSize=${record.payload?.size ?: 0}"
-                        )
-                    }
-                } catch (e: Exception) {
-                    ProximityLogger.e(
-                        TAG,
-                        "handleSelectFile: Error parsing NDEF message for logging: $e"
+                        "  Record #${index + 1}: TNF=${record.tnf}, Type='$typeStr', ID='$idStr', PayloadSize=${record.payload?.size ?: 0}"
                     )
                 }
-                val fileContents = ByteArray(hsMessage.size + 2)
-                fileContents[0] = (hsMessage.size / 256).toByte()
-                fileContents[1] = (hsMessage.size and 0xff).toByte()
-                System.arraycopy(hsMessage, 0, fileContents, 2, hsMessage.size)
-                selectedNfcFile = fileContents
-                handoverSelectMessage = hsMessage
-                handoverRequestMessage = null
-                handover = Cbor.encode(
-                    CborArray.builder()
-                        .add(handoverSelectMessage!!) // Handover Select message
-                        .add(Simple.NULL)             // Handover Request message
-                        .end()
-                        .build()
+            } catch (e: Exception) {
+                ProximityLogger.e(
+                    TAG,
+                    "handleSelectFile: Error parsing NDEF message for logging: $e"
                 )
-                ProximityLogger.dCbor(TAG, "NFC static DeviceEngagement", deviceEngagement)
-                ProximityLogger.dCbor(TAG, "NFC static Handover", handover)
             }
+            val fileContents = ByteArray(hsMessage.size + 2)
+            fileContents[0] = (hsMessage.size / 256).toByte()
+            fileContents[1] = (hsMessage.size and 0xff).toByte()
+            System.arraycopy(hsMessage, 0, fileContents, 2, hsMessage.size)
+            selectedNfcFile = fileContents
+            handoverSelectMessage = hsMessage
+            handoverRequestMessage = null
+            handover = Cbor.encode(
+                CborArray.builder()
+                    .add(handoverSelectMessage!!) // Handover Select message
+                    .add(Simple.NULL)             // Handover Request message
+                    .end()
+                    .build()
+            )
+            ProximityLogger.dCbor(TAG, "NFC static DeviceEngagement", deviceEngagement)
+            ProximityLogger.dCbor(TAG, "NFC static Handover", handover)
         } else {
             ProximityLogger.i(TAG, "handleSelectFile: Unknown file selected with id $fileId")
             return NfcUtil.STATUS_WORD_FILE_NOT_FOUND
@@ -485,9 +420,9 @@ class NfcEngagementHelperRefactor private constructor(
         // Il CAPABILITY file è piccolo (15 bytes), il file NDEF con Handover Select è molto più grande (200+ bytes)
         val isLastRead = offset + size == contents.size
         val isLargeNdefFile = contents.size > 100 // Il file NDEF è > 100 bytes, CAPABILITY è 15
-        val shouldDelayForBle = usingBle && !mUsingNegotiatedHandover &&
-                handoverSelectMessage != null && isLastRead && isLargeNdefFile &&
-                transportsSetupTimestamp > 0
+        val shouldDelayForBle =
+            usingBle && handoverSelectMessage != null && isLastRead && isLargeNdefFile &&
+                    transportsSetupTimestamp > 0
 
         if (shouldDelayForBle) {
             val timeSinceSetup = System.currentTimeMillis() - transportsSetupTimestamp
@@ -528,7 +463,7 @@ class NfcEngagementHelperRefactor private constructor(
 
         // Chiamata reportHandoverSelectMessageSent() solo quando tutti i byte sono stati letti
         if ((negotiatedHandoverState == NEGOTIATED_HANDOVER_STATE_EXPECT_HANDOVER_SELECT ||
-                    (!mUsingNegotiatedHandover && handoverSelectMessage != null))
+                    (handoverSelectMessage != null))
             && isLastRead
         ) {
             reportHandoverSelectMessageSent()
@@ -718,30 +653,6 @@ class NfcEngagementHelperRefactor private constructor(
         }
         val parsedCms = mutableListOf<ConnectionMethod>()
         for (r in records) {
-            // Handle Handover Request record for NFC Forum Connection Handover specification
-            // version 1.5 (encoded as 0x15 below).
-            //
-            if (r.tnf == NdefRecord.TNF_WELL_KNOWN
-                && r.type.contentEquals("Hr".toByteArray())
-            ) {
-                val payload = r.payload
-                if (payload.size >= 1 && payload[0].toInt() == 0x15) {
-                    val hrEmbMessageData = payload.copyOfRange(1, payload.size)
-                    var hrEmbMessage = try {
-                        NdefMessage(hrEmbMessageData)
-                    } catch (e: FormatException) {
-                        ProximityLogger.e(
-                            TAG,
-                            "handleHandoverRequest: Error parsing embedded HR NdefMessage: $e"
-                        )
-                        negotiatedHandoverState = NEGOTIATED_HANDOVER_STATE_NOT_STARTED
-                        return NfcUtil.STATUS_WORD_WRONG_PARAMETERS
-                    }
-                }
-                val hrEmbMessageRecords = message.records
-                // TODO: actually look at these records...
-            }
-
             // This parses the various carrier specific NDEF records, see
             // DataTransport.parseNdefRecord() for details.
             //
@@ -762,9 +673,6 @@ class NfcEngagementHelperRefactor private constructor(
         for (cm in disambiguatedCms) {
             ProximityLogger.i(TAG, "Have connectionMethod: $cm")
         }
-
-        // TODO: add a method to the Listener so the application can select which one to use.
-        //  For now we just pick the first method.
         val method = disambiguatedCms[0]
         val listWithSelectedConnectionMethod = mutableListOf<ConnectionMethod>()
         listWithSelectedConnectionMethod.add(method)
@@ -811,7 +719,7 @@ class NfcEngagementHelperRefactor private constructor(
         return message.toByteArray()
     }
 
-    fun peerIsConnecting(transport: DataTransport) {
+    fun peerIsConnecting() {
         if (!reportedDeviceConnecting) {
             reportedDeviceConnecting = true
             reportDeviceConnecting()
@@ -962,28 +870,14 @@ class NfcEngagementHelperRefactor private constructor(
         executor: Executor,
         usingBle: Boolean
     ) {
-        var helper: NfcEngagementHelperRefactor
-
-        init {
-            // For now we just hardcode wt_int to 16 meaning the Minimum Waiting Time shall
-            // be 8 ms as per the table in [TNEP] 4.1.6 Minimum Waiting Time. We also include
-            // the maximum number of waiting time extensions to be set at 15 which is the
-            // maximum allowed. This is only used for negotiated handover and - if needed - we
-            // could expose these settings to applications.
-            //
-            val negotiatedHandoverWtInt = 16
-            val negotiatedHandoverMaxNumWaitingTimeExtensions = 15
-            helper = NfcEngagementHelperRefactor(
-                context,
-                eDeviceKey,
-                options,
-                negotiatedHandoverWtInt,
-                negotiatedHandoverMaxNumWaitingTimeExtensions,
-                listener,
-                executor,
-                usingBle
-            )
-        }
+        var helper = NfcEngagementHelperRefactor(
+            context,
+            eDeviceKey,
+            options,
+            listener,
+            executor,
+            usingBle
+        )
 
         /**
          * Configures the builder so NFC Static Handover is used.
@@ -991,21 +885,8 @@ class NfcEngagementHelperRefactor private constructor(
          * @param connectionMethods a list of connection methods to use.
          * @return the builder.
          */
-        fun useStaticHandover(connectionMethods: List<ConnectionMethod>) = apply {
+        infix fun staticHandoverWith(connectionMethods: List<ConnectionMethod>) = apply {
             helper.staticHandoverConnectionMethods = connectionMethods
-        }
-
-        /**
-         * Configures the builder so NFC Negotiated Handover is used.
-         *
-         * Note: there is currently no way to specify which of the connection
-         * methods offered by the mdoc reader should be used. This will be added
-         * in a future version.
-         *
-         * @return the buider.
-         */
-        fun useNegotiatedHandover() = apply {
-            helper.mUsingNegotiatedHandover = true
         }
 
         /**
@@ -1017,12 +898,6 @@ class NfcEngagementHelperRefactor private constructor(
          * @return the helper, ready to be used.
          */
         fun build(): NfcEngagementHelperRefactor {
-            check(
-                !(helper.mUsingNegotiatedHandover &&
-                        helper.staticHandoverConnectionMethods != null)
-            ) {
-                "Can't use static and negotiated handover at the same time."
-            }
             return helper
         }
     }

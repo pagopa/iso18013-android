@@ -109,19 +109,7 @@ internal class NfcEngagement(
                     context.mainExecutor(),
                     usingBle = NfcEngagementEventBus.bluetoothOn
                 ).apply {
-                    if (NfcEngagementEventBus.bluetoothOn) {
-                        val originalMethods = retrievalMethods.connectionMethods
-                        ProximityLogger.i(
-                            "NfcEngagement",
-                            "Original connection methods (${originalMethods.size}): $originalMethods"
-                        )
-                        // Non chiamare combine() qui perché viene già fatto dentro useStaticHandover()
-                        useStaticHandover(originalMethods)
-                    } else {
-                        // NFC-only mode: use negotiated handover to establish the initial NDEF communication
-                        // The actual data transfer will be handled by ApduManager using mDL AID
-                        useNegotiatedHandover()
-                    }
+                    this staticHandoverWith retrievalMethods.connectionMethods
                 }
             }
         }
