@@ -10,7 +10,8 @@ import com.android.identity.crypto.Crypto
  * @param clientId Authorization Request 'client_id'
  * @param responseUri: Authorization Request 'response_uri'
  * @param authorizationRequestNonce: Authorization Request 'nonce'
- * @param jwkThumbprint: the JWK SHA-256 Thumbprint if direct_post.jwt, otherwise is null
+ * @param jwkThumbprint: the JWK SHA-256 Thumbprint if response_mode is direct_post.jwt, 
+ *                       null if response_mode is direct_post
  **/
 class OpenID4VP(
     private val clientId: String,
