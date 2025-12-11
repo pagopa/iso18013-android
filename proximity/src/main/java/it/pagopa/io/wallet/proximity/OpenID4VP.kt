@@ -10,49 +10,48 @@ import com.android.identity.crypto.Crypto
  * @param clientId Authorization Request 'client_id'
  * @param responseUri: Authorization Request 'response_uri'
  * @param authorizationRequestNonce: Authorization Request 'nonce'
- * @param mdocGeneratedNonce: cryptographically random number with sufficient entropy
+ * @param the JWK SHA-256 Thumbprint if direct_post.jwt, otherwise is null
  **/
 class OpenID4VP(
     private val clientId: String,
-    private val responseUri: String,
     private val authorizationRequestNonce: String,
-    private val mdocGeneratedNonce: String
+    private val jwkThumbprint: String?,
+    private val responseUri: String
 ) {
-    /**Generate session transcript with OID4VPHandover
-     *@return A CBOR-encoded SessionTranscript object*/
-    fun createSessionTranscript(): ByteArray {
-        val clientIdToHash = Cbor.encode(
-            CborArray.builder()
-                .add(clientId)
-                .add(mdocGeneratedNonce)
-                .end()
-                .build()
-        )
-        val clientIdHash = Crypto.digest(Algorithm.SHA256, clientIdToHash)
 
-        val responseUriToHash = Cbor.encode(
-            CborArray.builder()
-                .add(responseUri)
-                .add(mdocGeneratedNonce)
-                .end()
-                .build()
-        )
-        val responseUriHash = Crypto.digest(Algorithm.SHA256, responseUriToHash)
+    /** Build the OpenID4VPHandover CBOR structure */
+    fun encode(): ByteArray {
 
-        val oid4vpHandover = CborArray.builder()
-            .add(clientIdHash)
-            .add(responseUriHash)
+        // Convert JWK thumbprint: String? → bstr or null
+        val jwkThumbprintCbor =
+            if (jwkThumbprint != null) {
+                Simple.ByteString(jwkThumbprint.toByteArray(Charsets.UTF_8))
+            } else {
+                Simple.NULL
+            }
+
+        // Build OpenID4VPHandoverInfo
+        val handoverInfo = CborArray.builder()
+            .add(clientId)
             .add(authorizationRequestNonce)
+            .add(jwkThumbprintCbor)
+            .add(responseUri)
             .end()
             .build()
 
-        return Cbor.encode(
-            CborArray.builder()
-                .add(Simple.NULL)
-                .add(Simple.NULL)
-                .add(oid4vpHandover)
-                .end()
-                .build()
-        )
+        // Encode to bytes (OpenID4VPHandoverInfoBytes)
+        val handoverInfoBytes = Cbor.encode(handoverInfo)
+
+        // SHA-256 hash
+        val infoHash = Crypto.digest(Algorithm.SHA256, handoverInfoBytes)
+
+        // Final structure: ["OpenID4VPHandover", <hash>]
+        val finalCbor = CborArray.builder()
+            .add("OpenID4VPHandover")
+            .add(Simple.ByteString(infoHash))
+            .end()
+            .build()
+
+        return Cbor.encode(finalCbor)
     }
 }
