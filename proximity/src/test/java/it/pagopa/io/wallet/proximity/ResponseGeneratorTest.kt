@@ -28,7 +28,7 @@ class ResponseGeneratorTest {
             "clientId",
             "responseUri",
             "authorizationRequestNonce",
-            "jwkThumbprint"
+            "NZbLsXh8L4T44-23-g3-fE7-g3-fE7-g3-fE7-g3-fE7"
         ).createSessionTranscript()
         val parser = CBorParser(sessionTranscript).toJson()
         println(parser)

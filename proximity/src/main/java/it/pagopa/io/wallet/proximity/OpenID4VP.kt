@@ -3,8 +3,10 @@ package it.pagopa.io.wallet.proximity
 import com.android.identity.cbor.Cbor
 import com.android.identity.cbor.CborArray
 import com.android.identity.cbor.Simple
+import com.android.identity.cbor.Bstr
 import com.android.identity.crypto.Algorithm
 import com.android.identity.crypto.Crypto
+import java.util.Base64
 
 /** class to generate a DeviceResponse for ISO 18013-7 OID4VP flow.
  * @param clientId Authorization Request 'client_id'
@@ -26,7 +28,7 @@ class OpenID4VP(
         // Convert JWK thumbprint: String? → bstr or null
         val jwkThumbprintCbor =
             if (jwkThumbprint != null) {
-                Simple.ByteString(jwkThumbprint.toByteArray(Charsets.UTF_8))
+                Bstr(Base64.getUrlDecoder().decode(jwkThumbprint))
             } else {
                 Simple.NULL
             }
@@ -49,7 +51,7 @@ class OpenID4VP(
         // Final structure: ["OpenID4VPHandover", <hash>]
         val finalCbor = CborArray.builder()
             .add("OpenID4VPHandover")
-            .add(Simple.ByteString(infoHash))
+            .add(Bstr(infoHash))
             .end()
             .build()
 
