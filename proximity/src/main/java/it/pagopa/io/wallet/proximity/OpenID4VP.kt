@@ -10,17 +10,17 @@ import com.android.identity.crypto.Crypto
  * @param clientId Authorization Request 'client_id'
  * @param responseUri: Authorization Request 'response_uri'
  * @param authorizationRequestNonce: Authorization Request 'nonce'
- * @param the JWK SHA-256 Thumbprint if direct_post.jwt, otherwise is null
+ * @param jwkThumbprint: the JWK SHA-256 Thumbprint if direct_post.jwt, otherwise is null
  **/
 class OpenID4VP(
     private val clientId: String,
+    private val responseUri: String,
     private val authorizationRequestNonce: String,
-    private val jwkThumbprint: String?,
-    private val responseUri: String
+    private val jwkThumbprint: String?
 ) {
 
     /** Build the OpenID4VPHandover CBOR structure */
-    fun encode(): ByteArray {
+    fun createSessionTranscript(): ByteArray {
 
         // Convert JWK thumbprint: String? → bstr or null
         val jwkThumbprintCbor =
