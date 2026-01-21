@@ -8,8 +8,10 @@ import android.nfc.cardemulation.HostApduService
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.CheckResult
 import com.android.identity.android.util.NfcUtil
 import it.pagopa.io.wallet.cbor.model.Document
+import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.engagement.EngagementListener
 import it.pagopa.io.wallet.proximity.nfc.apdu.ApduManager
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
@@ -77,7 +79,7 @@ import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 abstract class NfcEngagementService : HostApduService() {
     open val docs: Array<Document> = arrayOf()
     private var manager: ApduManager? = null
-    open val alias: String =""
+    open val alias: String = ""
     private val nfcEngagement: NfcEngagement by lazy {
         NfcEngagement.build(this.baseContext, listOf(NfcRetrievalMethod())).configure()
     }
@@ -91,14 +93,15 @@ abstract class NfcEngagementService : HostApduService() {
          * @param activity
          */
         @JvmStatic
+        @CheckResult
         fun enable(
             activity: Activity,
             preferredNfcEngSerCls: Class<out NfcEngagementService>? = null,
-        ) {
+        ): Boolean {
             // set preferred Nfc Engagement Service
-            preferredNfcEngSerCls?.let {
-                setAsPreferredNfcEngagementService(activity, preferredNfcEngSerCls)
-            }
+            return preferredNfcEngSerCls?.let {
+                setAsPreferredNfcEngagementService(activity, it)
+            } ?: false
         }
 
         /**
@@ -111,11 +114,18 @@ abstract class NfcEngagementService : HostApduService() {
             unsetAsPreferredNfcEngagementService(activity)
         }
 
+        private fun Int.cardEmulationClearLog() = when (this) {
+            CardEmulation.SELECTION_MODE_PREFER_DEFAULT -> "Default"
+            CardEmulation.SELECTION_MODE_ASK_IF_CONFLICT -> "Ask if conflict"
+            CardEmulation.SELECTION_MODE_ALWAYS_ASK -> "Always ask"
+            else -> "Unknown"
+        }
+
         @JvmStatic
         private fun setAsPreferredNfcEngagementService(
             activity: Activity,
             nfcEngagementServiceClass: Class<out NfcEngagementService>,
-        ) {
+        ): Boolean {
             val cardEmulation = CardEmulation.getInstance(NfcAdapter.getDefaultAdapter(activity))
             val allowsForeground =
                 cardEmulation.categoryAllowsForegroundPreference(CardEmulation.CATEGORY_OTHER)
@@ -125,7 +135,38 @@ abstract class NfcEngagementService : HostApduService() {
                     nfcEngagementServiceClass,
                 )
                 cardEmulation.setPreferredService(activity, hceComponentName)
+                val selectionMode =
+                    cardEmulation.getSelectionModeForCategory(CardEmulation.CATEGORY_OTHER)
+                val isServiceRegistered = when (selectionMode) {
+                    CardEmulation.SELECTION_MODE_PREFER_DEFAULT -> {
+                        cardEmulation.isDefaultServiceForCategory(
+                            hceComponentName,
+                            CardEmulation.CATEGORY_OTHER
+                        )
+                    }
+
+                    CardEmulation.SELECTION_MODE_ASK_IF_CONFLICT,
+                    CardEmulation.SELECTION_MODE_ALWAYS_ASK -> {
+                        val isNdefAidRegistered = cardEmulation.isDefaultServiceForAid(
+                            hceComponentName,
+                            "D2760000850101"
+                        )
+                        val isMdlAidRegistered = cardEmulation.isDefaultServiceForAid(
+                            hceComponentName,
+                            "A0000002480400"
+                        )
+                        isNdefAidRegistered || isMdlAidRegistered
+                    }
+
+                    else -> false
+                }
+                ProximityLogger.i(
+                    "NfcEngagementService",
+                    "Selection mode: ${selectionMode.cardEmulationClearLog()}, isServiceRegistered: $isServiceRegistered"
+                )
+                return isServiceRegistered
             }
+            return false
         }
 
         @JvmStatic

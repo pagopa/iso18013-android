@@ -111,7 +111,7 @@ fun MainActivity?.IsoAndroidPocNavHost(
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val context = LocalContext.current
             NfcEngagementEventBus.bluetoothOn = true
-            NfcEngagementService.enable(
+            val enabled = NfcEngagementService.enable(
                 context.getActivity()!!,
                 AppNfcEngagementService::class.java
             )
@@ -124,18 +124,21 @@ fun MainActivity?.IsoAndroidPocNavHost(
                 ),
                 context.resources
             )
-            NfcEngagementView(viewModel = viewModel, onBack = {
-                backLogic(showMenu) {
-                    navController.popBackStack()
-                }
-            })
+            NfcEngagementView(
+                viewModel = viewModel,
+                enabled = enabled,
+                onBack = {
+                    backLogic(showMenu) {
+                        navController.popBackStack()
+                    }
+                })
         }
 
         customAnimatedComposable<HomeDestination.MasterNfcExchange> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val context = LocalContext.current
             NfcEngagementEventBus.bluetoothOn = false
-            NfcEngagementService.enable(
+            val enabled = NfcEngagementService.enable(
                 context.getActivity()!!,
                 AppNfcEngagementService::class.java
             )
@@ -148,11 +151,14 @@ fun MainActivity?.IsoAndroidPocNavHost(
                 ),
                 context.resources
             )
-            NfcEngagementView(viewModel = viewModel, onBack = {
-                backLogic(showMenu) {
-                    navController.popBackStack()
-                }
-            })
+            NfcEngagementView(
+                viewModel = viewModel,
+                enabled = enabled,
+                onBack = {
+                    backLogic(showMenu) {
+                        navController.popBackStack()
+                    }
+                })
         }
         customAnimatedComposable<HomeDestination.Slave> {
             val context = LocalContext.current
