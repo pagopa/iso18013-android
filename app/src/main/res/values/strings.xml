@@ -67,6 +67,7 @@
     <string name="data">Data</string>
     <string name="sent">Sent</string>
     <string name="perfect">Perfect</string>
+    <string name="nfc_not_supported">NFC not supported, please use bluetooth</string>
     <string name="sending_doc">Sending doc</string>
     <string name="no_doc_found">No document found</string>
 </resources>

@@ -67,6 +67,20 @@ class NfcEngagementViewModel(
                             this@NfcEngagementViewModel.loader.value = null
                         }
                     }
+                    is NfcEngagementEvent.NotSupported->{
+                        ProximityLogger.i(
+                            this@NfcEngagementViewModel.javaClass.name,
+                            "onNotSupported"
+                        )
+                        AppDialog.DialogButton(
+                            "${resources.getString(R.string.nfc_not_supported)}!!",
+                            onClick = {
+                                dialog.value = null
+                                _shouldGoBack.value = true
+                            }
+                        )
+                        _shouldGoBack.value = true
+                    }
                 }
             }
         }
