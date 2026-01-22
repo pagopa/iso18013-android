@@ -126,6 +126,34 @@ abstract class NfcEngagementService : HostApduService() {
             activity: Activity,
             nfcEngagementServiceClass: Class<out NfcEngagementService>,
         ): Boolean {
+            // Check device compatibility first
+            if (HceCompatibilityChecker.isKnownProblematicDevice()) {
+                ProximityLogger.i(
+                    "NfcEngagementService",
+                    "Device may have HCE compatibility issues. Proceeding with caution."
+                )
+            }
+
+            // Perform comprehensive HCE status check
+            val hceStatus = HceCompatibilityChecker.checkHceServiceStatus(
+                activity.applicationContext,
+                nfcEngagementServiceClass as Class<out HostApduService>
+            )
+
+            ProximityLogger.i(
+                "NfcEngagementService",
+                "HCE Status: ${HceCompatibilityChecker.getStatusMessage(hceStatus)}"
+            )
+
+            // If service cannot work, return early
+            if (!hceStatus.canWork()) {
+                ProximityLogger.e(
+                    "NfcEngagementService",
+                    "HCE service cannot work on this device: ${HceCompatibilityChecker.getStatusMessage(hceStatus)}"
+                )
+                return false
+            }
+
             val cardEmulation = CardEmulation.getInstance(NfcAdapter.getDefaultAdapter(activity))
             val allowsForeground =
                 cardEmulation.categoryAllowsForegroundPreference(CardEmulation.CATEGORY_OTHER)
@@ -137,32 +165,39 @@ abstract class NfcEngagementService : HostApduService() {
                 cardEmulation.setPreferredService(activity, hceComponentName)
                 val selectionMode =
                     cardEmulation.getSelectionModeForCategory(CardEmulation.CATEGORY_OTHER)
-                val isServiceRegistered = when (selectionMode) {
-                    CardEmulation.SELECTION_MODE_PREFER_DEFAULT -> {
-                        cardEmulation.isDefaultServiceForCategory(
-                            hceComponentName,
-                            CardEmulation.CATEGORY_OTHER
-                        )
-                    }
 
-                    CardEmulation.SELECTION_MODE_ASK_IF_CONFLICT,
-                    CardEmulation.SELECTION_MODE_ALWAYS_ASK -> {
-                        val isNdefAidRegistered = cardEmulation.isDefaultServiceForAid(
-                            hceComponentName,
-                            "D2760000850101"
-                        )
-                        val isMdlAidRegistered = cardEmulation.isDefaultServiceForAid(
-                            hceComponentName,
-                            "A0000002480400"
-                        )
-                        isNdefAidRegistered || isMdlAidRegistered
-                    }
-
-                    else -> false
+                // Use more reliable AID-based check instead of category check
+                // as isDefaultServiceForCategory may return false on some devices even when working
+                val isNdefAidRegistered = try {
+                    cardEmulation.isDefaultServiceForAid(
+                        hceComponentName,
+                        "D2760000850101"
+                    )
+                } catch (e: Exception) {
+                    ProximityLogger.e("NfcEngagementService", "Error checking NDEF AID: ${e.message}")
+                    false
                 }
+
+                val isMdlAidRegistered = try {
+                    cardEmulation.isDefaultServiceForAid(
+                        hceComponentName,
+                        "A0000002480400"
+                    )
+                } catch (e: Exception) {
+                    ProximityLogger.e("NfcEngagementService", "Error checking MDL AID: ${e.message}")
+                    false
+                }
+
+                val isServiceRegistered = isNdefAidRegistered || isMdlAidRegistered
+
                 ProximityLogger.i(
                     "NfcEngagementService",
-                    "Selection mode: ${selectionMode.cardEmulationClearLog()}, isServiceRegistered: $isServiceRegistered"
+                    """HCE Service Configuration:
+                        |Selection mode: ${selectionMode.cardEmulationClearLog()}
+                        |NDEF AID (D2760000850101): $isNdefAidRegistered
+                        |MDL AID (A0000002480400): $isMdlAidRegistered
+                        |Service registered: $isServiceRegistered
+                    """.trimMargin()
                 )
                 return isServiceRegistered
             }
