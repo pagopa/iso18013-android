@@ -1,6 +1,5 @@
 package it.pagopa.iso_android.ui.view
 
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -33,7 +32,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun NfcEngagementView(
     viewModel: NfcEngagementViewModel,
-    enabled: Boolean,
     onBack: () -> Unit
 ) {
     val ctx = LocalContext.current
@@ -49,16 +47,6 @@ fun NfcEngagementView(
                 if (it)
                     back.invoke()
             }
-        }
-        if (!enabled) {
-            Toast
-                .makeText(
-                    ctx,
-                    "Service not registered correctly",
-                    Toast.LENGTH_LONG
-                )
-                .show()
-            back.invoke()
         }
     }
     Column(
@@ -95,7 +83,6 @@ fun NfcEngagementViewPreview() {
     BasePreview {
         NfcEngagementView(
             viewModel = viewModel<NfcEngagementViewModel>(),
-            enabled = true,
             onBack = {})
     }
 }

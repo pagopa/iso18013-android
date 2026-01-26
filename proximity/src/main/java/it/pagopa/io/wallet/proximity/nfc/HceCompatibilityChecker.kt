@@ -62,15 +62,12 @@ object HceCompatibilityChecker {
         val isServiceDeclared = try {
             val intent = Intent("android.nfc.cardemulation.action.HOST_APDU_SERVICE")
             intent.component = componentName
-            val resolveInfos = context.packageManager.queryIntentServices(intent, PackageManager.GET_META_DATA)
+            val resolveInfos =
+                context.packageManager.queryIntentServices(intent, PackageManager.GET_META_DATA)
             resolveInfos.isNotEmpty()
         } catch (e: Exception) {
             ProximityLogger.e(TAG, "Error checking service declaration: ${e.message}")
             false
-        }
-
-        if (!isServiceDeclared) {
-            return HceServiceStatus.ServiceNotDeclaredInManifest
         }
 
         // Check 6: CardEmulation instance
@@ -128,7 +125,8 @@ object HceCompatibilityChecker {
             false
         }
 
-        ProximityLogger.i(TAG, """
+        ProximityLogger.i(
+            TAG, """
             HCE Service Status:
             - Service declared: $isServiceDeclared
             - Registered for AIDs: $isRegisteredForAids
@@ -136,17 +134,23 @@ object HceCompatibilityChecker {
             - Is default service: $isDefaultService
             - Device manufacturer: ${Build.MANUFACTURER}
             - Device model: ${Build.MODEL}
-        """.trimIndent())
+        """.trimIndent()
+        )
+
+        if (!isServiceDeclared) {
+            return HceServiceStatus.ServiceNotDeclaredInManifest
+        }
 
         // Final verdict: Service can work if registered for AIDs
         // Note: isDefaultServiceForCategory may return false on some devices
         // even when the service actually works, so we rely on AID registration
         return when {
-            isRegisteredForAids -> HceServiceStatus.FullyOperational
+            isRegisteredForAids -> HceServiceStatus.FullyOperational(selectionMode.toSelectionModeString())
             selectionMode == CardEmulation.SELECTION_MODE_ALWAYS_ASK ||
-            selectionMode == CardEmulation.SELECTION_MODE_ASK_IF_CONFLICT ->
-                HceServiceStatus.RequiresUserSelection
-            else -> HceServiceStatus.NotRegistered
+                    selectionMode == CardEmulation.SELECTION_MODE_ASK_IF_CONFLICT ->
+                HceServiceStatus.RequiresUserSelection(selectionMode.toSelectionModeString())
+
+            else -> HceServiceStatus.NotRegistered(selectionMode.toSelectionModeString())
         }
     }
 
@@ -177,26 +181,38 @@ object HceCompatibilityChecker {
      */
     fun getStatusMessage(status: HceServiceStatus): String {
         return when (status) {
-            is HceServiceStatus.FullyOperational ->
-                "NFC card emulation is fully operational"
+            is HceServiceStatus.FullyOperational -> {
+                "NFC card emulation is fully operational.\nselectionMode: ${status.selectionMode}"
+            }
+
             is HceServiceStatus.RequiresUserSelection ->
-                "NFC card emulation requires user selection in system settings"
+                "NFC card emulation requires user selection in system settings.\nselectionMode: \${status.selectionMode}\""
+
             is HceServiceStatus.NotRegistered ->
-                "HCE service is not registered. Please check app configuration."
+                "HCE service is not registered. Please check app configuration.\nselectionMode: \${status.selectionMode}\""
+
             is HceServiceStatus.NfcNotSupported ->
                 "This device does not support NFC"
+
             is HceServiceStatus.HceNotSupported ->
                 "This device does not support Host Card Emulation"
+
             is HceServiceStatus.NfcAdapterNotAvailable ->
                 "NFC adapter is not available"
+
             is HceServiceStatus.NfcDisabled ->
                 "NFC is disabled. Please enable it in system settings."
+
             is HceServiceStatus.ServiceNotDeclaredInManifest ->
                 "HCE service is not properly declared in AndroidManifest.xml"
+
             is HceServiceStatus.CardEmulationNotAvailable ->
                 "Card emulation is not available on this device"
+
             is HceServiceStatus.ForegroundPreferenceNotAllowed ->
                 "Foreground service preference is not allowed on this device"
+
+            is HceServiceStatus.PreferredClassNotSet -> "Preferred class not set"
         }
     }
 
@@ -213,13 +229,13 @@ object HceCompatibilityChecker {
  */
 sealed class HceServiceStatus {
     /** Service is fully operational and ready to use */
-    object FullyOperational : HceServiceStatus()
+    data class FullyOperational(val selectionMode: String) : HceServiceStatus()
 
     /** Service requires user to select it in system settings */
-    object RequiresUserSelection : HceServiceStatus()
+    data class RequiresUserSelection(val selectionMode: String) : HceServiceStatus()
 
     /** Service is not registered for any AIDs */
-    object NotRegistered : HceServiceStatus()
+    data class NotRegistered(val selectionMode: String) : HceServiceStatus()
 
     /** Device does not have NFC hardware */
     object NfcNotSupported : HceServiceStatus()
@@ -241,6 +257,9 @@ sealed class HceServiceStatus {
 
     /** Foreground preference not allowed */
     object ForegroundPreferenceNotAllowed : HceServiceStatus()
+
+    /** Preferred class not set */
+    object PreferredClassNotSet : HceServiceStatus()
 
     /**
      * Check if service can potentially work.

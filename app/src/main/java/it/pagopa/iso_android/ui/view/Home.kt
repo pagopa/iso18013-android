@@ -1,6 +1,7 @@
 package it.pagopa.iso_android.ui.view
 
 import android.Manifest
+import android.content.Context
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.CheckResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,8 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import it.pagopa.io.wallet.proximity.bluetooth.BluetoothUtils
+import it.pagopa.io.wallet.proximity.nfc.HceCompatibilityChecker
 import it.pagopa.io.wallet.proximity.nfc.NfcChecks
+import it.pagopa.io.wallet.proximity.nfc.NfcEngagementService
+import it.pagopa.iso_android.R
 import it.pagopa.iso_android.navigation.HomeDestination
+import it.pagopa.iso_android.navigation.getActivity
+import it.pagopa.iso_android.nfc.AppNfcEngagementService
 import it.pagopa.iso_android.ui.AppDialog
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.BigText
@@ -41,10 +48,48 @@ fun HomeView(
     onBack: () -> Unit,
     onNavigate: (destination: HomeDestination) -> Unit
 ) {
+    @Composable
+    fun DeviceInfoDialog(context: Context, destination: HomeDestination, onClick: () -> Unit) {
+        val hceStatus = NfcEngagementService.enable(
+            context.getActivity()!!,
+            AppNfcEngagementService::class.java
+        )
+        val manufacturer = Build.MANUFACTURER
+        val deviceModel = Build.MODEL
+        val description =
+            "- Device manufacturer: \n$manufacturer\n- Device model: \n${deviceModel}\n- Nfc Status:\n${
+                HceCompatibilityChecker.getStatusMessage(hceStatus)
+            }\n- Should work:\n${hceStatus.canWork()}"
+        GenericDialog(
+            AppDialog(
+                title = context.resources.getString(R.string.nfc_engagement_service_desc),
+                description = description,
+                button = AppDialog.DialogButton(
+                    context.resources.getString(R.string.ok)
+                ) {
+                    if (hceStatus.canWork())
+                        onNavigate.invoke(destination)
+                    else
+                        Toast.makeText(
+                            context,
+                            "Sorry but seems it will not work",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    onClick.invoke()
+                }
+            ), dismissOnBackPress = false)
+    }
+
+    @CheckResult
+    fun dialogLogic(destination: HomeDestination): Boolean {
+        return destination is HomeDestination.MasterNfc || destination is HomeDestination.MasterNfcExchange
+    }
+
     val context = LocalContext.current
     val whereToGo = remember { mutableStateOf<HomeDestination>(HomeDestination.Master) }
     val dialog = remember { mutableStateOf<AppDialog?>(null) }
     val showPopupMenu = remember { mutableStateOf(false) }
+    val shouldShowInfoDialog = remember { mutableStateOf(false) }
     val manyPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { permissionsMap ->
@@ -52,7 +97,7 @@ fun HomeView(
             it.value
         }
         if (granted.size >= permissionsMap.size - 1)
-            onNavigate.invoke(whereToGo.value)
+            shouldShowInfoDialog.value = dialogLogic(whereToGo.value)
         else
             Toast.makeText(
                 context,
@@ -123,7 +168,8 @@ fun HomeView(
                 if (nfcChecks.isNfcReadyForEngagement()) {
                     whereToGo.value = HomeDestination.MasterNfc
                     bluetoothCheck {
-                        onNavigate.invoke(HomeDestination.MasterNfc)
+                        shouldShowInfoDialog.value = true
+                        whereToGo.value = HomeDestination.MasterNfc
                     }
                 } else {
                     Toast.makeText(
@@ -138,8 +184,8 @@ fun HomeView(
                 nfcChecks.openNfcSettings()
             else {
                 if (nfcChecks.isNfcReadyForEngagement()) {
+                    shouldShowInfoDialog.value = true
                     whereToGo.value = HomeDestination.MasterNfcExchange
-                    onNavigate.invoke(HomeDestination.MasterNfcExchange)
                 } else {
                     Toast.makeText(
                         context, "Sorry, but your device has not card emulation feature",
@@ -175,6 +221,10 @@ fun HomeView(
     }
     if (dialog.value != null)
         GenericDialog(dialog.value!!)
+    if (shouldShowInfoDialog.value)
+        DeviceInfoDialog(context, whereToGo.value) {
+            shouldShowInfoDialog.value = false
+        }
 }
 
 @ThemePreviews

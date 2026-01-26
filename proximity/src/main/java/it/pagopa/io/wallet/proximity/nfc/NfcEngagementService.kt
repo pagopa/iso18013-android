@@ -97,11 +97,11 @@ abstract class NfcEngagementService : HostApduService() {
         fun enable(
             activity: Activity,
             preferredNfcEngSerCls: Class<out NfcEngagementService>? = null,
-        ): Boolean {
+        ): HceServiceStatus {
             // set preferred Nfc Engagement Service
             return preferredNfcEngSerCls?.let {
                 setAsPreferredNfcEngagementService(activity, it)
-            } ?: false
+            } ?: HceServiceStatus.PreferredClassNotSet
         }
 
         /**
@@ -125,7 +125,7 @@ abstract class NfcEngagementService : HostApduService() {
         private fun setAsPreferredNfcEngagementService(
             activity: Activity,
             nfcEngagementServiceClass: Class<out NfcEngagementService>,
-        ): Boolean {
+        ): HceServiceStatus {
             // Check device compatibility first
             if (HceCompatibilityChecker.isKnownProblematicDevice()) {
                 ProximityLogger.i(
@@ -149,9 +149,13 @@ abstract class NfcEngagementService : HostApduService() {
             if (!hceStatus.canWork()) {
                 ProximityLogger.e(
                     "NfcEngagementService",
-                    "HCE service cannot work on this device: ${HceCompatibilityChecker.getStatusMessage(hceStatus)}"
+                    "HCE service cannot work on this device: ${
+                        HceCompatibilityChecker.getStatusMessage(
+                            hceStatus
+                        )
+                    }"
                 )
-                return false
+                return hceStatus
             }
 
             val cardEmulation = CardEmulation.getInstance(NfcAdapter.getDefaultAdapter(activity))
@@ -174,7 +178,10 @@ abstract class NfcEngagementService : HostApduService() {
                         "D2760000850101"
                     )
                 } catch (e: Exception) {
-                    ProximityLogger.e("NfcEngagementService", "Error checking NDEF AID: ${e.message}")
+                    ProximityLogger.e(
+                        "NfcEngagementService",
+                        "Error checking NDEF AID: ${e.message}"
+                    )
                     false
                 }
 
@@ -184,7 +191,10 @@ abstract class NfcEngagementService : HostApduService() {
                         "A0000002480400"
                     )
                 } catch (e: Exception) {
-                    ProximityLogger.e("NfcEngagementService", "Error checking MDL AID: ${e.message}")
+                    ProximityLogger.e(
+                        "NfcEngagementService",
+                        "Error checking MDL AID: ${e.message}"
+                    )
                     false
                 }
 
@@ -199,9 +209,9 @@ abstract class NfcEngagementService : HostApduService() {
                         |Service registered: $isServiceRegistered
                     """.trimMargin()
                 )
-                return isServiceRegistered
+                return hceStatus
             }
-            return false
+            return hceStatus
         }
 
         @JvmStatic

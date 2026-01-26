@@ -17,7 +17,6 @@ import com.android.identity.crypto.EcPublicKey
 import com.android.identity.mdoc.connectionmethod.ConnectionMethod
 import com.android.identity.mdoc.connectionmethod.ConnectionMethod.Companion.disambiguate
 import com.android.identity.mdoc.engagement.EngagementGenerator
-import com.android.identity.util.fromHex
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.nfc.apdu.Utils
 import kotlinx.coroutines.Job
@@ -272,7 +271,7 @@ class NfcEngagementHelperRefactor private constructor(
             return NfcUtil.STATUS_WORD_FILE_NOT_FOUND
         }
         if (apdu.copyOfRange(5, 12)
-                .contentEquals("A0000002480400".fromHex())
+                .contentEquals(NfcUtil.AID_FOR_MDL_DATA_TRANSFER)
         ) {
             ProximityLogger.i(TAG, "handleInitialSelectByAid: connecting")
             updateBinaryData = null
