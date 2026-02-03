@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">Iso Android Poc</string>
+    <string name="engagement_aid_group_desc">mDL NFC Engagement</string>
+    <string name="exchange_aid_group_desc">mDL NFC Exchange</string>
+    <string name="nfc_engagement_service_desc">NFC Device Engagement</string>
+    <string name="nfc_exchange_service_desc">NFC Exchange</string>
     <string name="sign_and_verify">Sign and verify</string>
     <string name="read_document">Read Document</string>
     <string name="sign_doc">Sign doc</string>
@@ -63,6 +67,7 @@
     <string name="data">Data</string>
     <string name="sent">Sent</string>
     <string name="perfect">Perfect</string>
+    <string name="nfc_not_supported">NFC not supported, please use bluetooth</string>
     <string name="sending_doc">Sending doc</string>
     <string name="no_doc_found">No document found</string>
 </resources>

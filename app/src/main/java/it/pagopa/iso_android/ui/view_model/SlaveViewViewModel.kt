@@ -3,7 +3,7 @@ package it.pagopa.iso_android.ui.view_model
 import androidx.lifecycle.ViewModel
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
-import it.pagopa.io.wallet.proximity.qr_code.QrEngagementListener
+import it.pagopa.io.wallet.proximity.engagement.EngagementListener
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -26,7 +26,7 @@ class SlaveViewViewModel(
     }
 
     fun attachListenerAndObserve() {
-        qrCodeEngagement.withListener(object : QrEngagementListener {
+        qrCodeEngagement.withListener(object : EngagementListener {
             override fun onDeviceConnecting() {
                 ProximityLogger.i("ProximityLogger", "onConnecting")
             }

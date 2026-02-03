@@ -23,16 +23,14 @@ class DependencyInjectedVm<out VM : ViewModel>(
             if (paramSize != dependencies.size)
                 throw IllegalArgumentException("Array not filled completely or too much")
             it.parameterTypes.forEachIndexed { i, each ->
-                var isResourcesClass = false
-                try {
-                    dependencies[i]!!.javaClass.getDeclaredConstructor().newInstance() as Resources
-                    isResourcesClass = true
-                } catch (_: Exception) {
+                val dependencyClass = dependencies[i]!!.javaClass
+                val isResourcesType = Resources::class.java.isAssignableFrom(each)
+                val isDependencyResources = Resources::class.java.isAssignableFrom(dependencyClass)
+                if (isResourcesType && isDependencyResources) {
+                    cntOk--
+                } else if (dependencyClass == each) {
+                    cntOk--
                 }
-                if (isResourcesClass)
-                    cntOk--
-                else if (dependencies[i]!!.javaClass == each)
-                    cntOk--
             }
             cntOk == 0
         } ?: throw IllegalArgumentException("Cannot create ViewModel class for ${modelClass.name}")

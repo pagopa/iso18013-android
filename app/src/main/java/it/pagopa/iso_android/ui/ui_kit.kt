@@ -7,17 +7,22 @@ import androidx.compose.animation.core.animateValue
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -166,4 +171,30 @@ fun AnimateDottedText(
         fontSize = 18.sp,
         style = style
     )
+}
+
+data class PopUpMenuItem(val text: String, val action: () -> Unit)
+
+@Composable
+fun PopUpMenu(expanded: MutableState<Boolean>, items: List<PopUpMenuItem>) {
+    Box(
+        modifier = Modifier
+            .padding(16.dp)
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        DropdownMenu(
+            expanded = expanded.value,
+            onDismissRequest = { expanded.value = false }
+        ) {
+            items.forEach { item ->
+                DropdownMenuItem(
+                    text = { Text(item.text, color = MaterialTheme.colorScheme.onBackground) },
+                    onClick = {
+                        expanded.value = false
+                        item.action.invoke()
+                    }
+                )
+            }
+        }
+    }
 }

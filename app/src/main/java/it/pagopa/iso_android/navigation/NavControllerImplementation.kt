@@ -1,5 +1,8 @@
 package it.pagopa.iso_android.navigation
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,24 +23,34 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import it.pagopa.io.wallet.cbor.cose.COSEManager
 import it.pagopa.io.wallet.cbor.document_manager.DocManager
+import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
+import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEventBus
+import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
 import it.pagopa.iso_android.MainActivity
 import it.pagopa.iso_android.R
 import it.pagopa.iso_android.ui.view.CborView
 import it.pagopa.iso_android.ui.view.DocumentStorageView
 import it.pagopa.iso_android.ui.view.HomeView
 import it.pagopa.iso_android.ui.view.MasterView
+import it.pagopa.iso_android.ui.view.NfcEngagementView
 import it.pagopa.iso_android.ui.view.SignAndVerifyView
 import it.pagopa.iso_android.ui.view.SlaveView
 import it.pagopa.iso_android.ui.view_model.CborViewViewModel
 import it.pagopa.iso_android.ui.view_model.DocumentStorageViewViewModel
 import it.pagopa.iso_android.ui.view_model.MasterViewViewModel
+import it.pagopa.iso_android.ui.view_model.NfcEngagementViewModel
 import it.pagopa.iso_android.ui.view_model.SignAndVerifyViewViewModel
 import it.pagopa.iso_android.ui.view_model.SlaveViewViewModel
 import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
-import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
-import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
 
 private const val AnimDurationMillis = 700
+
+
+fun Context.getActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.getActivity()
+    else -> null
+}
 
 @Composable
 fun MainActivity?.IsoAndroidPocNavHost(
@@ -91,6 +104,49 @@ fun MainActivity?.IsoAndroidPocNavHost(
                     navController.popBackStack()
                 }
             })
+        }
+        customAnimatedComposable<HomeDestination.MasterNfc> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
+            val context = LocalContext.current
+            NfcEngagementEventBus.bluetoothOn = true
+            val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
+                DocManager.getInstance(
+                    context = context,
+                    storageDirectory = context.noBackupFilesDir,
+                    prefix = "SECURE_STORAGE",
+                    alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
+                ),
+                context.resources
+            )
+            NfcEngagementView(
+                viewModel = viewModel,
+                onBack = {
+                    backLogic(showMenu) {
+                        navController.popBackStack()
+                    }
+                })
+        }
+
+        customAnimatedComposable<HomeDestination.MasterNfcExchange> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
+            val context = LocalContext.current
+            NfcEngagementEventBus.bluetoothOn = false
+            val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
+                DocManager.getInstance(
+                    context = context,
+                    storageDirectory = context.noBackupFilesDir,
+                    prefix = "SECURE_STORAGE",
+                    alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
+                ),
+                context.resources
+            )
+            NfcEngagementView(
+                viewModel = viewModel,
+                onBack = {
+                    backLogic(showMenu) {
+                        navController.popBackStack()
+                    }
+                })
         }
         customAnimatedComposable<HomeDestination.Slave> {
             val context = LocalContext.current

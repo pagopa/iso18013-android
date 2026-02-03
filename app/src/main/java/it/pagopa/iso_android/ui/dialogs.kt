@@ -74,12 +74,13 @@ data class AppDialog(
 
 @Composable
 fun GenericDialog(
-    dialog: AppDialog
+    dialog: AppDialog,
+    dismissOnBackPress: Boolean = true
 ) {
     Dialog(
         onDismissRequest = {},
         DialogProperties(
-            dismissOnBackPress = true,
+            dismissOnBackPress = dismissOnBackPress,
             dismissOnClickOutside = true
         )
     ) {

@@ -59,9 +59,7 @@ class DocManager private constructor(
     }
 
     override fun getDocumentByIdentifier(id: DocumentId): Document {
-        val content = getFileContent(id)
-        if (content == null)
-            throw IllegalStateException("no doc with give id: $id")
+        val content = getFileContent(id) ?: throw IllegalStateException("no doc with give id: $id")
         return getDocument(content)
     }
 

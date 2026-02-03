@@ -221,6 +221,12 @@ class CborParserTest {
     }
 
     @Test
+    fun `issuer signed test`(){
+        val parser= CBorParser(issuerSignedTest)
+        println(parser.issuerSignedCborToJson())
+    }
+
+    @Test
     fun `only issuer signed, test presence of x5chain and kid`() {
         val parser = CBorParser(issuerSignedTest)
         val json = JSONObject(parser.issuerSignedCborToJson()!!)

@@ -17,7 +17,10 @@ class DeviceRetrievalHelperWrapper(
     }
 
     fun disconnect() {
-        deviceRetrievalHelper.stopPresentation(true, true)
+        deviceRetrievalHelper.stopPresentation(
+            sendSessionTerminationMessage = true,
+            useTransportSpecificSessionTermination = true
+        )
     }
 
     fun sessionTranscript() = this.deviceRetrievalHelper.sessionTranscript

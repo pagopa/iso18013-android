@@ -1,6 +1,5 @@
 package it.pagopa.io.wallet.proximity.response
 
-import android.util.Base64
 import androidx.annotation.VisibleForTesting
 import com.android.identity.cbor.Bstr
 import com.android.identity.cbor.Cbor
@@ -22,11 +21,6 @@ import it.pagopa.io.wallet.cbor.model.IssuerSigned
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import org.json.JSONObject
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.collections.filter
-import kotlin.collections.forEach
-import kotlin.collections.iterator
 
 class ResponseGenerator(
     private val sessionsTranscript: ByteArray
@@ -89,7 +83,7 @@ class ResponseGenerator(
      * [Throwable.message] reached or empty string if this is null
      */
     @JvmName("createResponseWithBase64")
-    private fun createResponse(
+    fun createResponse(
         documents: Array<DocRequested>,
         fieldRequestedAndAccepted: String
     ): Pair<ByteArray?, String> {
