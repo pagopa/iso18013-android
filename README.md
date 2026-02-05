@@ -398,7 +398,7 @@ val sessionTranscript = OpenID4VP(
    clientId,
    responseUri,
    authorizationRequestNonce,
-   mdocGeneratedNonce
+   jwkThumbprint
 ).createSessionTranscript()
 ```
 
