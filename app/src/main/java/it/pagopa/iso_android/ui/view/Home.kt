@@ -96,9 +96,13 @@ fun HomeView(
         val granted = permissionsMap.filter {
             it.value
         }
-        if (granted.size >= permissionsMap.size - 1)
-            shouldShowInfoDialog.value = dialogLogic(whereToGo.value)
-        else
+        if (granted.size >= permissionsMap.size - 1) {
+            val shouldShowDialog = dialogLogic(whereToGo.value)
+            shouldShowInfoDialog.value = shouldShowDialog
+            if (!shouldShowDialog) {
+                onNavigate.invoke(whereToGo.value)
+            }
+        } else
             Toast.makeText(
                 context,
                 "Ho bisogno del permesso al bluetooth per procedere..",

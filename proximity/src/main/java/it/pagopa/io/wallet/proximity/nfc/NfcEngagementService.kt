@@ -294,16 +294,16 @@ abstract class NfcEngagementService : HostApduService() {
             return this.nfcEngagement.nfcEngagementHelper.nfcProcessCommandApdu(commandApdu)
         if (manager == null)
             manager = ApduManager(nfcEngagement, docs, alias)
+        ProximityLogger.i("COMMAND_TYPE", NfcUtil.nfcGetCommandType(commandApdu).toString())
         return when (NfcUtil.nfcGetCommandType(commandApdu)) {
             NfcUtil.COMMAND_TYPE_SELECT_BY_AID -> {
                 manager?.let {
                     val selectedAid = commandApdu.copyOfRange(5, 12)
-                    if (selectedAid.contentEquals(NfcUtil.AID_FOR_TYPE_4_TAG_NDEF_APPLICATION)) {
-                        //NDEF AID detected but NFC-only mode is forced - rejecting
-                        NfcUtil.STATUS_WORD_FILE_NOT_FOUND
-                    } else if (selectedAid.contentEquals(NfcUtil.AID_FOR_MDL_DATA_TRANSFER)) {
+                   if (selectedAid.contentEquals(NfcUtil.AID_FOR_MDL_DATA_TRANSFER)) {
+                        ProximityLogger.i("SELECTED", "AID_FOR_MDL_DATA_TRANSFER")
                         //MDL AID detected, using ApduManager for NFC-only
-                        it.handleSelectByAid(commandApdu)
+                        it.resetApduDataRetrievalState()
+                        NfcUtil.STATUS_WORD_OK
                     } else {
                         //Unknown AID, rejecting
                         NfcUtil.STATUS_WORD_FILE_NOT_FOUND
@@ -320,7 +320,7 @@ abstract class NfcEngagementService : HostApduService() {
             NfcUtil.COMMAND_TYPE_RESPONSE -> manager?.handleGetResponse(commandApdu)
                 ?: NfcUtil.STATUS_WORD_FILE_NOT_FOUND
 
-            else -> NfcUtil.STATUS_WORD_FILE_NOT_FOUND
+            else -> NfcUtil.STATUS_WORD_INSTRUCTION_NOT_SUPPORTED
         }
     }
 }

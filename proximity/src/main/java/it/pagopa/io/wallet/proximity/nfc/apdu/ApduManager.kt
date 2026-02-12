@@ -36,59 +36,12 @@ internal class ApduManager(
     private var responseOffset: Int = 0
     private var useExtendedLength: Boolean = true
 
-    private fun resetApduDataRetrievalState() {
+    fun resetApduDataRetrievalState() {
         envelopeBuffer.reset()
         envelopeCollecting = false
         responseBuffer = null
         responseOffset = 0
         useExtendedLength = true
-    }
-
-    fun handleSelectByAid(apdu: ByteArray): ByteArray {
-        if (apdu.size < 12) {
-            ProximityLogger.i(tag, "handleSelectByAid: unexpected APDU length ${apdu.size}")
-            return NfcUtil.STATUS_WORD_FILE_NOT_FOUND
-        }
-        val selectedAid = apdu.copyOfRange(5, 12)
-        ProximityLogger.d(tag, "handleSelectByAid: AID = ${Utils.bytesToHex(selectedAid)}")
-        if (selectedAid.contentEquals(NfcUtil.AID_FOR_MDL_DATA_TRANSFER)) {
-            ProximityLogger.d(tag, "handleSelectByAid: mDL data transfer AID selected")
-            resetApduDataRetrievalState()
-            val fci = buildFciTemplate(selectedAid)
-            ProximityLogger.d(tag, "handleSelectByAid: Returning FCI, size=${fci.size}")
-            
-            val response = ByteArray(fci.size + 2)
-            System.arraycopy(fci, 0, response, 0, fci.size)
-            response[fci.size] = 0x90.toByte()
-            response[fci.size + 1] = 0x00.toByte()
-            
-            return response
-        }
-        ProximityLogger.d(
-            tag,
-            "handleSelectByAid: Unexpected AID selected in APDU:${Utils.bytesToHex(apdu)}"
-        )
-        return NfcUtil.STATUS_WORD_FILE_NOT_FOUND
-    }
-    
-    /**
-     * It builds FCI (File Control Information) Template respect ISO 18013-5
-     * 
-     * FCI Template structure:
-     * - Tag 6F (FCI Template)
-     *   - Tag 84 (DF Name = AID)
-     *   - Tag A5 (FCI Proprietary Template) - optional
-     *     - Tag 9F38 (Processing Options Data Object List - PDOL) - optional
-     */
-    private fun buildFciTemplate(aid: ByteArray): ByteArray {
-        // Tag 84: DF Name (AID)
-        val dfName = byteArrayOf(0x84.toByte(), aid.size.toByte()) + aid
-        
-        // Tag 6F: FCI Template
-        val fciLength = dfName.size
-        val fci = byteArrayOf(0x6F.toByte(), fciLength.toByte()) + dfName
-        
-        return fci
     }
 
     // ENVELOPE (INS=C3)
