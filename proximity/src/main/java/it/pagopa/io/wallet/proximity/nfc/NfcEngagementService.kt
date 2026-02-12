@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.nfc.NfcAdapter
 import android.nfc.cardemulation.CardEmulation
 import android.nfc.cardemulation.HostApduService
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -159,6 +160,13 @@ abstract class NfcEngagementService : HostApduService() {
             }
 
             val cardEmulation = CardEmulation.getInstance(NfcAdapter.getDefaultAdapter(activity))
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+                cardEmulation.registerPollingLoopPatternFilterForService(
+                    ComponentName(activity.applicationContext, NfcEngagementService::class.java),
+                    "6a028103.*",
+                    false
+                )
+            }
             val allowsForeground =
                 cardEmulation.categoryAllowsForegroundPreference(CardEmulation.CATEGORY_OTHER)
             if (allowsForeground) {
@@ -299,14 +307,14 @@ abstract class NfcEngagementService : HostApduService() {
             NfcUtil.COMMAND_TYPE_SELECT_BY_AID -> {
                 manager?.let {
                     val selectedAid = commandApdu.copyOfRange(5, 12)
-                   if (selectedAid.contentEquals(NfcUtil.AID_FOR_MDL_DATA_TRANSFER)) {
+                    if (selectedAid.contentEquals(NfcUtil.AID_FOR_MDL_DATA_TRANSFER)) {
                         ProximityLogger.i("SELECTED", "AID_FOR_MDL_DATA_TRANSFER")
                         //MDL AID detected, using ApduManager for NFC-only
                         it.resetApduDataRetrievalState()
                         NfcUtil.STATUS_WORD_OK
                     } else {
                         //Unknown AID, rejecting
-                        NfcUtil.STATUS_WORD_FILE_NOT_FOUND
+                        NfcUtil.STATUS_WORD_INSTRUCTION_NOT_SUPPORTED
                     }
                 } ?: run {
                     //Manager null in NFC-only mode - this shouldn't happen

@@ -3,11 +3,11 @@
 <host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:description="@string/nfc_engagement_service_desc"
-    android:requireDeviceUnlock="true">
+    android:requireDeviceUnlock="false"
+    android:requireDeviceScreenOn="false"
+    tools:ignore="UnusedAttribute">
 
-    <aid-group
-        android:description="@string/engagement_aid_group_desc"
-        android:category="other">
+    <aid-group android:description="@string/engagement_aid_group_desc" android:category="other">
         <!-- NFC Type 4 Tag - for NDEF handover to Bluetooth/WiFi -->
         <aid-filter android:name="A0000002480400"/>
     </aid-group>
