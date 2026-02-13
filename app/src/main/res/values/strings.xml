@@ -4,6 +4,8 @@
     <string name="exchange_aid_group_desc">mDL NFC Exchange</string>
     <string name="nfc_engagement_service_desc">NFC Device Engagement</string>
     <string name="nfc_exchange_service_desc">NFC Exchange</string>
+    <string name="quick_access_wallet_empty_state_text">No Cards</string>
+    <string name="quick_access_wallet_button_text">@string/app_name</string>
     <string name="sign_and_verify">Sign and verify</string>
     <string name="read_document">Read Document</string>
     <string name="sign_doc">Sign doc</string>
