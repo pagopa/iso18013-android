@@ -8,7 +8,6 @@
     tools:ignore="UnusedAttribute">
 
     <aid-group android:description="@string/exchange_aid_group_desc" android:category="other">
-        <!-- NFC Type 4 Tag - for NDEF handover to Bluetooth/WiFi -->
         <aid-filter android:name="A0000002480400"/>
     </aid-group>
 

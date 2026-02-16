@@ -188,8 +188,8 @@ fun HomeView(
                 nfcChecks.openNfcSettings()
             else {
                 if (nfcChecks.isNfcReadyForEngagement()) {
-                    shouldShowInfoDialog.value = true
-                    whereToGo.value = HomeDestination.MasterNfcExchange
+                    NfcEngagementService.disable(context.getActivity()!!)
+                    onNavigate.invoke(HomeDestination.MasterNfcExchange)
                 } else {
                     Toast.makeText(
                         context, "Sorry, but your device has not card emulation feature",

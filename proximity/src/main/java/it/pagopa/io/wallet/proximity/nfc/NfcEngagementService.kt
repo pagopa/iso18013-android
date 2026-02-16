@@ -2,6 +2,7 @@ package it.pagopa.io.wallet.proximity.nfc
 
 import android.app.Activity
 import android.content.ComponentName
+import android.content.Intent
 import android.nfc.NfcAdapter
 import android.nfc.cardemulation.CardEmulation
 import android.nfc.cardemulation.HostApduService
@@ -78,6 +79,7 @@ import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
  * @constructor
  */
 abstract class NfcEngagementService : HostApduService() {
+    abstract val javaClassToLaunch: Class<out Activity>
     open val docs: Array<Document> = arrayOf()
     private var manager: ApduManager? = null
     open val alias: String = ""
@@ -85,6 +87,9 @@ abstract class NfcEngagementService : HostApduService() {
         NfcEngagement.build(this.baseContext, listOf(NfcRetrievalMethod())).configure()
     }
     open val readerTrustStore: List<List<Any>> = listOf()
+    private var numApdusReceived = 0
+    private var firstCommandApdu: ByteArray? = null
+    private var engagementStarted = false
 
     companion object {
 
@@ -284,6 +289,9 @@ abstract class NfcEngagementService : HostApduService() {
     }
 
     override fun onDeactivated(reason: Int) {
+        numApdusReceived = 0
+        engagementStarted = false
+        firstCommandApdu = null
         nfcEngagement.nfcEngagementHelper.nfcOnDeactivated(reason)
         val timeoutSeconds = 15
         manager = null
@@ -292,21 +300,23 @@ abstract class NfcEngagementService : HostApduService() {
         }, timeoutSeconds * 1000L)
     }
 
-    /**
-     * Processes incoming NFC APDU commands.
-     */
-    override fun processCommandApdu(
-        commandApdu: ByteArray, extras: Bundle?
-    ): ByteArray? {
-        if (NfcEngagementEventBus.bluetoothOn)
-            return this.nfcEngagement.nfcEngagementHelper.nfcProcessCommandApdu(commandApdu)
+    private fun ByteArray.processApdu(): ByteArray {
+        if (NfcEngagementEventBus.bluetoothOn) {
+            ProximityLogger.i("COMMAND_TYPE_BLE", NfcUtil.nfcGetCommandType(this).toString())
+            return this@NfcEngagementService.nfcEngagement.nfcEngagementHelper.nfcProcessCommandApdu(
+                this
+            )
+        }
         if (manager == null)
             manager = ApduManager(nfcEngagement, docs, alias)
-        ProximityLogger.i("COMMAND_TYPE", NfcUtil.nfcGetCommandType(commandApdu).toString())
-        return when (NfcUtil.nfcGetCommandType(commandApdu)) {
+        ProximityLogger.i(
+            "COMMAND_TYPE_NFC_SERVICE",
+            NfcUtil.nfcGetCommandType(this).toString()
+        )
+        return when (NfcUtil.nfcGetCommandType(this)) {
             NfcUtil.COMMAND_TYPE_SELECT_BY_AID -> {
                 manager?.let {
-                    val selectedAid = commandApdu.copyOfRange(5, 12)
+                    val selectedAid = this.copyOfRange(5, 12)
                     if (selectedAid.contentEquals(NfcUtil.AID_FOR_MDL_DATA_TRANSFER)) {
                         ProximityLogger.i("SELECTED", "AID_FOR_MDL_DATA_TRANSFER")
                         //MDL AID detected, using ApduManager for NFC-only
@@ -322,13 +332,49 @@ abstract class NfcEngagementService : HostApduService() {
                 }
             }
 
-            NfcUtil.COMMAND_TYPE_ENVELOPE -> manager?.handleEnvelope(commandApdu)
+            NfcUtil.COMMAND_TYPE_ENVELOPE -> manager?.handleEnvelope(this)
                 ?: NfcUtil.STATUS_WORD_FILE_NOT_FOUND
 
-            NfcUtil.COMMAND_TYPE_RESPONSE -> manager?.handleGetResponse(commandApdu)
+            NfcUtil.COMMAND_TYPE_RESPONSE -> manager?.handleGetResponse(this)
                 ?: NfcUtil.STATUS_WORD_FILE_NOT_FOUND
 
             else -> NfcUtil.STATUS_WORD_INSTRUCTION_NOT_SUPPORTED
         }
+    }
+
+    /**
+     * Processes incoming NFC APDU commands.
+     */
+    override fun processCommandApdu(
+        commandApdu: ByteArray, extras: Bundle?
+    ): ByteArray? {
+        if (numApdusReceived == 0) {
+            numApdusReceived = 1
+            firstCommandApdu = commandApdu
+            return NfcUtil.STATUS_WORD_OK
+        }
+
+        if (!engagementStarted) {
+            engagementStarted = true
+            val intent = Intent(applicationContext, javaClassToLaunch)
+            intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_NO_HISTORY or
+                        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS or
+                        Intent.FLAG_ACTIVITY_NO_ANIMATION
+            )
+            intent.putExtra("NfcEngagement", "true")
+            applicationContext.startActivity(intent)
+        }
+        if (numApdusReceived++ == 1) {
+            val responseApdu = commandApdu.processApdu()
+            if (!responseApdu.contentEquals(NfcUtil.STATUS_WORD_OK)) {
+                ProximityLogger.e(
+                    this.javaClass.name, "Expected response 9000 to SELECT APPLICATION, " +
+                            " got $responseApdu"
+                )
+            }
+        }
+        return commandApdu.processApdu()
     }
 }

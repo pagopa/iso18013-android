@@ -1,5 +1,6 @@
 package it.pagopa.io.wallet.proximity.nfc
 
+import android.app.Activity
 import android.nfc.cardemulation.HostApduService
 import android.os.Bundle
 import com.android.identity.android.util.NfcUtil
@@ -8,6 +9,7 @@ import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.nfc.apdu.ApduManager
 
 abstract class NfcExchangeService : HostApduService() {
+    abstract val javaClassToLaunch: Class<out Activity>
     open val docs: Array<Document> = arrayOf()
     private var manager: ApduManager? = null
     open val alias: String = ""
@@ -26,6 +28,34 @@ abstract class NfcExchangeService : HostApduService() {
         nfcEngagement.nfcEngagementHelper.nfcOnDeactivated(reason)
     }
 
+    private fun ByteArray.processApdu() = when (NfcUtil.nfcGetCommandType(this)) {
+        NfcUtil.COMMAND_TYPE_SELECT_BY_AID -> {
+            manager?.let {
+                val selectedAid = this.copyOfRange(5, 12)
+                if (selectedAid.contentEquals(NfcUtil.AID_FOR_MDL_DATA_TRANSFER)) {
+                    ProximityLogger.i("SELECTED", "AID_FOR_MDL_DATA_TRANSFER")
+                    //MDL AID detected, using ApduManager for NFC-only
+                    it.resetApduDataRetrievalState()
+                    NfcUtil.STATUS_WORD_OK
+                } else {
+                    //Unknown AID, rejecting
+                    NfcUtil.STATUS_WORD_INSTRUCTION_NOT_SUPPORTED
+                }
+            } ?: run {
+                //Manager null in NFC-only mode - this shouldn't happen
+                NfcUtil.STATUS_WORD_FILE_NOT_FOUND
+            }
+        }
+
+        NfcUtil.COMMAND_TYPE_ENVELOPE -> manager?.handleEnvelope(this)
+            ?: NfcUtil.STATUS_WORD_FILE_NOT_FOUND
+
+        NfcUtil.COMMAND_TYPE_RESPONSE -> manager?.handleGetResponse(this)
+            ?: NfcUtil.STATUS_WORD_FILE_NOT_FOUND
+
+        else -> NfcUtil.STATUS_WORD_INSTRUCTION_NOT_SUPPORTED
+    }
+
     /**
      * Processes incoming NFC APDU commands.
      */
@@ -34,33 +64,10 @@ abstract class NfcExchangeService : HostApduService() {
     ): ByteArray? {
         if (manager == null)
             manager = ApduManager(nfcEngagement, docs, alias)
-        ProximityLogger.i("COMMAND_TYPE", NfcUtil.nfcGetCommandType(commandApdu).toString())
-        return when (NfcUtil.nfcGetCommandType(commandApdu)) {
-            NfcUtil.COMMAND_TYPE_SELECT_BY_AID -> {
-                manager?.let {
-                    val selectedAid = commandApdu.copyOfRange(5, 12)
-                    if (selectedAid.contentEquals(NfcUtil.AID_FOR_MDL_DATA_TRANSFER)) {
-                        ProximityLogger.i("SELECTED", "AID_FOR_MDL_DATA_TRANSFER")
-                        //MDL AID detected, using ApduManager for NFC-only
-                        it.resetApduDataRetrievalState()
-                        NfcUtil.STATUS_WORD_OK
-                    } else {
-                        //Unknown AID, rejecting
-                        NfcUtil.STATUS_WORD_INSTRUCTION_NOT_SUPPORTED
-                    }
-                } ?: run {
-                    //Manager null in NFC-only mode - this shouldn't happen
-                    NfcUtil.STATUS_WORD_FILE_NOT_FOUND
-                }
-            }
-
-            NfcUtil.COMMAND_TYPE_ENVELOPE -> manager?.handleEnvelope(commandApdu)
-                ?: NfcUtil.STATUS_WORD_FILE_NOT_FOUND
-
-            NfcUtil.COMMAND_TYPE_RESPONSE -> manager?.handleGetResponse(commandApdu)
-                ?: NfcUtil.STATUS_WORD_FILE_NOT_FOUND
-
-            else -> NfcUtil.STATUS_WORD_INSTRUCTION_NOT_SUPPORTED
-        }
+        ProximityLogger.i(
+            "COMMAND_TYPE_EXCHANGE",
+            NfcUtil.nfcGetCommandType(commandApdu).toString()
+        )
+        return commandApdu.processApdu()
     }
 }
