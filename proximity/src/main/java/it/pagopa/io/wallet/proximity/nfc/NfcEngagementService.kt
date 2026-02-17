@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import androidx.annotation.CheckResult
 import com.android.identity.android.util.NfcUtil
+import com.android.identity.util.toHex
 import it.pagopa.io.wallet.cbor.model.Document
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.engagement.EngagementListener
@@ -102,7 +103,7 @@ abstract class NfcEngagementService : HostApduService() {
         @CheckResult
         fun enable(
             activity: Activity,
-            preferredNfcEngSerCls: Class<out NfcEngagementService>? = null,
+            preferredNfcEngSerCls: Class<out HostApduService>? = null,
         ): HceServiceStatus {
             // set preferred Nfc Engagement Service
             return preferredNfcEngSerCls?.let {
@@ -130,7 +131,7 @@ abstract class NfcEngagementService : HostApduService() {
         @JvmStatic
         private fun setAsPreferredNfcEngagementService(
             activity: Activity,
-            nfcEngagementServiceClass: Class<out NfcEngagementService>,
+            nfcEngagementServiceClass: Class<out HostApduService>,
         ): HceServiceStatus {
             // Check device compatibility first
             if (HceCompatibilityChecker.isKnownProblematicDevice()) {
@@ -143,7 +144,7 @@ abstract class NfcEngagementService : HostApduService() {
             // Perform comprehensive HCE status check
             val hceStatus = HceCompatibilityChecker.checkHceServiceStatus(
                 activity.applicationContext,
-                nfcEngagementServiceClass as Class<out HostApduService>
+                nfcEngagementServiceClass
             )
 
             ProximityLogger.i(
@@ -310,7 +311,7 @@ abstract class NfcEngagementService : HostApduService() {
         if (manager == null)
             manager = ApduManager(nfcEngagement, docs, alias)
         ProximityLogger.i(
-            "COMMAND_TYPE_NFC_SERVICE",
+            "NFC_ENG_SERVICE",
             NfcUtil.nfcGetCommandType(this).toString()
         )
         return when (NfcUtil.nfcGetCommandType(this)) {
@@ -371,7 +372,7 @@ abstract class NfcEngagementService : HostApduService() {
             if (!responseApdu.contentEquals(NfcUtil.STATUS_WORD_OK)) {
                 ProximityLogger.e(
                     this.javaClass.name, "Expected response 9000 to SELECT APPLICATION, " +
-                            " got $responseApdu"
+                            " got ${responseApdu.toHex()}"
                 )
             }
         }

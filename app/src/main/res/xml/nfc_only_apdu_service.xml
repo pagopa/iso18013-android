@@ -3,8 +3,8 @@
 <host-apdu-service xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:description="@string/exchange_aid_group_desc"
-    android:requireDeviceUnlock="false"
-    android:requireDeviceScreenOn="false"
+    android:requireDeviceUnlock="true"
+    android:requireDeviceScreenOn="true"
     tools:ignore="UnusedAttribute">
 
     <aid-group android:description="@string/exchange_aid_group_desc" android:category="other">

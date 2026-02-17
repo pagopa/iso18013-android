@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.bluetooth.BluetoothUtils
 import it.pagopa.io.wallet.proximity.nfc.HceCompatibilityChecker
 import it.pagopa.io.wallet.proximity.nfc.NfcChecks
@@ -31,6 +32,7 @@ import it.pagopa.iso_android.R
 import it.pagopa.iso_android.navigation.HomeDestination
 import it.pagopa.iso_android.navigation.getActivity
 import it.pagopa.iso_android.nfc.AppNfcEngagementService
+import it.pagopa.iso_android.nfc.AppNfcExchangeService
 import it.pagopa.iso_android.ui.AppDialog
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.BigText
@@ -50,6 +52,7 @@ fun HomeView(
 ) {
     @Composable
     fun DeviceInfoDialog(context: Context, destination: HomeDestination, onClick: () -> Unit) {
+        NfcEngagementService.disable(context.getActivity()!!)
         val hceStatus = NfcEngagementService.enable(
             context.getActivity()!!,
             AppNfcEngagementService::class.java
@@ -189,6 +192,11 @@ fun HomeView(
             else {
                 if (nfcChecks.isNfcReadyForEngagement()) {
                     NfcEngagementService.disable(context.getActivity()!!)
+                    val status = NfcEngagementService.enable(
+                        context.getActivity()!!,
+                        AppNfcExchangeService::class.java
+                    )
+                    ProximityLogger.i("ONLY NFC", status.canWork().toString())
                     onNavigate.invoke(HomeDestination.MasterNfcExchange)
                 } else {
                     Toast.makeText(
