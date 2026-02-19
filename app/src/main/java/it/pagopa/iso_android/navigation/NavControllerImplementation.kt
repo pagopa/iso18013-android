@@ -24,7 +24,7 @@ import androidx.navigation.compose.composable
 import it.pagopa.io.wallet.cbor.cose.COSEManager
 import it.pagopa.io.wallet.cbor.document_manager.DocManager
 import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
-import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEventBus
+import it.pagopa.io.wallet.proximity.nfc.NfcRetrievalMethod
 import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
 import it.pagopa.iso_android.MainActivity
 import it.pagopa.iso_android.R
@@ -74,13 +74,22 @@ fun MainActivity?.IsoAndroidPocNavHost(
                 animationSpec = tween(AnimDurationMillis)
             )
         }) {
+            val context = LocalContext.current
             topBarImage.value = Icons.Default.Menu
-            HomeView(onBack = {
+            val docManager = DocManager.getInstance(
+                context = context,
+                storageDirectory = context.noBackupFilesDir,
+                prefix = "SECURE_STORAGE",
+                alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
+            )
+            HomeView(docManager = docManager, onBack = {
                 backLogic(showMenu) {
                     this@IsoAndroidPocNavHost?.finishAndRemoveTask()
                 }
             }, onNavigate = { destination ->
                 navController.navigateIfDifferent(destination)
+            }, onNavigateToDocStorage = {
+                navController.navigateIfDifferent(HomeDestination.DocumentStorage)
             })
         }
         customAnimatedComposable<HomeDestination.Master> {
@@ -94,7 +103,7 @@ fun MainActivity?.IsoAndroidPocNavHost(
                             peripheralServerMode = true,
                             centralClientMode = false,
                             clearBleCache = true
-                        )
+                        ), NfcRetrievalMethod()
                     )
                 ).withReaderTrustStore(listOf(listOf(R.raw.eudi_pid_issuer_ut))),
                 context.resources
@@ -108,7 +117,6 @@ fun MainActivity?.IsoAndroidPocNavHost(
         customAnimatedComposable<HomeDestination.MasterNfc> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val context = LocalContext.current
-            NfcEngagementEventBus.bluetoothOn = true
             val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
                 DocManager.getInstance(
                     context = context,
@@ -130,14 +138,14 @@ fun MainActivity?.IsoAndroidPocNavHost(
         customAnimatedComposable<HomeDestination.MasterNfcExchange> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val context = LocalContext.current
-            NfcEngagementEventBus.bluetoothOn = false
+            val docManager = DocManager.getInstance(
+                context = context,
+                storageDirectory = context.noBackupFilesDir,
+                prefix = "SECURE_STORAGE",
+                alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
+            )
             val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
-                DocManager.getInstance(
-                    context = context,
-                    storageDirectory = context.noBackupFilesDir,
-                    prefix = "SECURE_STORAGE",
-                    alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
-                ),
+                docManager,
                 context.resources
             )
             NfcEngagementView(

@@ -15,7 +15,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,10 +25,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import it.pagopa.io.wallet.cbor.document_manager.DocManager
+import it.pagopa.io.wallet.proximity.ProximityLogger
+import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
 import it.pagopa.io.wallet.proximity.bluetooth.BluetoothUtils
 import it.pagopa.io.wallet.proximity.nfc.HceCompatibilityChecker
 import it.pagopa.io.wallet.proximity.nfc.NfcChecks
+import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEventBus
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementService
+import it.pagopa.io.wallet.proximity.nfc.NfcRetrievalMethod
 import it.pagopa.iso_android.R
 import it.pagopa.iso_android.navigation.HomeDestination
 import it.pagopa.iso_android.navigation.getActivity
@@ -45,8 +52,10 @@ import it.pagopa.iso_android.ui.preview.ThemePreviews
 
 @Composable
 fun HomeView(
+    docManager: DocManager,
     onBack: () -> Unit,
-    onNavigate: (destination: HomeDestination) -> Unit
+    onNavigate: (destination: HomeDestination) -> Unit,
+    onNavigateToDocStorage: () -> Unit
 ) {
     @Composable
     fun DeviceInfoDialog(context: Context, destination: HomeDestination, onClick: () -> Unit) {
@@ -67,9 +76,31 @@ fun HomeView(
                 button = AppDialog.DialogButton(
                     context.resources.getString(R.string.ok)
                 ) {
-                    if (hceStatus.canWork())
+                    if (hceStatus.canWork()) {
+                        val initialized = when (destination) {
+                            is HomeDestination.MasterNfc -> NfcEngagementEventBus.setupNfcService(
+                                retrievalMethods = listOf(
+                                    NfcRetrievalMethod(), BleRetrievalMethod(
+                                        peripheralServerMode = true,
+                                        centralClientMode = false,
+                                        clearBleCache = true
+                                    )
+                                ),
+                                docManager.gelAllDocuments(),
+                                "pagoPa",
+                                listOf(listOf(R.raw.eudi_pid_issuer_ut))
+                            )
+                            is HomeDestination.MasterNfcExchange -> NfcEngagementEventBus.setupNfcService(
+                                retrievalMethods = listOf(NfcRetrievalMethod()),
+                                docManager.gelAllDocuments(),
+                                "pagoPa",
+                                listOf(listOf(R.raw.eudi_pid_issuer_ut))
+                            )
+                            else -> false
+                        }
+                        ProximityLogger.i("INIT_ok", initialized.toString())
                         onNavigate.invoke(destination)
-                    else
+                    } else
                         Toast.makeText(
                             context,
                             "Sorry but seems it will not work",
@@ -96,9 +127,13 @@ fun HomeView(
         val granted = permissionsMap.filter {
             it.value
         }
-        if (granted.size >= permissionsMap.size - 1)
-            shouldShowInfoDialog.value = dialogLogic(whereToGo.value)
-        else
+        if (granted.size >= permissionsMap.size - 1) {
+            val shouldShowDialog = dialogLogic(whereToGo.value)
+            shouldShowInfoDialog.value = shouldShowDialog
+            if (!shouldShowDialog) {
+                onNavigate.invoke(whereToGo.value)
+            }
+        } else
             Toast.makeText(
                 context,
                 "Ho bisogno del permesso al bluetooth per procedere..",
@@ -154,10 +189,46 @@ fun HomeView(
                 text = "Home",
                 color = MaterialTheme.colorScheme.primary
             )
+            val docSize = docManager.gelAllDocuments().size
+            Spacer(Modifier.height(24.dp))
+            if (docSize > 0) {
+                SmallText(
+                    modifier = Modifier.wrapContentSize(),
+                    text = "You've got $docSize documents",
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                SmallText(
+                    modifier = Modifier.wrapContentSize(),
+                    text = "You've got no documents",
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(16.dp))
+                Button(onClick = onNavigateToDocStorage) {
+                    Text(text = "Please create clicking Here")
+                }
+            }
         }
         PopUpMenu(showPopupMenu, listOf(PopUpMenuItem("Qr code") {
             whereToGo.value = HomeDestination.Master
             bluetoothCheck {
+                val hceStatus = NfcEngagementService.enable(
+                    context.getActivity()!!,
+                    AppNfcEngagementService::class.java
+                )
+                ProximityLogger.i("HCE WORKING STATUS", hceStatus.canWork().toString())
+                NfcEngagementEventBus.setupNfcService(
+                    retrievalMethods = listOf(
+                        NfcRetrievalMethod(), BleRetrievalMethod(
+                            peripheralServerMode = true,
+                            centralClientMode = false,
+                            clearBleCache = true
+                        )
+                    ),
+                    docManager.gelAllDocuments(),
+                    "pagoPa",
+                    listOf(listOf(R.raw.eudi_pid_issuer_ut))
+                )
                 onNavigate.invoke(HomeDestination.Master)
             }
         }, PopUpMenuItem("Nfc") {
@@ -231,10 +302,18 @@ fun HomeView(
 @Composable
 fun PreviewHomeView() {
     BasePreview {
-        HomeView(onBack = {
+        HomeView(
+            docManager = DocManager.getInstance(
+                context = LocalContext.current,
+                storageDirectory = LocalContext.current.noBackupFilesDir,
+                "",
+                ""
+            ), onBack = {
 
-        }, onNavigate = {
+            }, onNavigate = {
 
-        })
+            }) {
+
+        }
     }
 }

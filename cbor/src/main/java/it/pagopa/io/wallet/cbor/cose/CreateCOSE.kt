@@ -76,10 +76,11 @@ internal class CreateCOSE private constructor() {
         if (!keyExists())
             return SignWithCOSEResult.Failure(FailureReason.NO_KEY)
         val pair = getPrivateKeyAndPublicKey()
-        if (pair == null) return SignWithCOSEResult.Failure(FailureReason.PRIVATE_KEY_AND_PUBLIC_KEY_FAILURE)
+            ?: return SignWithCOSEResult.Failure(FailureReason.PRIVATE_KEY_AND_PUBLIC_KEY_FAILURE)
         val (private, public) = pair
-        val signature = signDataRaw(this, private)
-        if (signature == null) return SignWithCOSEResult.Failure(FailureReason.FAIL_TO_SIGN)
+        val signature = signDataRaw(this, private) ?: return SignWithCOSEResult.Failure(
+            FailureReason.FAIL_TO_SIGN
+        )
         return SignWithCOSEResult.Success(signature, public.encoded)
     }
 

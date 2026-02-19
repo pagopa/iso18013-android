@@ -10,6 +10,4 @@ import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 data class NfcRetrievalMethod(
     val commandDataFieldMaxLength: Long = 256L,
     val responseDataFieldMaxLength: Long = 256L
-) : DeviceRetrievalMethod {
-    var useBluetooth: Boolean = true
-}
+) : DeviceRetrievalMethod

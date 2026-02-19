@@ -44,6 +44,7 @@ class MasterViewViewModel(
                         .getQrCodeString()
                 ).asBitmap(qrCodeSize)
             }
+            qrCodeEngagement.setupDeviceEngagementForNfc()
             attachListenerAndObserve()
         }
     }

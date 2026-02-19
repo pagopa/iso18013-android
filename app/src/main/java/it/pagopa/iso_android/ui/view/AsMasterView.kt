@@ -16,9 +16,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import it.pagopa.io.wallet.proximity.nfc.NfcEngagementService
+import it.pagopa.iso_android.navigation.getActivity
 import it.pagopa.iso_android.ui.BasePreview
 import it.pagopa.iso_android.ui.BigText
 import it.pagopa.iso_android.ui.CenteredComposable
@@ -35,13 +38,16 @@ fun MasterView(
     viewModel: MasterViewViewModel,
     onBack: () -> Unit
 ) {
+    val ctx = LocalContext.current
     val back = {
         viewModel.qrCodeEngagement.close()
+        NfcEngagementService.disable(ctx.getActivity()!!)
         onBack.invoke()
     }
     BackHandler(onBack = back)
     val qrCodeSize = with(LocalDensity.current) { 200.dp.toPx() }.roundToInt()
     LaunchedEffect(viewModel) {
+        viewModel.observeEvents()
         viewModel.getQrCodeBitmap(
             qrCodeSize
         )

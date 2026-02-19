@@ -6,6 +6,7 @@ import com.android.identity.android.mdoc.engagement.NfcEngagementHelper
 import com.android.identity.android.mdoc.transport.DataTransport
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.engagement.Engagement
+import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.retrieval.connectionMethods
 import it.pagopa.io.wallet.proximity.retrieval.transportOptions
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
@@ -95,22 +96,19 @@ internal class NfcEngagement(
          * To observe all events call [withListener] method.
          * To close the connection call [close] method.
          */
-        fun build(context: Context, retrievalMethods: List<NfcRetrievalMethod>): NfcEngagement {
-            return NfcEngagement(context).apply {
-                this@apply.retrievalMethods = retrievalMethods.map {
-                    it.useBluetooth = NfcEngagementEventBus.bluetoothOn
-                    it
-                }
-                this@apply.nfcEngagementBuilder = NfcEngagementHelperRefactor.Builder(
-                    context,
-                    this@apply.eDevicePrivateKey.publicKey,
-                    this@apply.retrievalMethods.transportOptions,
-                    this@apply.nfcEngagementListener,
-                    context.mainExecutor(),
-                    usingBle = NfcEngagementEventBus.bluetoothOn
-                ).apply {
-                    this staticHandoverWith retrievalMethods.connectionMethods
-                }
+        fun build(
+            context: Context,
+            retrievalMethods: List<DeviceRetrievalMethod>
+        ) = NfcEngagement(context).apply {
+            this@apply.retrievalMethods = retrievalMethods
+            this@apply.nfcEngagementBuilder = NfcEngagementHelperRefactor.Builder(
+                context,
+                this@apply.eDevicePrivateKey,
+                this@apply.retrievalMethods.transportOptions,
+                this@apply.nfcEngagementListener,
+                context.mainExecutor()
+            ).also {
+                it staticHandoverWith this@apply.retrievalMethods.connectionMethods
             }
         }
     }

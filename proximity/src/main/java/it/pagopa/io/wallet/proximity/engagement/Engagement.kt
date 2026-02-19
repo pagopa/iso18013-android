@@ -190,7 +190,7 @@ abstract class Engagement(val context: Context) {
         val transport = DataTransport.fromConnectionMethod(
             context,
             connectionMethod,
-            DataTransport.Role.MDOC,
+            DataTransport.Role.MDOC_READER,
             this.retrievalMethods.transportOptions
         )
         val deviceRetrievalHelper = DeviceRetrievalHelper.Builder(
