@@ -109,6 +109,7 @@ abstract class NfcEngagementService : HostApduService() {
          */
         @JvmStatic
         fun disable(activity: Activity) {
+            nfcEngagement?.nfcEngagementHelper?.close()
             nfcEngagement = null
             unsetAsPreferredNfcEngagementService(activity)
         }
