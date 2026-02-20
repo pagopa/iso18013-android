@@ -267,7 +267,9 @@ abstract class NfcEngagementService : HostApduService() {
             .build(
                 this@NfcEngagementService.baseContext,
                 retrievalMethods
-            )
+            ) {
+                this.deactivateAll()
+            }
             .configure()
         createListeners()
     }
@@ -325,10 +327,16 @@ abstract class NfcEngagementService : HostApduService() {
         }
     }
 
+    private fun deactivateAll() {
+        if (nfcEngagement != null) {
+            nfcEngagement?.nfcEngagementHelper?.resetAll()
+            nfcEngagement?.close()
+        }
+    }
+
     override fun onDeactivated(reason: Int) {
         if (nfcEngagement != null) {
             nfcEngagement?.nfcEngagementHelper?.nfcOnDeactivated(reason)
-            nfcEngagement?.nfcEngagementHelper?.resetAll()
             val timeoutSeconds = 15
             Handler(Looper.getMainLooper()).postDelayed({
                 nfcEngagement?.close()

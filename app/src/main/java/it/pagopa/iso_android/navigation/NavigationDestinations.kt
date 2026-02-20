@@ -16,6 +16,8 @@ sealed class HomeDestination {
     data object MasterNfcExchange : HomeDestination()
 
     @Serializable
+    data object MasterNfcBLE : HomeDestination()
+    @Serializable
     data object Slave : HomeDestination()
 
     @Serializable

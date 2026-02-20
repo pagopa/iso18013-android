@@ -18,4 +18,7 @@ class NfcEngagementViewModel(
     override val engagement: Engagement? = null
     override fun getEuPid() = docManager.gelAllEuPidDocuments().firstOrNull()
     override fun getMdl() = docManager.gelAllMdlDocuments().firstOrNull()
+    fun initializeListeners(){
+        attachListenerAndObserve()
+    }
 }

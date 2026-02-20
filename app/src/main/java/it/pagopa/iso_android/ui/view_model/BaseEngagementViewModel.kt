@@ -8,12 +8,13 @@ import it.pagopa.io.wallet.cbor.model.DocType
 import it.pagopa.io.wallet.cbor.model.Document
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.engagement.Engagement
+import it.pagopa.io.wallet.proximity.engagement.EngagementListener
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEvent
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEventBus
-import it.pagopa.io.wallet.proximity.nfc.sendErrorResponseByNfc
-import it.pagopa.io.wallet.proximity.nfc.sendResponseByNfc
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator
+import it.pagopa.io.wallet.proximity.retrieval.sendErrorResponse
+import it.pagopa.io.wallet.proximity.retrieval.sendSessionTermination
 import it.pagopa.io.wallet.proximity.session_data.SessionDataStatus
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 import it.pagopa.iso_android.R
@@ -98,7 +99,7 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                             Base64.encodeToString(response, Base64.NO_WRAP)
                         )
                         this@BaseEngagementViewModel.engagement?.sendResponse(response) ?: run {
-                            sendResponseByNfc(deviceConnected, response)
+                            deviceConnected.sendSessionTermination(response)
                         }
                         ProximityLogger.i(
                             "RESPONSE TO SEND",
@@ -115,7 +116,7 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                         else
                             SessionDataStatus.ERROR_CBOR_DECODING
                         this@BaseEngagementViewModel.engagement?.sendErrorResponse(toSend) ?: run {
-                            sendErrorResponseByNfc(deviceConnected, toSend)
+                            deviceConnected.sendErrorResponse(toSend)
                         }
                     }
                 }
@@ -289,8 +290,64 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                         loader.value = null
                         _shouldGoBack.value = true
                     }
+                    is NfcEngagementEvent.NfcOnlyEventListener->{
+
+                    }
                 }
             }
         }
+    }
+    protected fun attachListenerAndObserve() {
+        engagement?.withListener(object : EngagementListener {
+            override fun onDeviceConnecting() {
+                this@BaseEngagementViewModel.loader.value = "Connecting"
+            }
+
+            override fun onError(error: Throwable) {
+                ProximityLogger.e(
+                    this@BaseEngagementViewModel.javaClass.name,
+                    "onCommunicationError: ${error.message}"
+                )
+                this@BaseEngagementViewModel.loader.value = null
+                _shouldGoBack.value = true
+            }
+
+            override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {
+                ProximityLogger.i(this@BaseEngagementViewModel.javaClass.name, "onDeviceDisconnected")
+                this@BaseEngagementViewModel.loader.value = null
+                if (transportSpecificTermination) {
+                    this@BaseEngagementViewModel.dialog.value = AppDialog(
+                        title = resources.getString(R.string.data),
+                        description = resources.getString(R.string.sent),
+                        button = AppDialog.DialogButton(
+                            "${resources.getString(R.string.perfect)}!!",
+                            onClick = {
+                                dialog.value = null
+                                _shouldGoBack.value = true
+                            }
+                        )
+                    )
+                    this@BaseEngagementViewModel.loader.value = null
+                }
+            }
+
+            override fun onDeviceConnected(deviceRetrievalHelper: DeviceRetrievalHelperWrapper) {
+                this@BaseEngagementViewModel.loader.value = "Connected"
+                this@BaseEngagementViewModel.deviceConnected = deviceRetrievalHelper
+            }
+
+            override fun onDocumentRequestReceived(
+                request: String?,
+                sessionsTranscript: ByteArray
+            ) {
+                ProximityLogger.i("request", request.toString())
+                this@BaseEngagementViewModel.request = request.orEmpty()
+                if (request == null) {
+                    engagement?.sendErrorResponse(SessionDataStatus.ERROR_CBOR_DECODING)
+                    _shouldGoBack.value = true
+                } else
+                    manageRequestFromDeviceUi(sessionsTranscript)
+            }
+        })
     }
 }

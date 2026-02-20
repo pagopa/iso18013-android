@@ -156,6 +156,28 @@ fun MainActivity?.IsoAndroidPocNavHost(
                     }
                 })
         }
+
+        customAnimatedComposable<HomeDestination.MasterNfcBLE> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
+            val context = LocalContext.current
+            val docManager = DocManager.getInstance(
+                context = context,
+                storageDirectory = context.noBackupFilesDir,
+                prefix = "SECURE_STORAGE",
+                alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
+            )
+            val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
+                docManager,
+                context.resources
+            )
+            NfcEngagementView(
+                viewModel = viewModel,
+                onBack = {
+                    backLogic(showMenu) {
+                        navController.popBackStack()
+                    }
+                })
+        }
         customAnimatedComposable<HomeDestination.Slave> {
             val context = LocalContext.current
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack

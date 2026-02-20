@@ -38,4 +38,23 @@ class ProximityLoggerTest {
         logger.i(tag, "ciao")
         verify(exactly = 1) { Log.i(tag, "ciao") }
     }
+
+    @Test
+    fun filterLogTest() {
+        mockkStatic(Log::class)
+        val tag = "fake"
+        every { Log.v(tag, "ciao") } returns 0
+        every { Log.e(tag, "ciao") } returns 0
+        every { Log.d(tag, "ciao") } returns 0
+        every { Log.i(tag, "ciao") } returns 0
+        val logger = ProximityLogger
+        logger.enabled = true
+        logger.filterLogs = arrayOf(KindOfLog.E)
+        //TESTING THAT WILL WORK JUST ERROR LOGS
+        println(logger.filterLogs.map { it.name })
+        logger.e(tag, "ciao")
+        verify(exactly = 1) { Log.e(tag, "ciao") }
+        logger.v(tag, "ciao")
+        verify(exactly = 0) { Log.v(tag, "ciao") }
+    }
 }

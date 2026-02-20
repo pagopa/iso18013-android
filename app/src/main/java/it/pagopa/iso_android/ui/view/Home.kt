@@ -90,12 +90,27 @@ fun HomeView(
                                 "pagoPa",
                                 listOf(listOf(R.raw.eudi_pid_issuer_ut))
                             )
+
                             is HomeDestination.MasterNfcExchange -> NfcEngagementEventBus.setupNfcService(
                                 retrievalMethods = listOf(NfcRetrievalMethod()),
                                 docManager.gelAllDocuments(),
                                 "pagoPa",
                                 listOf(listOf(R.raw.eudi_pid_issuer_ut))
                             )
+
+                            is HomeDestination.MasterNfcBLE -> NfcEngagementEventBus.setupNfcService(
+                                retrievalMethods = listOf(
+                                    BleRetrievalMethod(
+                                        peripheralServerMode = true,
+                                        centralClientMode = false,
+                                        clearBleCache = true
+                                    )
+                                ),
+                                docManager.gelAllDocuments(),
+                                "pagoPa",
+                                listOf(listOf(R.raw.eudi_pid_issuer_ut))
+                            )
+
                             else -> false
                         }
                         ProximityLogger.i("INIT_ok", initialized.toString())
@@ -257,6 +272,21 @@ fun HomeView(
                 if (nfcChecks.isNfcReadyForEngagement()) {
                     shouldShowInfoDialog.value = true
                     whereToGo.value = HomeDestination.MasterNfcExchange
+                } else {
+                    Toast.makeText(
+                        context, "Sorry, but your device has not card emulation feature",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }, PopUpMenuItem("Nfc-BLE") {
+            val nfcChecks = NfcChecks(context)
+            if (!nfcChecks.isNfcAvailable())
+                nfcChecks.openNfcSettings()
+            else {
+                if (nfcChecks.isNfcReadyForEngagement()) {
+                    shouldShowInfoDialog.value = true
+                    whereToGo.value = HomeDestination.MasterNfcBLE
                 } else {
                     Toast.makeText(
                         context, "Sorry, but your device has not card emulation feature",
