@@ -78,8 +78,7 @@ class NfcEngagementHelperRefactor private constructor(
     private val eDeviceKey: EcPrivateKey,
     private val retrievalMethods: List<DeviceRetrievalMethod>,
     private val listener: Listener,
-    private val executor: Executor,
-    private val onFinish: () -> Unit
+    private val executor: Executor
 ) {
     private var staticHandoverConnectionMethods: List<ConnectionMethod>? = null
     private var transports = mutableListOf<DataTransport>()
@@ -312,33 +311,25 @@ class NfcEngagementHelperRefactor private constructor(
      * [android.nfc.cardemulation.HostApduService.processCommandApdu].
      *
      * @param apdu The APDU that was received from the remote device.
-     * @return a byte-array containing the response APDU.
+     * @return a byte-array containing the response APDU a boolean which means if process is ended or not.
      */
-    fun nfcProcessCommandApdu(apdu: ByteArray): ByteArray {
+    fun nfcProcessCommandApdu(apdu: ByteArray): Pair<ByteArray, Boolean> {
         if (ProximityLogger.enabled) {
             ProximityLogger.d(TAG, "nfcProcessCommandApdu: apdu: ${Utils.bytesToHex(apdu)}")
         }
         return when (val commandType = NfcUtil.nfcGetCommandType(apdu)) {
-            NfcUtil.COMMAND_TYPE_SELECT_BY_AID -> handleSelectByAid(apdu)
-            NfcUtil.COMMAND_TYPE_SELECT_FILE -> handleSelectFile(apdu)
-            NfcUtil.COMMAND_TYPE_READ_BINARY -> handleReadBinary(apdu)
+            NfcUtil.COMMAND_TYPE_SELECT_BY_AID -> handleSelectByAid(apdu) to false
+            NfcUtil.COMMAND_TYPE_SELECT_FILE -> handleSelectFile(apdu) to false
+            NfcUtil.COMMAND_TYPE_READ_BINARY -> handleReadBinary(apdu) to false
             NfcUtil.COMMAND_TYPE_ENVELOPE -> handleEnvelope(apdu)
-            NfcUtil.COMMAND_TYPE_UPDATE_BINARY -> handleUpdateBinary(apdu)
-            NfcUtil.COMMAND_TYPE_RESPONSE -> {
-                val (resp, theEnd) = handleGetResponse(apdu)
-                if (theEnd) {
-                    NfcEngagementEventBus.tryEmit(NfcEngagementEvent.DocumentSent)
-                    onFinish.invoke()
-                }
-                resp
-            }
-
+            NfcUtil.COMMAND_TYPE_UPDATE_BINARY -> handleUpdateBinary(apdu) to false
+            NfcUtil.COMMAND_TYPE_RESPONSE -> handleGetResponse(apdu)
             else -> {
                 ProximityLogger.i(
                     TAG,
                     "nfcProcessCommandApdu: command type $commandType not handled"
                 )
-                NfcUtil.STATUS_WORD_INSTRUCTION_NOT_SUPPORTED
+                NfcUtil.STATUS_WORD_INSTRUCTION_NOT_SUPPORTED to true
             }
         }
     }
@@ -853,16 +844,16 @@ class NfcEngagementHelperRefactor private constructor(
 
     // ENVELOPE (INS=C3)
     @OptIn(ExperimentalStdlibApi::class)
-    private fun handleEnvelope(apdu: ByteArray): ByteArray {
+    private fun handleEnvelope(apdu: ByteArray): Pair<ByteArray, Boolean> {
         ProximityLogger.i(TAG, "ENVELOPE - APDU size: ${apdu.size}")
         // INS = C3, P1P2=0000, datadata=DO'53' o part of; Nc=0 for "end of data string"
         if (apdu.size < 4 || (apdu[1].toInt() and 0xff) != 0xC3) {
             ProximityLogger.e(TAG, "ENVELOPE: Invalid instruction")
-            return NfcUtil.STATUS_WORD_INSTRUCTION_NOT_SUPPORTED
+            return NfcUtil.STATUS_WORD_INSTRUCTION_NOT_SUPPORTED to true
         }
         if (((apdu[2].toInt() and 0xff) != 0x00) || ((apdu[3].toInt() and 0xff) != 0x00)) {
             ProximityLogger.e(TAG, "ENVELOPE: Wrong parameters P1 or P2")
-            return NfcUtil.STATUS_WORD_WRONG_PARAMETERS
+            return NfcUtil.STATUS_WORD_WRONG_PARAMETERS to true
         }
         val apduCommand = CommandApdu.decode(apdu)
         ProximityLogger.i("APDU[0]", apdu[0].toHexString())
@@ -877,7 +868,7 @@ class NfcEngagementHelperRefactor private constructor(
                     ByteString(fullRequest).extractFromDo53().toByteArray()
                 } catch (e: Throwable) {
                     ProximityLogger.e(TAG, "ENVELOPE: Error parsing DO'53': ${e.message}")
-                    return NfcUtil.STATUS_WORD_WRONG_PARAMETERS
+                    return NfcUtil.STATUS_WORD_WRONG_PARAMETERS to true
                 }
                 ProximityLogger.d(TAG, "ENVELOPE: Encrypted request size=${requestEncrypted.size}")
 
@@ -885,7 +876,7 @@ class NfcEngagementHelperRefactor private constructor(
                     processReaderRequest(requestEncrypted)
                 } catch (e: Throwable) {
                     ProximityLogger.e(TAG, "ENVELOPE: Error processing request: ${e.message}")
-                    return NfcUtil.STATUS_WORD_FILE_NOT_FOUND
+                    return NfcUtil.STATUS_WORD_FILE_NOT_FOUND to true
                 }
                 ProximityLogger.d(
                     TAG,
@@ -921,7 +912,7 @@ class NfcEngagementHelperRefactor private constructor(
                         TAG,
                         "ENVELOPE: Response too large, sending SW=${Utils.bytesToHex(sw)}"
                     )
-                    sw
+                    sw to false
                 } else {
                     val out = ByteArray(responseBuffer!!.size + 2)
                     System.arraycopy(responseBuffer!!, 0, out, 0, responseBuffer!!.size)
@@ -940,18 +931,17 @@ class NfcEngagementHelperRefactor private constructor(
                             })
                     )
                     NfcEngagementEventBus.tryEmit(NfcEngagementEvent.DocumentSent)
-                    onFinish.invoke()
-                    out
+                    out to true
                 }
             }
 
             0x10 -> {
                 ProximityLogger.d(TAG, "ENVELOPE: Buffer now has ${envelopeBuffer.size()} bytes")
                 // Waiting for final Envelope with Nc=0
-                NfcUtil.STATUS_WORD_OK
+                NfcUtil.STATUS_WORD_OK to false
             }
 
-            else -> NfcUtil.STATUS_WORD_WRONG_PARAMETERS
+            else -> NfcUtil.STATUS_WORD_WRONG_PARAMETERS to false
         }
     }
 
@@ -1157,6 +1147,7 @@ class NfcEngagementHelperRefactor private constructor(
             responseBuffer = null
             theEnd = true
             responseOffset = 0
+            NfcEngagementEventBus.tryEmit(NfcEngagementEvent.DocumentSent)
             out
         }
         return back to theEnd
@@ -1252,16 +1243,14 @@ class NfcEngagementHelperRefactor private constructor(
         eDeviceKey: EcPrivateKey,
         retrievalMethods: List<DeviceRetrievalMethod>,
         listener: Listener,
-        executor: Executor,
-        onFinish: () -> Unit
+        executor: Executor
     ) {
         var helper = NfcEngagementHelperRefactor(
             context,
             eDeviceKey,
             retrievalMethods,
             listener,
-            executor,
-            onFinish
+            executor
         )
 
         /**

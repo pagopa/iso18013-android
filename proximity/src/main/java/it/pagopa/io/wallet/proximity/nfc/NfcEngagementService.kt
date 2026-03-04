@@ -267,10 +267,7 @@ abstract class NfcEngagementService : HostApduService() {
             .build(
                 this@NfcEngagementService.baseContext,
                 retrievalMethods
-            ) {
-                this.deactivateAll()
-            }
-            .configure()
+            ).configure()
         createListeners()
     }
 
@@ -351,12 +348,13 @@ abstract class NfcEngagementService : HostApduService() {
         commandApdu: ByteArray, extras: Bundle?
     ): ByteArray? {
         ProximityLogger.i("NfcEngagementService", "processCommandApdu: ${commandApdu.toHex()}")
-        val back = if (nfcEngagement != null)
-            nfcEngagement?.nfcEngagementHelper?.nfcProcessCommandApdu(commandApdu)
-        else {
-            null
+        val (back, theEnd) = nfcEngagement?.nfcEngagementHelper?.nfcProcessCommandApdu(commandApdu)
+            ?: (null to true)
+        if (theEnd) {
+            Handler(Looper.getMainLooper()).postDelayed({
+                this.deactivateAll()
+            }, 250L)
         }
-        ProximityLogger.i("GIVING BACK", back?.toHex() ?: "null")
         return back
     }
 }
