@@ -4,7 +4,6 @@ import android.util.Log
 import io.mockk.every
 import io.mockk.mockkStatic
 import io.mockk.verify
-import it.pagopa.io.wallet.proximity.ProximityLogger
 import org.junit.Test
 
 class ProximityLoggerTest {
@@ -18,6 +17,7 @@ class ProximityLoggerTest {
         every { Log.i(tag, "ciao") } returns 0
         val logger = ProximityLogger
         logger.enabled = false
+        logger.filterLogs = KindOfLog.entries.toTypedArray()
         assert(!logger.enabled)
         logger.v(tag, "ciao")
         verify(exactly = 0) { Log.v(tag, "ciao") }
