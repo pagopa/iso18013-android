@@ -263,12 +263,14 @@ abstract class NfcEngagementService : HostApduService() {
     }
 
     private fun buildNfcEngagement(retrievalMethods: List<DeviceRetrievalMethod>) {
-        nfcEngagement = NfcEngagement
-            .build(
-                this@NfcEngagementService.baseContext,
-                retrievalMethods
-            ).configure()
-        createListeners()
+        if (nfcEngagement == null) {
+            nfcEngagement = NfcEngagement
+                .build(
+                    this@NfcEngagementService.baseContext,
+                    retrievalMethods
+                ).configure()
+            createListeners()
+        }
     }
 
     @Suppress("UNCHECKED_CAST")

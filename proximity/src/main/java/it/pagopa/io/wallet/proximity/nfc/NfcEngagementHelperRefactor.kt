@@ -454,6 +454,7 @@ class NfcEngagementHelperRefactor private constructor(
                 fileContents[0] = (hsMessage.size / this.fileMaxLength).toByte()
                 fileContents[1] = (hsMessage.size and 0xff).toByte()
                 System.arraycopy(hsMessage, 0, fileContents, 2, hsMessage.size)
+                ProximityLogger.dHex(TAG, "FILE CONTENTS:", fileContents)
                 selectedNfcFile = fileContents
                 handover = createHandover(hsMessage)
                 ProximityLogger.dCbor(TAG, "NFC static DeviceEngagement", deviceEngagement)
