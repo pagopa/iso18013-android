@@ -11,6 +11,7 @@ import it.pagopa.io.wallet.proximity.engagement.Engagement
 import it.pagopa.io.wallet.proximity.engagement.EngagementListener
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEvent
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEventBus
+import it.pagopa.io.wallet.proximity.nfc.utils.OnlyNfcEvents
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator
 import it.pagopa.io.wallet.proximity.retrieval.sendErrorResponse
@@ -242,7 +243,8 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                         event.sessionTranscript
                         ProximityLogger.i("request", request.toString())
                         this@BaseEngagementViewModel.request = request.orEmpty()
-                        manageRequestFromDeviceUi(event.sessionTranscript)
+                        if (!event.onlyNfc)
+                            manageRequestFromDeviceUi(event.sessionTranscript)
                     }
 
                     is NfcEngagementEvent.Disconnected -> {
@@ -290,13 +292,20 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                         loader.value = null
                         _shouldGoBack.value = true
                     }
-                    is NfcEngagementEvent.NfcOnlyEventListener->{
 
+                    is NfcEngagementEvent.NfcOnlyEventListener -> {
+                        if (event.event == OnlyNfcEvents.NFC_ENGAGEMENT_STARTED) {
+                            ProximityLogger.i(
+                                this@BaseEngagementViewModel.javaClass.name,
+                                "NFC_ENGAGEMENT_STARTED"
+                            )
+                        }
                     }
                 }
             }
         }
     }
+
     protected fun attachListenerAndObserve() {
         engagement?.withListener(object : EngagementListener {
             override fun onDeviceConnecting() {
@@ -313,7 +322,10 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
             }
 
             override fun onDeviceDisconnected(transportSpecificTermination: Boolean) {
-                ProximityLogger.i(this@BaseEngagementViewModel.javaClass.name, "onDeviceDisconnected")
+                ProximityLogger.i(
+                    this@BaseEngagementViewModel.javaClass.name,
+                    "onDeviceDisconnected"
+                )
                 this@BaseEngagementViewModel.loader.value = null
                 if (transportSpecificTermination) {
                     this@BaseEngagementViewModel.dialog.value = AppDialog(

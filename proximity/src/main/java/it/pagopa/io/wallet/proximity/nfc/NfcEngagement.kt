@@ -97,7 +97,8 @@ internal class NfcEngagement(
          */
         fun build(
             context: Context,
-            retrievalMethods: List<DeviceRetrievalMethod>
+            retrievalMethods: List<DeviceRetrievalMethod>,
+            whatToDoWithRequest: (String)->String
         ) = NfcEngagement(context).apply {
             this@apply.retrievalMethods = retrievalMethods
             this@apply.nfcEngagementBuilder = NfcEngagementHelperRefactor.Builder(
@@ -105,7 +106,8 @@ internal class NfcEngagement(
                 this@apply.eDevicePrivateKey,
                 this@apply.retrievalMethods,
                 this@apply.nfcEngagementListener,
-                context.mainExecutor()
+                context.mainExecutor(),
+                whatToDoWithRequest
             ).also {
                 it staticHandoverWith this@apply.retrievalMethods.connectionMethods
             }

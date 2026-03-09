@@ -78,7 +78,8 @@ class NfcEngagementHelperRefactor private constructor(
     private val eDeviceKey: EcPrivateKey,
     private val retrievalMethods: List<DeviceRetrievalMethod>,
     private val listener: Listener,
-    private val executor: Executor
+    private val executor: Executor,
+    private val whatToDoWithRequest: (String) -> String
 ) {
     private var staticHandoverConnectionMethods: List<ConnectionMethod>? = null
     private var transports = mutableListOf<DataTransport>()
@@ -352,6 +353,11 @@ class NfcEngagementHelperRefactor private constructor(
         ) {
             ProximityLogger.i(TAG, "handleSelectByAid: NDEF application selected")
             updateBinaryData = null
+            NfcEngagementEventBus.tryEmit(
+                NfcEngagementEvent.NfcOnlyEventListener(
+                    OnlyNfcEvents.NFC_ENGAGEMENT_STARTED
+                )
+            )
             return NfcUtil.STATUS_WORD_OK
         }
         NfcEngagementEventBus.tryEmit(NfcEngagementEvent.NotSupported)
@@ -859,6 +865,11 @@ class NfcEngagementHelperRefactor private constructor(
         val apduCommand = CommandApdu.decode(apdu)
         ProximityLogger.i("APDU[0]", apdu[0].toHexString())
         envelopeBuffer.write(apduCommand.payload.toByteArray())
+        NfcEngagementEventBus.tryEmit(
+            NfcEngagementEvent.NfcOnlyEventListener(
+                OnlyNfcEvents.DATA_TRANSFER_STARTED
+            )
+        )
         return when (apduCommand.cla) {
             0x00 -> {
                 val fullRequest = envelopeBuffer.toByteArray()
@@ -902,13 +913,6 @@ class NfcEngagementHelperRefactor private constructor(
                         0x61,
                         0xFF.toByte()
                     )
-                    NfcEngagementEventBus.tryEmit(
-                        NfcEngagementEvent.NfcOnlyEventListener(
-                            OnlyNfcEvents.ENVELOPE.apply {
-                                this.percentage =
-                                    (fullRequest.size.toFloat() - this@NfcEngagementHelperRefactor.fileMaxLength / fullRequest.size.toFloat()) * 100f
-                            })
-                    )
                     ProximityLogger.d(
                         TAG,
                         "ENVELOPE: Response too large, sending SW=${Utils.bytesToHex(sw)}"
@@ -925,12 +929,6 @@ class NfcEngagementHelperRefactor private constructor(
                         "ENVELOPE: Response fits, sending ${out.size} bytes directly"
                     )
                     responseBuffer = null
-                    NfcEngagementEventBus.tryEmit(
-                        NfcEngagementEvent.NfcOnlyEventListener(
-                            OnlyNfcEvents.ENVELOPE.apply {
-                                this.percentage = 100f
-                            })
-                    )
                     NfcEngagementEventBus.tryEmit(NfcEngagementEvent.DocumentSent)
                     out to true
                 }
@@ -1036,11 +1034,16 @@ class NfcEngagementHelperRefactor private constructor(
                 )
             }
         }
-
         val jsonToSend = requestWrapperList.toTypedArray().toRequest()
+        NfcEngagementEventBus.tryEmit(
+            NfcEngagementEvent.DocumentRequestReceived(
+                request = jsonToSend.toString(),
+                sessionTranscript = sessionTranscript,
+                onlyNfc = true
+            )
+        )
         val disclosedDocuments = ArrayList<Document>()
-        val req = NfcEngagementHelperUtils
-            .acceptFieldsFromJsonExcept(jsonToSend.toString(), arrayOf())
+        val req = this.whatToDoWithRequest.invoke(jsonToSend.toString())
         JSONObject(req).keys().forEach {
             when {
                 DocType(it) == DocType.MDL -> disclosedDocuments.add(docs.first { doc -> doc.docType == MDL_DOCTYPE })
@@ -1244,14 +1247,16 @@ class NfcEngagementHelperRefactor private constructor(
         eDeviceKey: EcPrivateKey,
         retrievalMethods: List<DeviceRetrievalMethod>,
         listener: Listener,
-        executor: Executor
+        executor: Executor,
+        whatToDoWithRequest: (String) -> String
     ) {
         var helper = NfcEngagementHelperRefactor(
             context,
             eDeviceKey,
             retrievalMethods,
             listener,
-            executor
+            executor,
+            whatToDoWithRequest
         )
 
         /**

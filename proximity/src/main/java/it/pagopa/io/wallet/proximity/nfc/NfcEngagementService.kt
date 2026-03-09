@@ -17,8 +17,10 @@ import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 /**
  * Abstract Nfc engagement service.
@@ -81,6 +83,32 @@ import kotlinx.coroutines.launch
  * @constructor
  */
 abstract class NfcEngagementService : HostApduService() {
+    open fun nfcOnlyFieldAcceptation(
+        jsonString: String
+    ): String {
+        val originalReq = JSONObject(jsonString).optJSONObject("request")
+        val jsonAccepted = JSONObject()
+        originalReq?.keys()?.forEach {
+            originalReq.optJSONObject(it)?.let { json ->
+                val keyJson = JSONObject()
+                json.keys().forEach { key ->
+                    json.optJSONObject(key)?.let { internalJson ->
+                        val internalNewJson = JSONObject()
+                        internalJson.keys().forEach { dataKey ->
+                            internalNewJson.put(dataKey, true)
+                        }
+                        keyJson.put(key, internalNewJson)
+                    }
+                }
+                jsonAccepted.put(it, keyJson)
+            }
+        }
+        return jsonAccepted.toString()
+    }
+
+    private val whatToDoWithRequest: (jsonString: String) -> String
+        get() = { nfcOnlyFieldAcceptation(jsonString = it) }
+
     companion object {
         @SuppressLint("StaticFieldLeak")
         private var nfcEngagement: NfcEngagement? = null
@@ -247,7 +275,8 @@ abstract class NfcEngagementService : HostApduService() {
                 NfcEngagementEventBus.tryEmit(
                     NfcEngagementEvent.DocumentRequestReceived(
                         request,
-                        sessionsTranscript
+                        sessionsTranscript,
+                        onlyNfc = false
                     )
                 )
             }
@@ -267,19 +296,24 @@ abstract class NfcEngagementService : HostApduService() {
             nfcEngagement = NfcEngagement
                 .build(
                     this@NfcEngagementService.baseContext,
-                    retrievalMethods
+                    retrievalMethods,
+                    whatToDoWithRequest = whatToDoWithRequest
                 ).configure()
             createListeners()
         }
     }
 
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.Default + serviceJob)
+
     @Suppress("UNCHECKED_CAST")
     override fun onCreate() {
         super.onCreate()
-        CoroutineScope(Dispatchers.Default).launch {
+        serviceScope.launch {
             NfcEngagementEventBus.internalEvent.collectLatest { event ->
                 when (event) {
                     is ServiceEvents.SetupReady -> {
+                        ProximityLogger.i("NfcEngagementService", "SetupReady")
                         buildNfcEngagement(event.retrievalMethods)
                         val readerTrustStore = event.readerTrustStore
                         readerTrustStore?.firstOrNull()?.let { list ->
@@ -319,8 +353,6 @@ abstract class NfcEngagementService : HostApduService() {
                         )?.setKeyFromQr(
                             event.deviceEngagementSetup.second
                         )
-
-                    else -> Unit
                 }
             }
         }
@@ -330,7 +362,13 @@ abstract class NfcEngagementService : HostApduService() {
         if (nfcEngagement != null) {
             nfcEngagement?.nfcEngagementHelper?.resetAll()
             nfcEngagement?.close()
+            nfcEngagement = null
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceJob.cancel()
     }
 
     override fun onDeactivated(reason: Int) {
@@ -340,6 +378,7 @@ abstract class NfcEngagementService : HostApduService() {
             Handler(Looper.getMainLooper()).postDelayed({
                 nfcEngagement?.close()
             }, timeoutSeconds * 1000L)
+            nfcEngagement = null
         }
     }
 

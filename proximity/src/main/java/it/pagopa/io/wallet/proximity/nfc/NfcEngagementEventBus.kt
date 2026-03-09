@@ -1,11 +1,9 @@
 package it.pagopa.io.wallet.proximity.nfc
 
-import com.android.identity.android.mdoc.deviceretrieval.DeviceRetrievalHelper
 import com.android.identity.crypto.EcPrivateKey
 import it.pagopa.io.wallet.cbor.model.Document
 import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**Singleton event bus using SharedFlow for NFC notifications.  */
@@ -16,8 +14,9 @@ object NfcEngagementEventBus {
         extraBufferCapacity = 1 // Optional: prevents lost fast events
     )
     val events = _events.asSharedFlow()
-    private val _internalEvent = MutableStateFlow<ServiceEvents?>(
-        null
+    private val _internalEvent = MutableSharedFlow<ServiceEvents>(
+        replay = 0,
+        extraBufferCapacity = 1
     )
     internal val internalEvent = _internalEvent.asSharedFlow()
 

@@ -1,6 +1,5 @@
 package it.pagopa.io.wallet.proximity.nfc
 
-import com.android.identity.android.mdoc.deviceretrieval.DeviceRetrievalHelper
 import com.android.identity.crypto.EcPrivateKey
 import it.pagopa.io.wallet.cbor.model.Document
 import it.pagopa.io.wallet.proximity.nfc.utils.OnlyNfcEvents
@@ -14,8 +13,11 @@ sealed class NfcEngagementEvent {
     data class Connected(val device: DeviceRetrievalHelperWrapper) : NfcEngagementEvent()
     data class Error(val error: Throwable) : NfcEngagementEvent()
     data class Disconnected(val transportSpecificTermination: Boolean) : NfcEngagementEvent()
-    data class DocumentRequestReceived(val request: String?, val sessionTranscript: ByteArray) :
-        NfcEngagementEvent()
+    data class DocumentRequestReceived(
+        val request: String?,
+        val sessionTranscript: ByteArray,
+        val onlyNfc: Boolean = false
+    ) : NfcEngagementEvent()
 
     data class NfcOnlyEventListener(val event: OnlyNfcEvents) : NfcEngagementEvent()
 

@@ -2,7 +2,6 @@ package it.pagopa.io.wallet.proximity.nfc.utils
 
 import android.nfc.NdefMessage
 import android.nfc.NdefRecord
-import org.json.JSONObject
 
 internal object NfcEngagementHelperUtils {
     fun calculateStatusMessage(statusCode: Int = 0x00): ByteArray {
@@ -20,27 +19,6 @@ internal object NfcEngagementHelperUtils {
     }
 
     fun shouldUseGetResponse(resp: ByteArray) = resp.size > 255
-    fun acceptFieldsFromJsonExcept(jsonString: String, notAccepted: Array<String> = arrayOf()): String {
-        val originalReq = JSONObject(jsonString).optJSONObject("request")
-        val jsonAccepted = JSONObject()
-        originalReq?.keys()?.forEach {
-            originalReq.optJSONObject(it)?.let { json ->
-                val keyJson = JSONObject()
-                json.keys().forEach { key ->
-                    json.optJSONObject(key)?.let { internalJson ->
-                        val internalNewJson = JSONObject()
-                        internalJson.keys().forEach { dataKey ->
-                            if (!notAccepted.contains(dataKey))
-                                internalNewJson.put(dataKey, true)
-                        }
-                        keyJson.put(key, internalNewJson)
-                    }
-                }
-                jsonAccepted.put(it, keyJson)
-            }
-        }
-        return jsonAccepted.toString()
-    }
     fun parseLe(apdu: ByteArray): Int {
         // Case GET RESPONSE: Le present
         // If extended and Le=00 -> unlimited
