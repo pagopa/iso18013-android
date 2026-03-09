@@ -83,6 +83,9 @@ import org.json.JSONObject
  * @constructor
  */
 abstract class NfcEngagementService : HostApduService() {
+    /**
+     * Override this method if you don't want to send some kind of documents or some kind of keys..
+     * */
     open fun nfcOnlyFieldAcceptation(
         jsonString: String
     ): String {

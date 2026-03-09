@@ -4,13 +4,16 @@ An Android implementation of the ISO 18013-5 standard for mobile driving license
 
 ## Project Overview
 
-This project implements the ISO 18013-5 standard for mobile driving licenses (mDL) and other identity documents on Android devices.
+This project implements the ISO 18013-5 standard for mobile driving licenses (mDL) and other identity documents on Android devices. It exposes two independent Android libraries:
+
+- **`proximity`** — handles device engagement (NFC, QR Code), secure transport (BLE, NFC data transfer) and document response generation.
+- **`cbor`** — handles CBOR encoding/decoding, COSE signing/verification and mDL document parsing.
 
 ## Requirements
 
 - Android SDK 26+
 - Kotlin 1.8+
-- Android device with Bluetooth support
+- Android device with NFC and/or Bluetooth support
 - Android Studio Arctic Fox or later
 
 ## Getting Started
@@ -73,11 +76,12 @@ Commit the changes to the remote repository with a commit message like `chore: R
 
 Create a git tag corresponding to your version, then push it to your remote repository. For example:
 
-```perl
+```bash
 git tag proximity-v1.1.1
 git push origin proximity-v1.1.1
-(Adjust the tag name according to your library and version.)
 ```
+
+Adjust the tag name according to your library and version.
 
 ### 3. Automatic Release to Maven
 
@@ -92,7 +96,7 @@ ProximityLogger.enabled = BuildConfig.DEBUG
 CborLogger.enabled = BuildConfig.DEBUG
 ```
 
-It consists of three main modules:
+---
 
 ## Modules
 
@@ -106,335 +110,438 @@ The CBOR module handles Concise Binary Object Representation (CBOR) encoding and
 
 The public classes in this library are:
 
-- COSEManager
-- MDoc
+- `COSEManager`
+- `MDoc`
 
 The `COSEManager` is designed for signing arbitrary byte arrays using COSE (CBOR Object Signing and Encryption) and for verifying COSE signatures.
 
-Examples: </br>
 Sign data:
 
 ```kotlin
-val data = //your byte array data
-when (val result = coseManager.signWithCOSE(
-    data = data,
-    alias = "pagoPA"
-)) {
+val data = // your byte array data
+when (val result = coseManager.signWithCOSE(data = data, alias = "pagoPA")) {
     is SignWithCOSEResult.Failure -> failureAppDialog(result.msg)
     is SignWithCOSEResult.Success -> {
-        // handle result
-        signature = result.signature//bytes[]
-        publicKey = result.publicKey//bytes[]
+        signature = result.signature  // ByteArray
+        publicKey = result.publicKey  // ByteArray
     }
 }
 ```
 
-Verify Sign1Message:
+Verify a Sign1Message:
 
 ```kotlin
-// it returns a Boolean
-coseManager.verifySign1(
-    dataSigned = what,
-    publicKey = pubKey
-)
+// returns Boolean
+coseManager.verifySign1(dataSigned = what, publicKey = pubKey)
 ```
 
-Examples of how to use `COSEManager` can be found in the `SignAndVerifyViewViewModel` class.
+The `MDoc` class is a polymorphic parser for CBOR-encoded identity documents that returns a `ModelMDoc` object, which can be converted to JSON.
 
-MDoc: </br>
+```kotlin
+// From Base64 string
+val mdoc = MDoc(base64String)
 
-The `MDoc` class is a polymorphic class in Kotlin that returns an object of type `ModelMDoc`. The `ModelMDoc` is a
-parser for a CBOR format, which includes a method to convert it to JSON.
-The `MDoc` class has three constructors:
+// From raw bytes
+val mdoc = MDoc(byteArray)
+```
 
-1. **Primary Constructor**: This is private and is used internally by the other constructors.
-
-   ```kotlin
-   private constructor(source: Any, isByteArray: Boolean = false)
-   ```
-
-2. **String Constructor**: This takes a `Base64String` source and sets `isByteArray` to `false`.
-
-   ```kotlin
-   constructor(source: String) : this(source, false)
-   ```
-
-3. **ByteArray Constructor**: This takes a `bytes[]` source and sets `isByteArray` to `true`.
-   ```kotlin
-   constructor(source: ByteArray) : this(source, true)
-   ```
+---
 
 ### Proximity
 
-The Proximity module manages secure communication between devices for document exchange, including:
+The Proximity module manages secure communication between devices for document exchange according to ISO 18013-5. It supports:
 
-- QR code engagement
-- Bluetooth communication
-- Device connection management
-- Request and response protocols
-- Certificate validation
+- **NFC device engagement** (ISO 18013-5 NFC Static Handover)
+- **QR Code device engagement**
+- **BLE data transfer** (Peripheral Server Mode / Central Client Mode)
+- **NFC-only data transfer** (engagement + data exchange entirely over NFC)
+- Reader certificate validation (Reader Trust Store)
+- Document request and response protocols
 
-The public classes here are:
+#### Retrieval Methods
 
-- QrEngagement
-- ResponseGenerator
-
-and a data class:
+Two `DeviceRetrievalMethod` implementations are available to configure the transport layer:
 
 ```kotlin
 /**
- * BLE Retrieval Method
- * @property peripheralServerMode set if the peripheral server mode is enabled
- * @property centralClientMode set if the central client mode is enabled
- * @property clearBleCache set if the BLE cache should be cleared
+ * BLE Retrieval Method.
+ * @property peripheralServerMode enables BLE Peripheral Server mode
+ * @property centralClientMode enables BLE Central Client mode
+ * @property clearBleCache clears the BLE GATT cache before connecting
  */
 data class BleRetrievalMethod(
     val peripheralServerMode: Boolean,
     val centralClientMode: Boolean,
     val clearBleCache: Boolean
 ) : DeviceRetrievalMethod
+
+/**
+ * NFC Retrieval Method.
+ * Used when the entire data transfer must happen over NFC (no BLE).
+ * @property commandDataFieldMaxLength max APDU command data length (default 256)
+ * @property responseDataFieldMaxLength max APDU response data length (default 256)
+ */
+data class NfcRetrievalMethod(
+    val commandDataFieldMaxLength: Long = 256L,
+    val responseDataFieldMaxLength: Long = 256L
+) : DeviceRetrievalMethod
 ```
 
-### QrEngagement:
+---
 
-`QrEngagement` is used to generate and handle QR-based connections for an mdoc session.
+### NFC Engagement — `NfcEngagementService`
 
-#### Instantiation Example
+`NfcEngagementService` is an abstract `HostApduService` that manages ISO 18013-5 NFC engagement. It supports two operating modes depending on the `DeviceRetrievalMethod` combination passed at setup:
+
+| Mode                              | `retrievalMethods`                                | Description                                                                |
+|-----------------------------------|---------------------------------------------------|----------------------------------------------------------------------------|
+| **NFC engagement + BLE transfer** | `[NfcRetrievalMethod(), BleRetrievalMethod(...)]` | NFC is used only for the initial handshake; data transfer happens over BLE |
+| **NFC-only**                      | `[NfcRetrievalMethod()]`                          | Both engagement and data transfer happen entirely over NFC (APDU-based)    |
+
+#### Step 1 — Implement the service
+
+Extend `NfcEngagementService` in your application module:
 
 ```kotlin
-companion object {
-        /**
-         * Create an instance and configures the QR engagement.
-         * First of all you must call [configure] to build QrEngagementHelper.
-         * To accept just some certificates use [withReaderTrustStore] method.
-         * To create a QrCode use [getQrCodeString] method.
-         * To observe all events call [withListener] method.
-         * To close the connection call [close] method.
-         */
-        fun build(context: Context, retrievalMethods: List<DeviceRetrievalMethod>): QrEngagement {
-            return QrEngagement(context).apply {
-                this.retrievalMethods = retrievalMethods
-                qrEngagementBuilder = QrEngagementHelper.Builder(
-                    context,
-                    eDevicePrivateKey.publicKey,
-                    retrievalMethods.transportOptions,
-                    qrEngagementListener,
-                    context.mainExecutor()
-                ).setConnectionMethods(retrievalMethods.connectionMethods)
-            }
-        }
+class MyNfcEngagementService : NfcEngagementService() {
+
+    /**
+     * Override this method to customize which fields are accepted from the verifier's request.
+     * The default implementation accepts all requested fields.
+     *
+     * @param jsonString the raw JSON request string
+     * @return a JSON string with the fields to disclose (value = true to share, omit to reject)
+     */
+    override fun nfcOnlyFieldAcceptation(jsonString: String): String {
+        // Default: accept all fields as requested.
+        // You can filter specific fields by not including them in the returned JSON.
+        return super.nfcOnlyFieldAcceptation(jsonString)
     }
-```
-
-This is thew way this class is intended to be instantiated. Examples can be found into MasterViewViewModel class.
-
-#### Key Methods:</br>
-
-1. **configure**: builds QrEngagementHelper by com.android.identity package and returns QrEngagement instance created
-   via QrEngagement.build static method.
-
-   ```kotlin
-   fun configure() = apply {
-      qrEngagement = qrEngagementBuilder.build()
-   }
-   ```
-
-2. **withReaderTrustStore**: Method to inject certificates to be verified sent by mdoc verifier app.
-
-   ```kotlin
-   /**
-   * Use this if you have certificates into your **Raw Resource** folder.
-   * *You have still other two methods with [List] of [ByteArray] for raw certificates and [List] of [String] for pem*
-   * @param certificates a [List] of [Int] representing your raw resource
-   * @return [QrEngagement]
-     */
-     fun withReaderTrustStore(certificates: List<Int>) = apply {
-        certificates.setReaderTrustStore()
-     }
-
-   /**
-   * Use this if you have certificates **As [ByteArray]**.
-   * *You have still other two methods with [List] of [Int] for raw resources and [List] of [String] for pem*
-   * @param certificates a [List] of [ByteArray] representing your raw certificates
-   * @return [QrEngagement]
-     */
-     @JvmName("withReaderTrustStore1")
-     fun withReaderTrustStore(certificates: List<ByteArray>) = apply {
-        certificates.setReaderTrustStore()
-     }
-
-   /**
-   * Use this if you have certificates **As [String]**.
-   * *You have still other two methods with [List] of [Int] for raw resources and [List] of [ByteArray] for raw certificates*
-   * @param certificates a [List] of [String] representing your pem certificates
-   * @return [QrEngagement]
-     */
-     @JvmName("withReaderTrustStore2")
-     fun withReaderTrustStore(certificates: List<String>) = apply {
-        certificates.setReaderTrustStore()
-     }
-   ```
-
-3. **getQrCodeString**: Gives back QR code string for engagement
-   ```kotlin
-   fun getQrCodeString() = apply {
-      if (!checkQrEngagementInit())
-         return ""
-     return qrEngagement.deviceEngagementUriEncoded
-   }
-   ```
-4. **withListener**: Starts the listener for qrCodeEngagement
-   ```kotlin
-   fun withListener(callback: QrEngagementListener) = apply {
-     this.listener = callback
-   }
-   ```
-5. **close**: Closes the connection with the mdoc verifier
-   ```kotlin
-   fun close() {
-     if (!checkQrEngagementInit())
-         return
-     try {
-         if (deviceRetrievalHelper != null)
-             deviceRetrievalHelper!!.disconnect()
-         qrEngagement.close()
-     } catch (exception: RuntimeException) {
-         ProximityLogger.e(this.javaClass.name, "Error closing QR engagement $exception")
-     }
-   }
-   ```
-
-The listener:
-
-```kotlin
-interface QrEngagementListener {
-    fun onDeviceConnecting()
-    fun onDeviceConnected(deviceRetrievalHelper: DeviceRetrievalHelperWrapper)
-    fun onError(msg: String)
-    fun onDocumentRequestReceived(request: String?, sessionsTranscript: ByteArray)
-    fun onDeviceDisconnected(transportSpecificTermination: Boolean)
 }
 ```
 
-### ResponseGenerator
+The `nfcOnlyFieldAcceptation` method receives the verifier's device request as a JSON string and must return a JSON object mapping each requested document namespace and field to `true` (disclose) or omitting it (reject). This is the single customisation point for field-level disclosure policy.
 
-`ResponseGenerator` is used to create a response in `ByteArray` format for the connected mdoc verifier.
+#### Step 2 — Declare the service in `AndroidManifest.xml`
 
-```kotlin
-interface Response {
-     /**@param [response] [ByteArray] generated for response*/
-     fun onResponseGenerated(response: ByteArray)
-
-     /**@param [message] [String] for error reached*/
-     fun onError(message: String)
- }
-
- /**
-  * It creates a mdoc response in ByteArray format respect documents requested and disclosed
-  * @param fieldRequestedAndAccepted a JSON with values to share (I.E.:{
- "org.iso.18013.5.1.mDL": {
- "org.iso.18013.5.1": {
- "portrait": true,
- "birth_date": true,
- "given_name": true,
- "issue_date": true,
- "expiry_date": true,
- "family_name": true,
- "document_number": true,
- "issuing_country": true,
- "issuing_authority": true,
- "driving_privileges": true,
- "un_distinguishing_sign": true
- }
- }
- })
-  * @return[Response.onResponseGenerated] if ByteArray is created without Exceptions, else
-  * [Response.onError] if disclosedDocumentsArray is Empty with "no doc found" message or if an
-  * [Exception] was reached with [Throwable.message].
-  */
- @JvmName("createResponseWithCallback")
- fun createResponse(
-     documents: Array<DocRequested>,
-     fieldRequestedAndAccepted: String,
-     response: Response
- ) {
-     val (responseToSend, message) = this.createResponse(
-         documents, fieldRequestedAndAccepted
-     )
-     responseToSend?.let {
-         response.onResponseGenerated(it)
-     } ?: run {
-         response.onError(message)
-         ProximityLogger.e(
-             "Sending resp",
-             "found doc but fail to generate raw response: $message"
-         )
-     }
- }
+```xml
+<service
+    android:name=".MyNfcEngagementService"
+    android:exported="true"
+    android:label="@string/nfc_engagement_service_desc"
+    android:permission="android.permission.BIND_NFC_SERVICE">
+    <intent-filter>
+        <action android:name="android.nfc.action.NDEF_DISCOVERED" />
+        <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE"/>
+    </intent-filter>
+    <meta-data
+        android:name="android.nfc.cardemulation.host_apdu_service"
+        android:resource="@xml/nfc_engagement_apdu_service" />
+</service>
 ```
 
-where `DocRequested` is:
+> The `nfc_engagement_apdu_service` XML resource must declare the AIDs supported by the service (NDEF AID `D2760000850101` and mDL AID `A0000002480400`).
+
+#### Step 3 — Initialise the service before navigating to the NFC screen
+
+Before navigating to the NFC engagement screen, call `NfcEngagementEventBus.setupNfcService(...)` to configure the session. This call is non-suspending and can be invoked from any coroutine context or UI thread:
 
 ```kotlin
-@Parcelize
+// NFC engagement + BLE data transfer
+NfcEngagementEventBus.setupNfcService(
+    retrievalMethods = listOf(
+        NfcRetrievalMethod(),
+        BleRetrievalMethod(
+            peripheralServerMode = true,
+            centralClientMode = false,
+            clearBleCache = true
+        )
+    ),
+    documents = docManager.getAllDocuments(),  // List<Document>
+    alias = "myKeyAlias",
+    readerTrustStore = listOf(listOf(R.raw.eudi_pid_issuer_ut))  // raw resource certificates
+)
+
+// NFC-only (engagement + data transfer entirely over NFC)
+NfcEngagementEventBus.setupNfcService(
+    retrievalMethods = listOf(NfcRetrievalMethod()),
+    documents = docManager.getAllDocuments(),
+    alias = "myKeyAlias",
+    readerTrustStore = listOf(listOf(R.raw.eudi_pid_issuer_ut))
+)
+```
+
+The `readerTrustStore` parameter accepts three formats:
+- `List<List<Int>>` — Android raw resource IDs (`.cer` files in `res/raw/`)
+- `List<List<ByteArray>>` — raw DER-encoded certificate bytes
+- `List<List<String>>` — PEM-encoded certificate strings
+
+#### Step 4 — Enable/disable the foreground preferred service
+
+Call `enable` and `disable` to register your service as the preferred HCE service while your activity is in the foreground:
+
+```kotlin
+override fun onResume() {
+    super.onResume()
+    val status = NfcEngagementService.enable(this, MyNfcEngagementService::class.java)
+    if (!status.canWork()) {
+        // Handle incompatible device: show a warning to the user
+    }
+}
+
+override fun onPause() {
+    super.onPause()
+    NfcEngagementService.disable(this)
+}
+```
+
+`enable` returns an `HceServiceStatus` that describes the HCE readiness of the device:
+
+| Status                         | Meaning                                                      |
+|--------------------------------|--------------------------------------------------------------|
+| `FullyOperational`             | Service is registered and ready                              |
+| `RequiresUserSelection`        | The user must manually select the service in system settings |
+| `NotRegistered`                | Service is not registered for the required AIDs              |
+| `NfcNotSupported`              | Device has no NFC hardware                                   |
+| `HceNotSupported`              | Device does not support Host Card Emulation                  |
+| `NfcDisabled`                  | NFC is turned off in system settings                         |
+| `ServiceNotDeclaredInManifest` | Service missing from `AndroidManifest.xml`                   |
+
+Use `status.canWork()` to determine whether to proceed or notify the user.
+
+#### Step 5 — Observe NFC engagement events
+
+Subscribe to `NfcEngagementEventBus.events` (a `SharedFlow`) to react to the engagement lifecycle. All events are instances of `NfcEngagementEvent`:
+
+```kotlin
+viewModelScope.launch {
+    NfcEngagementEventBus.events.collect { event ->
+        when (event) {
+            is NfcEngagementEvent.Connecting -> { /* device is connecting */ }
+
+            is NfcEngagementEvent.Connected -> {
+                // event.device: DeviceRetrievalHelperWrapper
+                // Store it to send the response later
+                deviceConnected = event.device
+            }
+
+            is NfcEngagementEvent.DocumentRequestReceived -> {
+                // event.request: String? — JSON with the verifier's document request
+                // event.sessionTranscript: ByteArray — required for ResponseGenerator
+                // event.onlyNfc: Boolean — true when using NfcRetrievalMethod only
+                //   (in NFC-only mode the response must be sent automatically,
+                //    without waiting for user confirmation)
+                val request = event.request.orEmpty()
+                if (!event.onlyNfc) {
+                    // Show a consent UI to the user before disclosing data
+                    manageRequestFromDeviceUi(event.sessionTranscript)
+                } else {
+                    // NFC-only: respond immediately without user interaction
+                    shareInfo(event.sessionTranscript)
+                }
+            }
+
+            is NfcEngagementEvent.Disconnected -> {
+                // event.transportSpecificTermination: Boolean
+                // true = session terminated correctly by the verifier
+            }
+
+            is NfcEngagementEvent.Error -> {
+                // event.error: Throwable
+            }
+
+            is NfcEngagementEvent.DocumentSent -> { /* document sent successfully */ }
+
+            is NfcEngagementEvent.NotSupported -> { /* NFC not supported on device */ }
+
+            is NfcEngagementEvent.NfcOnlyEventListener -> {
+                // event.event: OnlyNfcEvents
+                // OnlyNfcEvents.NFC_ENGAGEMENT_STARTED or DATA_TRANSFER_STARTED
+            }
+        }
+    }
+}
+```
+
+> **Important:** `NfcEngagementEventBus.events` uses `replay = 0`. You must be subscribed before the engagement starts. Start collecting in `onResume` or in a `LaunchedEffect` that is active before NFC is tapped.
+
+#### Step 6 — Build and send the response
+
+Once the user has consented (or immediately in NFC-only mode), use `ResponseGenerator` to build the CBOR response and send it:
+
+```kotlin
+ResponseGenerator(sessionsTranscript = sessionTranscript)
+    .createResponse(
+        documents = docRequested.toTypedArray(),        // Array<DocRequested>
+        fieldRequestedAndAccepted = acceptedFieldsJson, // JSON from nfcOnlyFieldAcceptation
+        response = object : ResponseGenerator.Response {
+            override fun onResponseGenerated(response: ByteArray) {
+                // Send via DeviceRetrievalHelperWrapper (NFC+BLE or NFC-only)
+                deviceConnected?.sendResponse(response, SessionDataStatus.SESSION_DATA.value)
+            }
+            override fun onError(message: String) {
+                deviceConnected?.sendResponse(null, SessionDataStatus.ERROR_CBOR_DECODING.value)
+            }
+        }
+    )
+```
+
+---
+
+### QR Code Engagement — `QrEngagement`
+
+`QrEngagement` is used to generate and handle QR-based device engagement. After engagement, the data transfer happens over BLE.
+
+#### Instantiation
+
+```kotlin
+val engagement = QrEngagement.build(
+    context = context,
+    retrievalMethods = listOf(
+        BleRetrievalMethod(
+            peripheralServerMode = true,
+            centralClientMode = false,
+            clearBleCache = true
+        )
+    )
+).configure()
+```
+
+#### Key Methods
+
+| Method                        | Description                                                            |
+|-------------------------------|------------------------------------------------------------------------|
+| `configure()`                 | Builds the internal `QrEngagementHelper` and returns the instance      |
+| `getQrCodeString()`           | Returns the URI-encoded device engagement string to embed in a QR code |
+| `withReaderTrustStore(certs)` | Injects verifier certificates for reader authentication                |
+| `withListener(callback)`      | Registers an `EngagementListener` for session events                   |
+| `close()`                     | Terminates the session and releases resources                          |
+
+#### Listener
+
+```kotlin
+engagement.withListener(object : EngagementListener {
+    override fun onDeviceConnecting() { }
+    override fun onDeviceConnected(deviceRetrievalHelper: DeviceRetrievalHelperWrapper) { }
+    override fun onError(error: Throwable) { }
+    override fun onDocumentRequestReceived(request: String?, sessionsTranscript: ByteArray) { }
+    override fun onDeviceDisconnected(transportSpecificTermination: Boolean) { }
+})
+```
+
+`withReaderTrustStore` accepts the same three formats as `NfcEngagementEventBus.setupNfcService`:
+
+```kotlin
+// Raw resource IDs
+engagement.withReaderTrustStore(listOf(R.raw.eudi_pid_issuer_ut))
+
+// ByteArray certificates
+engagement.withReaderTrustStore(listOf(certByteArray))
+
+// PEM strings
+engagement.withReaderTrustStore(listOf(pemString))
+```
+
+---
+
+### ResponseGenerator
+
+`ResponseGenerator` creates the CBOR-encoded device response to return to the verifier.
+
+```kotlin
 data class DocRequested(
-   val issuerSignedContent: String,
-   val alias: String,
-   val docType: String
+    val issuerSignedContent: String, // Base64-encoded IssuerSigned CBOR
+    val alias: String,               // Android Keystore alias used to sign
+    val docType: String              // e.g. "org.iso.18013.5.1.mDL"
 ) : Parcelable
 ```
 
-See in app `MasterViewViewModel.shareInfo` method to understand how to retrieve documents from JSON request and correctly
-send to response.
+```kotlin
+ResponseGenerator(sessionsTranscript = sessionsTranscript)
+    .createResponse(
+        documents = arrayOf(
+            DocRequested(
+                issuerSignedContent = issuerSignedBase64,
+                alias = "myKeyAlias",
+                docType = "org.iso.18013.5.1.mDL"
+            )
+        ),
+        fieldRequestedAndAccepted = """
+            {
+              "org.iso.18013.5.1.mDL": {
+                "org.iso.18013.5.1": {
+                  "family_name": true,
+                  "given_name": true,
+                  "birth_date": true,
+                  "document_number": true,
+                  "portrait": true
+                }
+              }
+            }
+        """.trimIndent(),
+        response = object : ResponseGenerator.Response {
+            override fun onResponseGenerated(response: ByteArray) {
+                // Send response to verifier
+            }
+            override fun onError(message: String) {
+                // Handle error
+            }
+        }
+    )
+```
+
+---
 
 ## ISO 18013-7
 
-The `OpenID4VP` class can be used to generate a `sessionTranscript` to pass to `ResponseGenerator` to use standard ISO 18013-7.
-Class parameters can be retrieved by calling backend an getting parameters themselves.
-Example:
+The `OpenID4VP` class can be used to generate a `sessionTranscript` compatible with ISO 18013-7 (OpenID4VP). Parameters are typically obtained from a backend or authorization request:
 
 ```kotlin
 val sessionTranscript = OpenID4VP(
-   clientId,
-   responseUri,
-   authorizationRequestNonce,
-   mdocGeneratedNonce
+    clientId = clientId,
+    responseUri = responseUri,
+    authorizationRequestNonce = authorizationRequestNonce,
+    mdocGeneratedNonce = mdocGeneratedNonce
 ).createSessionTranscript()
-```
 
-Then you can create a device response doing:
-
-```kotlin
-val responseGenerator = ResponseGenerator(sessionTranscript)
-responseGenerator.createResponse(
-    documents,
-    fieldRequestedAndAccepted,
-    object : ResponseGenerator.Response {
-        override fun onResponseGenerated(response: ByteArray) {
-            //do what you want with response
-        }
-
-        override fun onError(message: String) {
-            //ERROR!!
-        }
+ResponseGenerator(sessionTranscript).createResponse(
+    documents = documents,
+    fieldRequestedAndAccepted = acceptedJson,
+    response = object : ResponseGenerator.Response {
+        override fun onResponseGenerated(response: ByteArray) { /* send response */ }
+        override fun onError(message: String) { /* handle error */ }
     }
 )
 ```
 
+---
+
 ## Permissions
 
-To use the Proximity module, you need to declare the following permissions in your `AndroidManifest.xml` as it uses Bluetooth according to the [official Android documentation](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions):
+### Bluetooth
+
+Declare the following permissions in `AndroidManifest.xml` for BLE-based transport:
 
 ```xml
-    <!-- Required for Bluetooth on Android >=12 or SDK >=31 and must be required at runtime -->
-    <!-- We defined the neverForLocation flag as we do not derive it from the Bluetooth -->
-    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
-    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-    <!-- Required for Bluetooth on Android <=11 SDK <= 30 ACCESS_FINE_LOCATION must be requested at runtime -->
-    <uses-permission android:name="android.permission.BLUETOOTH"
-                     android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
-                     android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
+<!-- Android 12+ (API 31+): must be requested at runtime -->
+<uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+    android:usesPermissionFlags="neverForLocation" />
+<uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+
+<!-- Android 11 and below (API 30-): ACCESS_FINE_LOCATION must be requested at runtime -->
+<uses-permission android:name="android.permission.BLUETOOTH"
+    android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.BLUETOOTH_ADMIN"
+    android:maxSdkVersion="30" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+    android:maxSdkVersion="30" />
+```
+
+### NFC
+
+```xml
+<uses-permission android:name="android.permission.NFC" />
+<uses-feature android:name="android.hardware.nfc" android:required="true" />
+<uses-feature android:name="android.hardware.nfc.hce" android:required="true" />
 ```

@@ -10,20 +10,24 @@ class AppNfcEngagementService : NfcEngagementService() {
     ): String {
         val originalReq = JSONObject(jsonString).optJSONObject("request")
         val jsonAccepted = JSONObject()
-        originalReq?.keys()?.forEach {
-            originalReq.optJSONObject(it)?.let { json ->
-                val keyJson = JSONObject()
-                json.keys().forEach { key ->
-                    json.optJSONObject(key)?.let { internalJson ->
-                        val internalNewJson = JSONObject()
-                        internalJson.keys().forEach { dataKey ->
-                            internalNewJson.put(dataKey, true)
+        originalReq?.keys()?.forEach { docType ->
+            //here docType is I.E.: org.iso.18013.5.1.mDL
+            //in case with Only NFC mode you don't allow to send euPid:
+            //if (docType != DocType.EU_PID.value) {
+                originalReq.optJSONObject(docType)?.let { json ->
+                    val keyJson = JSONObject()
+                    json.keys().forEach { key ->
+                        json.optJSONObject(key)?.let { internalJson ->
+                            val internalNewJson = JSONObject()
+                            internalJson.keys().forEach { dataKey ->
+                                internalNewJson.put(dataKey, true)
+                            }
+                            keyJson.put(key, internalNewJson)
                         }
-                        keyJson.put(key, internalNewJson)
                     }
+                    jsonAccepted.put(docType, keyJson)
                 }
-                jsonAccepted.put(it, keyJson)
-            }
+            //and close it here... }
         }
         return jsonAccepted.toString()
     }

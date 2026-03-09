@@ -11,7 +11,6 @@ import it.pagopa.io.wallet.proximity.engagement.Engagement
 import it.pagopa.io.wallet.proximity.engagement.EngagementListener
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEvent
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEventBus
-import it.pagopa.io.wallet.proximity.nfc.utils.OnlyNfcEvents
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator
 import it.pagopa.io.wallet.proximity.retrieval.sendErrorResponse
@@ -294,12 +293,10 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                     }
 
                     is NfcEngagementEvent.NfcOnlyEventListener -> {
-                        if (event.event == OnlyNfcEvents.NFC_ENGAGEMENT_STARTED) {
-                            ProximityLogger.i(
-                                this@BaseEngagementViewModel.javaClass.name,
-                                "NFC_ENGAGEMENT_STARTED"
-                            )
-                        }
+                        ProximityLogger.i(
+                            this@BaseEngagementViewModel.javaClass.name,
+                            event.event.name
+                        )
                     }
                 }
             }
