@@ -8,7 +8,6 @@ import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.engagement.Engagement
 import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.retrieval.connectionMethods
-import it.pagopa.io.wallet.proximity.retrieval.transportOptions
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 
 internal class NfcEngagement(
@@ -90,7 +89,7 @@ internal class NfcEngagement(
 
     companion object {
         /**
-         * Create an instance and configures the QR engagement.
+         * Create an instance and configures the NFC engagement.
          * First of all you must call [configure] to build NfcEngagementBuilder.
          * To accept just some certificates use [withReaderTrustStore] method.
          * To observe all events call [withListener] method.
