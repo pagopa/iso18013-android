@@ -285,8 +285,10 @@ fun HomeView(
                 nfcChecks.openNfcSettings()
             else {
                 if (nfcChecks.isNfcReadyForEngagement()) {
-                    shouldShowInfoDialog.value = true
-                    whereToGo.value = HomeDestination.MasterNfcBLE
+                    bluetoothCheck {
+                        shouldShowInfoDialog.value = true
+                        whereToGo.value = HomeDestination.MasterNfcBLE
+                    }
                 } else {
                     Toast.makeText(
                         context, "Sorry, but your device has not card emulation feature",
