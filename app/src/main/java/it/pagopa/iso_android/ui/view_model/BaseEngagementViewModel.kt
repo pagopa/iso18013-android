@@ -288,11 +288,22 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                             this@BaseEngagementViewModel.javaClass.name,
                             "onDocumentSent"
                         )
-                        loader.value = null
-                        _shouldGoBack.value = true
+                        this@BaseEngagementViewModel.dialog.value = AppDialog(
+                            title = resources.getString(R.string.data),
+                            description = resources.getString(R.string.sent),
+                            button = AppDialog.DialogButton(
+                                "${resources.getString(R.string.perfect)}!!",
+                                onClick = {
+                                    dialog.value = null
+                                    _shouldGoBack.value = true
+                                }
+                            )
+                        )
+                        this@BaseEngagementViewModel.loader.value = null
                     }
 
                     is NfcEngagementEvent.NfcOnlyEventListener -> {
+                        loader.value = event.event.name
                         ProximityLogger.i(
                             this@BaseEngagementViewModel.javaClass.name,
                             event.event.name
