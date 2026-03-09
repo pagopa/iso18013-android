@@ -332,13 +332,9 @@ viewModelScope.launch {
                 //   (in NFC-only mode the response must be sent automatically,
                 //    without waiting for user confirmation)
                 val request = event.request.orEmpty()
-                if (!event.onlyNfc) {
+                if (!event.onlyNfc)
                     // Show a consent UI to the user before disclosing data
                     manageRequestFromDeviceUi(event.sessionTranscript)
-                } else {
-                    // NFC-only: respond immediately without user interaction
-                    shareInfo(event.sessionTranscript)
-                }
             }
 
             is NfcEngagementEvent.Disconnected -> {
