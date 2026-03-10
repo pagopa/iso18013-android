@@ -108,9 +108,7 @@ internal class NfcEngagement(
                 this@apply.nfcEngagementListener,
                 context.mainExecutor(),
                 whatToDoWithRequest
-            ).also {
-                it staticHandoverWith this@apply.retrievalMethods.connectionMethods
-            }
+            ).staticHandoverWith(this@apply.retrievalMethods.connectionMethods)
         }
     }
 }

@@ -385,7 +385,7 @@ class NfcEngagementHelperRefactor private constructor(
             return NfcUtil.STATUS_WORD_FILE_NOT_FOUND
         }
         val fileId =
-            (apdu[5].toInt() and 0xff) * this.fileMaxLength.toInt() + (apdu[6].toInt() and 0xff)
+            (apdu[5].toInt() and 0xff) * 256 + (apdu[6].toInt() and 0xff)
         ProximityLogger.i(TAG, "handleSelectFile: fileId $fileId")
         // We only support two files
         when (fileId) {
@@ -1126,10 +1126,10 @@ class NfcEngagementHelperRefactor private constructor(
             // Return chunk + status word indicating more data available
             val out = ByteArray(chunk.size + 2)
             System.arraycopy(chunk, 0, out, 0, chunk.size)
-            if (useExtendedLength && more > 255) {
+            if (useExtendedLength && more > fileMaxLength) {
                 out[out.size - 2] = 0x61.toByte()
-                out[out.size - 1] = 0x00.toByte() // più di 255 bytes
-                ProximityLogger.d(TAG, "GET RESPONSE: More data available (>255 bytes), SW=6100")
+                out[out.size - 1] = 0x00.toByte() // più di fileMaxLength bytes
+                ProximityLogger.d(TAG, "GET RESPONSE: More data available (>${fileMaxLength} bytes), SW=6100")
             } else {
                 out[out.size - 2] = 0x61.toByte()
                 out[out.size - 1] = more.toByte()
