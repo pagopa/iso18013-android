@@ -134,7 +134,7 @@ fun HomeView(
 
     @CheckResult
     fun dialogLogic(destination: HomeDestination): Boolean {
-        return destination is HomeDestination.MasterNfc || destination is HomeDestination.MasterNfcExchange
+        return destination is HomeDestination.MasterNfc || destination is HomeDestination.MasterNfcExchange || destination is HomeDestination.MasterNfcBLE
     }
 
     val context = LocalContext.current
@@ -232,6 +232,7 @@ fun HomeView(
         }
         PopUpMenu(showPopupMenu, listOf(PopUpMenuItem("QR+NFC/BLE") {
             whereToGo.value = HomeDestination.MasterQRNFCBLE
+            shouldShowInfoDialog.value = true
             bluetoothCheck {
                 shouldShowInfoDialog.value = true
             }
@@ -250,6 +251,7 @@ fun HomeView(
             else {
                 if (nfcChecks.isNfcReadyForEngagement()) {
                     whereToGo.value = HomeDestination.MasterNfc
+                    shouldShowInfoDialog.value = true
                     bluetoothCheck {
                         shouldShowInfoDialog.value = true
                     }
@@ -281,8 +283,9 @@ fun HomeView(
                 nfcChecks.openNfcSettings()
             else {
                 if (nfcChecks.isNfcReadyForEngagement()) {
+                    whereToGo.value = HomeDestination.MasterNfcBLE
+                    shouldShowInfoDialog.value = true
                     bluetoothCheck {
-                        shouldShowInfoDialog.value = true
                         whereToGo.value = HomeDestination.MasterNfcBLE
                     }
                 } else {
