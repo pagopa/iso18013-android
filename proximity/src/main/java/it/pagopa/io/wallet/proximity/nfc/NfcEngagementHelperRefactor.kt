@@ -86,7 +86,7 @@ class NfcEngagementHelperRefactor private constructor(
     private var envelopeBuffer = ByteArrayOutputStream()
     private var responseBuffer: ByteArray? = null   // DO'53' already TLV codified
     private var responseOffset: Int = 0
-    private var useExtendedLength: Boolean = true
+    private var useExtendedLength: Boolean = false
     private var readerTrustStores: List<ReaderTrustStore>? = listOf()
     private var docs: Array<Document> = arrayOf()
     private var alias = ""
@@ -863,6 +863,8 @@ class NfcEngagementHelperRefactor private constructor(
             return NfcUtil.STATUS_WORD_WRONG_PARAMETERS to true
         }
         val apduCommand = CommandApdu.decode(apdu)
+        useExtendedLength = apdu.size > 5 && (apdu[4].toInt() and 0xff) == 0x00
+        ProximityLogger.i("useExtendedLength", useExtendedLength.toString())
         ProximityLogger.i("APDU[0]", apdu[0].toHexString())
         envelopeBuffer.write(apduCommand.payload.toByteArray())
         NfcEngagementEventBus.tryEmit(
@@ -1152,6 +1154,7 @@ class NfcEngagementHelperRefactor private constructor(
             theEnd = true
             responseOffset = 0
             NfcEngagementEventBus.tryEmit(NfcEngagementEvent.DocumentSent)
+            ProximityLogger.dHex(TAG, "GET RESPONSE: Final chunk sent", out)
             out
         }
         return back to theEnd
