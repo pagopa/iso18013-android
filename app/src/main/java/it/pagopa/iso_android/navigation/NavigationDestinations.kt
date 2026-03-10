@@ -8,6 +8,10 @@ data object Home
 sealed class HomeDestination {
     @Serializable
     data object Master : HomeDestination()
+    @Serializable
+    data object MasterQrNFC : HomeDestination()
+    @Serializable
+    data object MasterQRNFCBLE : HomeDestination()
 
     @Serializable
     data object MasterNfc : HomeDestination()
@@ -17,8 +21,6 @@ sealed class HomeDestination {
 
     @Serializable
     data object MasterNfcBLE : HomeDestination()
-    @Serializable
-    data object Slave : HomeDestination()
 
     @Serializable
     data object SignAndVerify : HomeDestination()

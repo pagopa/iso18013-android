@@ -20,7 +20,6 @@ import com.android.identity.crypto.EcPublicKey
 import com.android.identity.mdoc.connectionmethod.ConnectionMethod
 import com.android.identity.mdoc.connectionmethod.ConnectionMethod.Companion.disambiguate
 import com.android.identity.mdoc.engagement.EngagementGenerator
-import com.android.identity.mdoc.request.DeviceRequestParser
 import com.android.identity.mdoc.sessionencryption.SessionEncryption
 import com.android.identity.util.Constants
 import com.android.identity.util.Logger
@@ -37,6 +36,7 @@ import it.pagopa.io.wallet.proximity.nfc.apdu.encapsulateInDo53
 import it.pagopa.io.wallet.proximity.nfc.apdu.extractFromDo53
 import it.pagopa.io.wallet.proximity.nfc.utils.NfcEngagementHelperUtils
 import it.pagopa.io.wallet.proximity.nfc.utils.OnlyNfcEvents
+import it.pagopa.io.wallet.proximity.parser.DeviceRequestParserRefactor
 import it.pagopa.io.wallet.proximity.qr_code.toReaderAuthWith
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.request.RequestWrapper
@@ -1018,7 +1018,7 @@ class NfcEngagementHelperRefactor private constructor(
         )
         ProximityLogger.i("Session Transcript", Cbor.decode(sessionTranscript).toString())
         val (deviceRequestBytes, _) = this.decryptMessage(requestCborEncrypted, sessionTranscript)
-        val listRequested: List<DeviceRequestParser.DocRequest> = DeviceRequestParser(
+        val listRequested: List<DeviceRequestParserRefactor.DocRequest> = DeviceRequestParserRefactor(
             deviceRequestBytes!!,
             sessionTranscript
         ).parse().docRequests

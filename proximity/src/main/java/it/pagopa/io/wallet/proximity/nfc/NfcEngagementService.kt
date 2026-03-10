@@ -140,6 +140,7 @@ abstract class NfcEngagementService : HostApduService() {
          */
         @JvmStatic
         fun disable(activity: Activity) {
+            ProximityLogger.i("NfcEngagementService", "disable")
             nfcEngagement?.nfcEngagementHelper?.close()
             nfcEngagement = null
             unsetAsPreferredNfcEngagementService(activity)
@@ -371,6 +372,7 @@ abstract class NfcEngagementService : HostApduService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        ProximityLogger.i("NfcEngagementService", "On Destroy")
         serviceJob.cancel()
     }
 
@@ -399,6 +401,7 @@ abstract class NfcEngagementService : HostApduService() {
                 this.deactivateAll()
             }, 250L)
         }
+        ProximityLogger.i("Giving back", back?.toHex().orEmpty())
         return back
     }
 }

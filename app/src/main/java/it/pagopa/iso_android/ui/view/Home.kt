@@ -47,7 +47,6 @@ import it.pagopa.iso_android.ui.MediumText
 import it.pagopa.iso_android.ui.PopUpMenu
 import it.pagopa.iso_android.ui.PopUpMenuItem
 import it.pagopa.iso_android.ui.SmallText
-import it.pagopa.iso_android.ui.TwoButtonsInARow
 import it.pagopa.iso_android.ui.preview.ThemePreviews
 
 @Composable
@@ -111,7 +110,14 @@ fun HomeView(
                                 listOf(listOf(R.raw.eudi_pid_issuer_ut))
                             )
 
-                            else -> false
+                            else -> NfcEngagementEventBus.setupNfcService(
+                                retrievalMethods = listOf(
+                                    NfcRetrievalMethod()
+                                ),
+                                docManager.gelAllDocuments(),
+                                "pagoPa",
+                                listOf(listOf(R.raw.eudi_pid_issuer_ut))
+                            )
                         }
                         ProximityLogger.i("INIT_ok", initialized.toString())
                         onNavigate.invoke(destination)
@@ -224,29 +230,20 @@ fun HomeView(
                 }
             }
         }
-        PopUpMenu(showPopupMenu, listOf(PopUpMenuItem("Qr code") {
+        PopUpMenu(showPopupMenu, listOf(PopUpMenuItem("QR+NFC/BLE") {
+            whereToGo.value = HomeDestination.MasterQRNFCBLE
+            bluetoothCheck {
+                shouldShowInfoDialog.value = true
+            }
+        }, PopUpMenuItem("QR+NFC") {
+            whereToGo.value = HomeDestination.MasterQrNFC
+            shouldShowInfoDialog.value = true
+        }, PopUpMenuItem("QR+BLE") {
             whereToGo.value = HomeDestination.Master
             bluetoothCheck {
-                val hceStatus = NfcEngagementService.enable(
-                    context.getActivity()!!,
-                    AppNfcEngagementService::class.java
-                )
-                ProximityLogger.i("HCE WORKING STATUS", hceStatus.canWork().toString())
-                NfcEngagementEventBus.setupNfcService(
-                    retrievalMethods = listOf(
-                        NfcRetrievalMethod(), BleRetrievalMethod(
-                            peripheralServerMode = true,
-                            centralClientMode = false,
-                            clearBleCache = true
-                        )
-                    ),
-                    docManager.gelAllDocuments(),
-                    "pagoPa",
-                    listOf(listOf(R.raw.eudi_pid_issuer_ut))
-                )
                 onNavigate.invoke(HomeDestination.Master)
             }
-        }, PopUpMenuItem("Nfc") {
+        }, PopUpMenuItem("NFC+NFC/BLE") {
             val nfcChecks = NfcChecks(context)
             if (!nfcChecks.isNfcAvailable())
                 nfcChecks.openNfcSettings()
@@ -255,7 +252,6 @@ fun HomeView(
                     whereToGo.value = HomeDestination.MasterNfc
                     bluetoothCheck {
                         shouldShowInfoDialog.value = true
-                        whereToGo.value = HomeDestination.MasterNfc
                     }
                 } else {
                     Toast.makeText(
@@ -264,7 +260,7 @@ fun HomeView(
                     ).show()
                 }
             }
-        }, PopUpMenuItem("Only Nfc") {
+        }, PopUpMenuItem("NFC+NFC") {
             val nfcChecks = NfcChecks(context)
             if (!nfcChecks.isNfcAvailable())
                 nfcChecks.openNfcSettings()
@@ -279,7 +275,7 @@ fun HomeView(
                     ).show()
                 }
             }
-        }, PopUpMenuItem("Nfc-BLE") {
+        }, PopUpMenuItem("NFC+BLE") {
             val nfcChecks = NfcChecks(context)
             if (!nfcChecks.isNfcAvailable())
                 nfcChecks.openNfcSettings()
@@ -297,7 +293,7 @@ fun HomeView(
                 }
             }
         }))
-        TwoButtonsInARow(leftBtnText = "do as Master", leftBtnAction = {
+        Button(onClick = {
             val nfcChecks = NfcChecks(context)
             if (nfcChecks.hasNfcFeature())
                 showPopupMenu.value = true
@@ -307,19 +303,9 @@ fun HomeView(
                     onNavigate.invoke(HomeDestination.Master)
                 }
             }
-        }, rightBtnText = "do as Slave", rightBtnAction = {
-            whereToGo.value = HomeDestination.Slave
-            val permissionList = arrayListOf(
-                Manifest.permission.CAMERA,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                permissionList.add(Manifest.permission.BLUETOOTH_CONNECT)
-                permissionList.add(Manifest.permission.BLUETOOTH_ADVERTISE)
-                permissionList.add(Manifest.permission.BLUETOOTH_SCAN)
-            }
-            manyPermissionLauncher.launch(permissionList.toTypedArray())
-        })
+        }) {
+            Text("START!!")
+        }
         Spacer(Modifier.height(16.dp))
     }
     if (dialog.value != null)

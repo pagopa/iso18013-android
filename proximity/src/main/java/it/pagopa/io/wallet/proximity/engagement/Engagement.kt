@@ -3,25 +3,21 @@ package it.pagopa.io.wallet.proximity.engagement
 import android.content.Context
 import android.os.Build
 import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
 import com.android.identity.android.mdoc.deviceretrieval.DeviceRetrievalHelper
 import com.android.identity.android.mdoc.engagement.QrEngagementHelper
-import com.android.identity.android.mdoc.transport.DataTransport
 import com.android.identity.crypto.Crypto
 import com.android.identity.crypto.EcCurve
 import com.android.identity.crypto.EcPublicKey
-import com.android.identity.mdoc.engagement.EngagementParser
-import com.android.identity.mdoc.request.DeviceRequestParser
 import com.android.identity.util.Constants
 import com.android.identity.util.Logger
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.document.reader_auth.ReaderTrustStore
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementHelperRefactor
+import it.pagopa.io.wallet.proximity.parser.DeviceRequestParserRefactor
 import it.pagopa.io.wallet.proximity.qr_code.toReaderAuthWith
 import it.pagopa.io.wallet.proximity.qr_code.toReaderTrustStore
 import it.pagopa.io.wallet.proximity.request.RequestWrapper
 import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
-import it.pagopa.io.wallet.proximity.retrieval.transportOptions
 import it.pagopa.io.wallet.proximity.session_data.SessionDataStatus
 import it.pagopa.io.wallet.proximity.toRequest
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
@@ -116,7 +112,7 @@ abstract class Engagement(val context: Context) {
                 "DeviceRetrievalHelper Listener (QR): OnDeviceRequest"
             )
             val sessionTranscript = deviceRetrievalHelper!!.sessionTranscript()
-            val listRequested: List<DeviceRequestParser.DocRequest> = DeviceRequestParser(
+            val listRequested: List<DeviceRequestParserRefactor.DocRequest> = DeviceRequestParserRefactor(
                 deviceRequestBytes,
                 sessionTranscript
             ).parse().docRequests
@@ -171,40 +167,6 @@ abstract class Engagement(val context: Context) {
     }
 
     abstract fun configure(): Engagement
-
-    fun connect(mDocString: String) {
-        val uri = mDocString.toUri()
-        if (!uri.scheme.equals("mdoc"))
-            throw IllegalArgumentException("mdoc string must contain mdoc:")
-        val ba = android.util.Base64.decode(
-            uri.encodedSchemeSpecificPart,
-            android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING
-        )
-        val engagement = EngagementParser(ba).parse()
-        if (engagement.connectionMethods.isEmpty())
-            throw IllegalArgumentException("No connection methods in engagement")
-        ProximityLogger.i("connectionMethods", engagement.connectionMethods.toString())
-        // For now, just pick the first transport
-        val connectionMethod = engagement.connectionMethods[0]
-        ProximityLogger.d(this.javaClass.name, "Using connection method $connectionMethod")
-        val transport = DataTransport.fromConnectionMethod(
-            context,
-            connectionMethod,
-            DataTransport.Role.MDOC_READER,
-            this.retrievalMethods.transportOptions
-        )
-        val deviceRetrievalHelper = DeviceRetrievalHelper.Builder(
-            context,
-            deviceRetrievalHelperListener,
-            context.mainExecutor(),
-            eDevicePrivateKey
-        ).useReverseEngagement(
-            transport,
-            ba,
-            engagement.originInfos
-        ).build()
-        listener?.onDeviceConnected(DeviceRetrievalHelperWrapper(deviceRetrievalHelper))
-    }
 
     /**
      * Use this method to send a generic error message

@@ -34,13 +34,11 @@ import it.pagopa.iso_android.ui.view.HomeView
 import it.pagopa.iso_android.ui.view.MasterView
 import it.pagopa.iso_android.ui.view.NfcEngagementView
 import it.pagopa.iso_android.ui.view.SignAndVerifyView
-import it.pagopa.iso_android.ui.view.SlaveView
 import it.pagopa.iso_android.ui.view_model.CborViewViewModel
 import it.pagopa.iso_android.ui.view_model.DocumentStorageViewViewModel
 import it.pagopa.iso_android.ui.view_model.MasterViewViewModel
 import it.pagopa.iso_android.ui.view_model.NfcEngagementViewModel
 import it.pagopa.iso_android.ui.view_model.SignAndVerifyViewViewModel
-import it.pagopa.iso_android.ui.view_model.SlaveViewViewModel
 import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
 
 private const val AnimDurationMillis = 700
@@ -93,6 +91,46 @@ fun MainActivity?.IsoAndroidPocNavHost(
             })
         }
         customAnimatedComposable<HomeDestination.Master> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
+            val context = LocalContext.current
+            val viewModel = dependenciesInjectedViewModel<MasterViewViewModel>(
+                QrEngagement.build(
+                    context = context,
+                    retrievalMethods = listOf(
+                        BleRetrievalMethod(
+                            peripheralServerMode = true,
+                            centralClientMode = false,
+                            clearBleCache = true
+                        )
+                    )
+                ).withReaderTrustStore(listOf(listOf(R.raw.eudi_pid_issuer_ut))),
+                context.resources
+            )
+            MasterView(viewModel = viewModel, onBack = {
+                backLogic(showMenu) {
+                    navController.popBackStack()
+                }
+            })
+        }
+        customAnimatedComposable<HomeDestination.MasterQrNFC> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
+            val context = LocalContext.current
+            val viewModel = dependenciesInjectedViewModel<MasterViewViewModel>(
+                QrEngagement.build(
+                    context = context,
+                    retrievalMethods = listOf(
+                        NfcRetrievalMethod()
+                    )
+                ).withReaderTrustStore(listOf(listOf(R.raw.eudi_pid_issuer_ut))),
+                context.resources
+            )
+            MasterView(viewModel = viewModel, onBack = {
+                backLogic(showMenu) {
+                    navController.popBackStack()
+                }
+            })
+        }
+        customAnimatedComposable<HomeDestination.MasterQRNFCBLE> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val context = LocalContext.current
             val viewModel = dependenciesInjectedViewModel<MasterViewViewModel>(
@@ -178,26 +216,6 @@ fun MainActivity?.IsoAndroidPocNavHost(
                     }
                 })
         }
-        customAnimatedComposable<HomeDestination.Slave> {
-            val context = LocalContext.current
-            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
-            val vm = dependenciesInjectedViewModel<SlaveViewViewModel>(
-                QrEngagement.build(
-                    context, listOf(
-                        BleRetrievalMethod(
-                            peripheralServerMode = true,
-                            centralClientMode = true,
-                            clearBleCache = true
-                        )
-                    )
-                ).configure()
-            )
-            SlaveView(vm = vm, onBack = {
-                backLogic(showMenu) {
-                    navController.popBackStack()
-                }
-            })
-        }
         customAnimatedComposable<HomeDestination.ReadDocument> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val vm = viewModel<CborViewViewModel>()
@@ -247,7 +265,7 @@ fun backLogic(showMenu: MutableState<Boolean>, action: () -> Unit) {
 }
 
 /**
- * Moves to an other destination if the current is not the same
+ * Moves to another destination if the current is not the same
  **/
 fun NavController.navigateIfDifferent(to: HomeDestination) {
     if (currentBackStackEntry?.destination?.route != to.javaClass.canonicalName)
