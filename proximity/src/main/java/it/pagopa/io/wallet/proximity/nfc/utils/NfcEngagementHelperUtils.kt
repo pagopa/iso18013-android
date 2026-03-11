@@ -18,7 +18,7 @@ internal object NfcEngagementHelperUtils {
         return message.toByteArray()
     }
 
-    fun shouldUseGetResponse(resp: ByteArray) = resp.size > 255
+    fun shouldUseGetResponse(resp: ByteArray, max: Int = 256) = resp.size > max
     fun parseLe(apdu: ByteArray): Int {
         // Case GET RESPONSE: Le present
         // If extended and Le=00 -> unlimited

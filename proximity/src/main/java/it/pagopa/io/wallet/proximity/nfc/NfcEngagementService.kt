@@ -20,6 +20,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 
 /**
@@ -111,6 +113,7 @@ abstract class NfcEngagementService : HostApduService() {
 
     private val whatToDoWithRequest: (jsonString: String) -> String
         get() = { nfcOnlyFieldAcceptation(jsonString = it) }
+    private val mutex = Mutex()
 
     companion object {
         @SuppressLint("StaticFieldLeak")
@@ -362,14 +365,6 @@ abstract class NfcEngagementService : HostApduService() {
         }
     }
 
-    private fun deactivateAll() {
-        if (nfcEngagement != null) {
-            nfcEngagement?.nfcEngagementHelper?.resetAll()
-            nfcEngagement?.close()
-            nfcEngagement = null
-        }
-    }
-
     override fun onDestroy() {
         super.onDestroy()
         ProximityLogger.i("NfcEngagementService", "On Destroy")
@@ -380,10 +375,11 @@ abstract class NfcEngagementService : HostApduService() {
         if (nfcEngagement != null) {
             nfcEngagement?.nfcEngagementHelper?.nfcOnDeactivated(reason)
             val timeoutSeconds = 15
+            nfcEngagement?.nfcEngagementHelper?.resetAll()
             Handler(Looper.getMainLooper()).postDelayed({
                 nfcEngagement?.close()
+                nfcEngagement = null
             }, timeoutSeconds * 1000L)
-            nfcEngagement = null
         }
     }
 
@@ -396,12 +392,27 @@ abstract class NfcEngagementService : HostApduService() {
         ProximityLogger.i("NfcEngagementService", "processCommandApdu: ${commandApdu.toHex()}")
         val (back, theEnd) = nfcEngagement?.nfcEngagementHelper?.nfcProcessCommandApdu(commandApdu)
             ?: (null to true)
-        if (theEnd) {
+        /*if (theEnd) {
             Handler(Looper.getMainLooper()).postDelayed({
                 this.deactivateAll()
             }, 250L)
+        }*/
+        // Non chiamiamo deactivateAll() qui: lasciamo che sia onDeactivated() a fare cleanup
+        // naturalmente quando il reader toglie il dispositivo dal campo NFC, esattamente
+        // come fa iOS. Chiamarlo subito interrompe la sessione prima che il reader
+        // finisca di elaborare la risposta (causando "waiting for message").
+        ProximityLogger.i("Giving back (theEnd=$theEnd)", back?.toHex().orEmpty())
+        back?.let {
+            ProximityLogger.i(
+                "Giving back LAST (theEnd=$theEnd)",
+                byteArrayOf(back[back.size - 2], back[back.size - 1]).toHex()
+            )
         }
-        ProximityLogger.i("Giving back", back?.toHex().orEmpty())
-        return back
+        CoroutineScope(Dispatchers.Default).launch {
+            mutex.withLock {
+                sendResponseApdu(back)
+            }
+        }
+        return null
     }
 }

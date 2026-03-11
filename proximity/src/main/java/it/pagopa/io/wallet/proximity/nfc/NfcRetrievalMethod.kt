@@ -8,6 +8,6 @@ import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
  * @property responseDataFieldMaxLength
  */
 data class NfcRetrievalMethod(
-    val commandDataFieldMaxLength: Long = 256L,
-    val responseDataFieldMaxLength: Long = 256L
+    val commandDataFieldMaxLength: Long = 65279,
+    val responseDataFieldMaxLength: Long = 65279
 ) : DeviceRetrievalMethod
