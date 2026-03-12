@@ -87,7 +87,6 @@ class NfcEngagementHelperRefactor private constructor(
     private var responseBuffer: ByteArray? = null   // DO'53' already TLV codified
     private var responseOffset: Int = 0
     private var useExtendedLength: Boolean = false
-    private var nfcPhysicalMaxLength: Int = 0  // limite fisico reale NFC, dal parseLe dell'ENVELOPE
     private var readerTrustStores: List<ReaderTrustStore>? = listOf()
     private var docs: Array<Document> = arrayOf()
     private var alias = ""
@@ -867,7 +866,6 @@ class NfcEngagementHelperRefactor private constructor(
         useExtendedLength = apdu.size > 5 && (apdu[4].toInt() and 0xff) == 0x00
         ProximityLogger.i("useExtendedLength", useExtendedLength.toString())
         ProximityLogger.i("APDU[0]", apdu[0].toHexString())
-        ProximityLogger.i("ENVELOPE Le", "apduCommand.le=${apduCommand.le}, fileMaxLength=$fileMaxLength, shouldUseGetResponse=${apduCommand.le > 0 && NfcEngagementHelperUtils.shouldUseGetResponse(ByteArray(apduCommand.le.coerceAtMost(100000)), fileMaxLength.toInt())}")
         envelopeBuffer.write(apduCommand.payload.toByteArray())
         return when (apduCommand.cla) {
             0x00 -> {
@@ -903,12 +901,7 @@ class NfcEngagementHelperRefactor private constructor(
                     Constants.SESSION_DATA_STATUS_SESSION_TERMINATION
                 )
                 val le = apduCommand.le
-                val parsedLe = NfcEngagementHelperUtils.parseLe(apdu)
-                // parsedLe = limite fisico reale NFC; apduCommand.le = valore logico handover
-                // Usiamo parsedLe come soglia reale per inline vs GET RESPONSE
-                val effectiveLe = if (parsedLe > 0) parsedLe else le
-                nfcPhysicalMaxLength = effectiveLe  // salva per uso in GET RESPONSE
-                ProximityLogger.i(TAG, "ENVELOPE: apduCommand.le=$le, parseLe=$parsedLe, effectiveLe=$effectiveLe, fileMaxLength=$fileMaxLength")
+                ProximityLogger.i(TAG, "ENVELOPE: apduCommand.le=$le, fileMaxLength=$fileMaxLength")
                 // Encapsulating in DO'53'
                 responseBuffer = ByteString(messageBack).encapsulateInDo53().toByteArray()
                 responseOffset = 0
@@ -916,10 +909,15 @@ class NfcEngagementHelperRefactor private constructor(
                     TAG,
                     "ENVELOPE: Response buffer size=${responseBuffer!!.size}, useExtendedLength=$useExtendedLength"
                 )
+                val unlimited = (le == 0 && useExtendedLength)
+                val chunkSize =
+                    if (unlimited) responseBuffer!!.size else responseBuffer!!.size.coerceAtMost(fileMaxLength.toInt())
+                val chunk = responseBuffer!!.copyOfRange(responseOffset, responseOffset + chunkSize)
+                responseOffset += chunkSize
                 // If oversize, responding with 61xx and waiting for GET RESPONSE
                 if (NfcEngagementHelperUtils.shouldUseGetResponse(
                         responseBuffer!!,
-                        effectiveLe
+                        fileMaxLength.toInt()
                     )
                 ) {
                     val sw = if (useExtendedLength) byteArrayOf(0x61, 0x00) else byteArrayOf(
@@ -930,7 +928,7 @@ class NfcEngagementHelperRefactor private constructor(
                         TAG,
                         "ENVELOPE: Response too large, sending SW=${Utils.bytesToHex(sw)}"
                     )
-                    sw to false
+                    (chunk + sw) to false
                 } else {
                     val response = responseBuffer!! + byteArrayOf(0x90.toByte(), 0x00.toByte())
                     ProximityLogger.i("SENDING", response.toHex())
@@ -1099,8 +1097,13 @@ class NfcEngagementHelperRefactor private constructor(
             return NfcUtil.STATUS_WORD_WRONG_PARAMETERS to false
         }
 
-        val le = NfcEngagementHelperUtils.parseLe(apdu)
-        ProximityLogger.d(TAG, "GET RESPONSE: Le=$le, nfcPhysicalMaxLength=$nfcPhysicalMaxLength, useExtendedLength=$useExtendedLength")
+        val le = try{
+            CommandApdu.decode(apdu).le
+        }catch (ex: Exception){
+            ProximityLogger.e(TAG, "GET RESPONSE: Error parsing APDU: ${ex.message}")
+            fileMaxLength.toInt()
+        }
+        ProximityLogger.d(TAG, "GET RESPONSE: Le=$le, useExtendedLength=$useExtendedLength")
 
         if (responseBuffer == null) {
             ProximityLogger.e(TAG, "GET RESPONSE: No response buffer available")
@@ -1108,7 +1111,10 @@ class NfcEngagementHelperRefactor private constructor(
         }
 
         val remaining = responseBuffer!!.size - responseOffset
-        ProximityLogger.d(TAG, "GET RESPONSE: remaining=$remaining, responseOffset=$responseOffset, total buffer=${responseBuffer!!.size}")
+        ProximityLogger.d(
+            TAG,
+            "GET RESPONSE: remaining=$remaining, responseOffset=$responseOffset, total buffer=${responseBuffer!!.size}"
+        )
 
         if (remaining <= 0) {
             ProximityLogger.i(TAG, "GET RESPONSE: All data sent, clearing buffer")
@@ -1117,15 +1123,12 @@ class NfcEngagementHelperRefactor private constructor(
             return NfcUtil.STATUS_WORD_OK to true
         }
 
-        // Limita il chunk al minore tra Le richiesto e il limite fisico NFC reale
-        val effectiveChunkSize = if (nfcPhysicalMaxLength > 0)
-            minOf(le.coerceAtLeast(1), nfcPhysicalMaxLength)
-        else
-            le.coerceAtLeast(1)
         val unlimited = (le == 0 && useExtendedLength)
-        val chunkSize = if (unlimited) minOf(remaining, if (nfcPhysicalMaxLength > 0) nfcPhysicalMaxLength else remaining)
-                        else remaining.coerceAtMost(effectiveChunkSize)
-        ProximityLogger.d(TAG, "GET RESPONSE: Sending chunk of $chunkSize bytes (unlimited=$unlimited, effectiveChunkSize=$effectiveChunkSize)")
+        val chunkSize = if (unlimited) remaining else remaining.coerceAtMost(fileMaxLength.toInt())
+        ProximityLogger.d(
+            TAG,
+            "GET RESPONSE: Sending chunk of $chunkSize bytes (unlimited=$unlimited, effectiveChunkSize=$le)"
+        )
 
         val chunk = responseBuffer!!.copyOfRange(responseOffset, responseOffset + chunkSize)
         responseOffset += chunkSize
