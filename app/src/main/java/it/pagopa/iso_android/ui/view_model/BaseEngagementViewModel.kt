@@ -11,6 +11,8 @@ import it.pagopa.io.wallet.proximity.engagement.Engagement
 import it.pagopa.io.wallet.proximity.engagement.EngagementListener
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEvent
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEventBus
+import it.pagopa.io.wallet.proximity.nfc.NfcTransportMdoc
+import it.pagopa.io.wallet.proximity.nfc.utils.OnlyNfcEvents
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator
 import it.pagopa.io.wallet.proximity.retrieval.sendErrorResponse
@@ -239,7 +241,6 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
 
                     is NfcEngagementEvent.DocumentRequestReceived -> {
                         val request = event.request
-                        event.sessionTranscript
                         ProximityLogger.i("request", request.toString())
                         this@BaseEngagementViewModel.request = request.orEmpty()
                         if (!event.onlyNfc)
@@ -308,6 +309,13 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                             this@BaseEngagementViewModel.javaClass.name,
                             event.event.name
                         )
+                        if(event.event == OnlyNfcEvents.DATA_TRANSFER_STARTED){
+                            // Launch in a separate coroutine so the collector is not blocked
+                            // and subsequent events (DocumentRequestReceived, DocumentSent) are received
+                            viewModelScope.launch(Dispatchers.IO) {
+                                NfcTransportMdoc.doPresentment()
+                            }
+                        }
                     }
                 }
             }

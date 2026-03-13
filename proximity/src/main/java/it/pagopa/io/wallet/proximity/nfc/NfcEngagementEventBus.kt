@@ -11,7 +11,7 @@ object NfcEngagementEventBus {
     // No replay; only current collectors receive events.
     private val _events = MutableSharedFlow<NfcEngagementEvent>(
         replay = 0,
-        extraBufferCapacity = 1 // Optional: prevents lost fast events
+        extraBufferCapacity = 16 // large enough to avoid drops during rapid NFC event bursts
     )
     val events = _events.asSharedFlow()
     private val _internalEvent = MutableSharedFlow<ServiceEvents>(

@@ -13,6 +13,7 @@ sealed class NfcEngagementEvent {
     data class Connected(val device: DeviceRetrievalHelperWrapper) : NfcEngagementEvent()
     data class Error(val error: Throwable) : NfcEngagementEvent()
     data class Disconnected(val transportSpecificTermination: Boolean) : NfcEngagementEvent()
+
     data class DocumentRequestReceived(
         val request: String?,
         val sessionTranscript: ByteArray,

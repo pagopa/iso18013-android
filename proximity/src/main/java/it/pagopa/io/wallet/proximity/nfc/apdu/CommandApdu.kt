@@ -89,7 +89,7 @@ data class CommandApdu(
             val p1 = reader.getUInt8()
             val p2 = reader.getUInt8()
             var payload = ByteString(byteArrayOf())
-            var lc = 0
+            var lc: Int
             var le = 0
             if (encoded.size == 5) {
                 val encLe = reader.getUInt8().toInt()

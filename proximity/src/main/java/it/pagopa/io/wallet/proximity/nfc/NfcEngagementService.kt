@@ -84,7 +84,7 @@ import org.json.JSONObject
  */
 abstract class NfcEngagementService : HostApduService() {
     /**
-     * Override this method if you don't want to send some kind of documents or some kind of keys..
+     * Override this method if you don't want to send some kind of documents or some kind of keys.
      * */
     open fun nfcOnlyFieldAcceptation(
         jsonString: String
@@ -154,7 +154,6 @@ abstract class NfcEngagementService : HostApduService() {
         @JvmStatic
         fun disable(activity: Activity) {
             ProximityLogger.i("NfcEngagementService", "disable")
-            nfcEngagement?.nfcEngagementHelper?.close()
             nfcEngagement = null
             unsetAsPreferredNfcEngagementService(activity)
         }
@@ -353,18 +352,18 @@ abstract class NfcEngagementService : HostApduService() {
                         }
                         event.documents?.let {
                             nfcEngagement
-                                ?.nfcEngagementHelper
+                                ?.nfcRetrievalMethod
                                 ?.withDocs(event.documents.toTypedArray())
                         }
                         event.alias?.let {
                             nfcEngagement
-                                ?.nfcEngagementHelper
+                                ?.nfcRetrievalMethod
                                 ?.withAlias(event.alias)
                         }
                     }
 
                     is ServiceEvents.QrCodeDeviceEngagement -> nfcEngagement
-                        ?.nfcEngagementHelper
+                        ?.nfcRetrievalMethod
                         ?.deviceEngagementFromQr(
                             event.deviceEngagementSetup.first
                         )?.setKeyFromQr(
@@ -382,15 +381,8 @@ abstract class NfcEngagementService : HostApduService() {
     }
 
     override fun onDeactivated(reason: Int) {
-        if (nfcEngagement != null) {
-            nfcEngagement?.nfcEngagementHelper?.nfcOnDeactivated(reason)
-            val timeoutSeconds = 15
-            nfcEngagement?.nfcEngagementHelper?.resetAll()
-            Handler(Looper.getMainLooper()).postDelayed({
-                nfcEngagement?.close()
-                nfcEngagement = null
-            }, timeoutSeconds * 1000L)
-        }
+        ProximityLogger.i("NfcEngagementService", "onDeactivated $reason")
+        NfcTransportMdoc.onDeactivated()
     }
 
     /**
@@ -401,31 +393,19 @@ abstract class NfcEngagementService : HostApduService() {
     ): ByteArray? {
         serviceScope.launch {
             ProximityLogger.i("NfcEngagementService", "processCommandApdu: ${commandApdu.toHex()}")
-            if (nfcEngagement == null) {
-                NfcEngagementEvent.Error(
-                    Throwable("NFC Engagement setup not DONE")
+            try {
+                NfcTransportMdoc.processCommandApdu(
+                    commandApdu = commandApdu,
+                    sendResponse = { responseApdu -> sendResponseApdu(responseApdu) }
                 )
+            } catch (e: Throwable) {
+                ProximityLogger.e("NfcEngagementService", "processCommandApdu: ${e.message}")
+                e.printStackTrace()
             }
-            val (back, theEnd) = nfcEngagement?.nfcEngagementHelper?.nfcProcessCommandApdu(
-                commandApdu
-            )
-                ?: (null to true)
-            ProximityLogger.i("Giving back (theEnd=$theEnd)", back?.toHex().orEmpty())
-            back?.let {
-                ProximityLogger.i(
-                    "Giving back LAST (theEnd=$theEnd)",
-                    byteArrayOf(back[back.size - 2], back[back.size - 1]).toHex()
-                )
-            }
-            handler.removeCallbacks(runnable)
-            if (theEnd) {
-                this@NfcEngagementService.onDeactivated(0)
-            } else {
-                val timeoutSeconds = 3
-                handler.postDelayed(runnable, timeoutSeconds * 1000L)
-            }
-            sendResponseApdu(back)
         }
+        handler.removeCallbacks(runnable)
+        val timeoutSeconds = 3
+        handler.postDelayed(runnable, timeoutSeconds * 1000L)
         return null
     }
 }

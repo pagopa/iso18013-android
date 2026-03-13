@@ -12,7 +12,7 @@ import com.android.identity.util.Constants
 import com.android.identity.util.Logger
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.document.reader_auth.ReaderTrustStore
-import it.pagopa.io.wallet.proximity.nfc.NfcEngagementHelperRefactor
+import it.pagopa.io.wallet.proximity.nfc.NfcTransportMdoc
 import it.pagopa.io.wallet.proximity.parser.DeviceRequestParserRefactor
 import it.pagopa.io.wallet.proximity.qr_code.toReaderAuthWith
 import it.pagopa.io.wallet.proximity.qr_code.toReaderTrustStore
@@ -57,8 +57,7 @@ abstract class Engagement(val context: Context) {
         Crypto.createEcPrivateKey(EcCurve.P256)
     }
 
-    @JvmName("setReaderTrustStorePrivate")
-    private fun <T> List<List<T>>.setReaderTrustStore() {
+    protected open fun <T> List<List<T>>.setReaderTrustStore() {
         readerTrustStores = this.toReaderTrustStore(context)
     }
 
@@ -95,7 +94,7 @@ abstract class Engagement(val context: Context) {
     }
 
     open val qrEngagementListener: QrEngagementHelper.Listener? = null
-    open val nfcEngagementListener: NfcEngagementHelperRefactor.Listener? = null
+    open val nfcEngagementListener: NfcTransportMdoc.Listener? = null
 
     @OptIn(ExperimentalEncodingApi::class)
     protected val deviceRetrievalHelperListener = object : DeviceRetrievalHelper.Listener {

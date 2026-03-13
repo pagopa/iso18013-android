@@ -6,16 +6,22 @@ import com.android.identity.android.mdoc.engagement.NfcEngagementHelper
 import com.android.identity.android.mdoc.transport.DataTransport
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.engagement.Engagement
+import it.pagopa.io.wallet.proximity.qr_code.toReaderTrustStore
 import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.retrieval.connectionMethods
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 internal class NfcEngagement(
     context: Context
 ) : Engagement(context) {
-    private lateinit var nfcEngagementBuilder: NfcEngagementHelperRefactor.Builder
-    lateinit var nfcEngagementHelper: NfcEngagementHelperRefactor
-    override val nfcEngagementListener = object : NfcEngagementHelperRefactor.Listener {
+    val helperJob = Job()
+    val helperScope = CoroutineScope(Dispatchers.IO + helperJob)
+    lateinit var nfcRetrievalMethod: NfcTransportMdoc
+    override val nfcEngagementListener = object : NfcTransportMdoc.Listener {
         override fun onTwoWayEngagementDetected() {
             ProximityLogger.i(this@NfcEngagement.tag, "Two way engagement detected")
         }
@@ -36,7 +42,7 @@ internal class NfcEngagement(
             }
             ProximityLogger.d(
                 this@NfcEngagement.tag,
-                "OnDeviceConnected via NFC: qrEngagement=$nfcEngagementHelper"
+                "OnDeviceConnected via NFC: qrEngagement=$nfcRetrievalMethod"
             )
             val deviceRetrievalHelperBuilt = DeviceRetrievalHelper.Builder(
                 this@NfcEngagement.context,
@@ -45,8 +51,8 @@ internal class NfcEngagement(
                 eDevicePrivateKey,
             ).useForwardEngagement(
                 transport,
-                nfcEngagementHelper.deviceEngagement,
-                nfcEngagementHelper.handover,
+                nfcRetrievalMethod.deviceEngagement,
+                nfcRetrievalMethod.handover,
             ).build()
             deviceRetrievalHelper = DeviceRetrievalHelperWrapper(deviceRetrievalHelperBuilt)
             listener?.onDeviceConnected(
@@ -58,7 +64,9 @@ internal class NfcEngagement(
 
         override fun onError(error: Throwable) {
             ProximityLogger.e(this@NfcEngagement.tag, "Error: ${error.message}")
-            nfcEngagementHelper.close()
+            helperScope.launch {
+                nfcRetrievalMethod.close()
+            }
             listener?.onError(error)
         }
 
@@ -71,19 +79,29 @@ internal class NfcEngagement(
         try {
             if (deviceRetrievalHelper != null)
                 deviceRetrievalHelper!!.disconnect()
-            nfcEngagementHelper.close()
+            helperScope.launch {
+                nfcRetrievalMethod.close()
+            }
             deviceRetrievalHelper = null
         } catch (exception: RuntimeException) {
             ProximityLogger.e(this.javaClass.name, "Error closing NFC engagement $exception")
         }
     }
 
+    override fun <T> List<List<T>>.setReaderTrustStore() {
+        readerTrustStores = this.toReaderTrustStore(context)
+        nfcRetrievalMethod.withReaderTrustStores(
+            readerTrustStores
+        )
+    }
     /**
      * builds [NfcEngagementHelper] by com.android.identity package
      * @return [NfcEngagement] instance created via [NfcEngagement.build] static method
      * */
     override fun configure() = apply {
-        nfcEngagementHelper = nfcEngagementBuilder.build()
+        helperScope.launch {
+            nfcRetrievalMethod.open()
+        }
     }
 
 
@@ -98,17 +116,17 @@ internal class NfcEngagement(
         fun build(
             context: Context,
             retrievalMethods: List<DeviceRetrievalMethod>,
-            whatToDoWithRequest: (String)->String
+            whatToDoWithRequest: (String) -> String
         ) = NfcEngagement(context).apply {
             this@apply.retrievalMethods = retrievalMethods
-            this@apply.nfcEngagementBuilder = NfcEngagementHelperRefactor.Builder(
+            this@apply.nfcRetrievalMethod = NfcTransportMdoc(
                 context,
                 this@apply.eDevicePrivateKey,
                 this@apply.retrievalMethods,
                 this@apply.nfcEngagementListener,
                 context.mainExecutor(),
                 whatToDoWithRequest
-            ).staticHandoverWith(this@apply.retrievalMethods.connectionMethods)
+            ).withStaticHandoverConnectionMethods(this@apply.retrievalMethods.connectionMethods)
         }
     }
 }
