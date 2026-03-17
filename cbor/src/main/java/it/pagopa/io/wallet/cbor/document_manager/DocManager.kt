@@ -31,7 +31,7 @@ class DocManager private constructor(
     private val storageDirectory: File
 ) : LibIso18013Interface {
     private lateinit var prefix: String
-    private lateinit var keyAlias: String
+    lateinit var keyAlias: String
     private fun getFile(key: String): File {
         val fileName = prefix + URLEncoder.encode(key, "UTF-8")
         return File(storageDirectory, fileName)

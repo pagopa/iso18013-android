@@ -24,4 +24,6 @@ class DeviceRetrievalHelperWrapper(
     }
 
     fun sessionTranscript() = this.deviceRetrievalHelper.sessionTranscript
+
+    internal fun getOriginal() = deviceRetrievalHelper
 }

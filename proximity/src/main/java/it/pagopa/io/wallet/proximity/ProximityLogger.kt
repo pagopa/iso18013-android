@@ -6,25 +6,30 @@ import com.android.identity.cbor.DiagnosticOption
 import com.android.identity.util.toHex
 import it.pagopa.io.wallet.proximity.nfc.apdu.Utils
 
+enum class KindOfLog {
+    V, E, D, I, HEX, CBOR
+}
+
 object ProximityLogger {
     var enabled = false
+    var filterLogs = KindOfLog.entries.toTypedArray()
     fun v(tag: String, message: String) {
-        if (enabled)
+        if (enabled && filterLogs.contains(KindOfLog.V))
             Log.v(tag, message)
     }
 
     fun e(tag: String, message: String) {
-        if (enabled)
+        if (enabled && filterLogs.contains(KindOfLog.E))
             Log.e(tag, message)
     }
 
     fun d(tag: String, message: String) {
-        if (enabled)
+        if (enabled && filterLogs.contains(KindOfLog.D))
             Log.d(tag, message)
     }
 
     fun i(tag: String, message: String) {
-        if (enabled)
+        if (enabled && filterLogs.contains(KindOfLog.I))
             Log.i(tag, message)
     }
 
@@ -40,12 +45,12 @@ object ProximityLogger {
     }
 
     fun dHex(tag: String, message: String, bytes: ByteArray) {
-        if (enabled)
+        if (enabled && filterLogs.contains(KindOfLog.HEX))
             Log.d(tag, "$message: ${Utils.bytesToHex(bytes)}")
     }
 
     fun dCbor(tag: String, message: String, encodedCbor: ByteArray) {
-        if (enabled) {
+        if (enabled && filterLogs.contains(KindOfLog.CBOR)) {
             Log.d(tag, cbor(message, encodedCbor))
         }
     }

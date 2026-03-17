@@ -4,8 +4,10 @@ import android.content.Context
 import com.android.identity.android.mdoc.deviceretrieval.DeviceRetrievalHelper
 import com.android.identity.android.mdoc.engagement.QrEngagementHelper
 import com.android.identity.android.mdoc.transport.DataTransport
+import com.android.identity.crypto.EcPrivateKey
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.engagement.Engagement
+import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEventBus
 import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.retrieval.connectionMethods
 import it.pagopa.io.wallet.proximity.retrieval.transportOptions
@@ -19,6 +21,25 @@ class QrEngagement private constructor(
 ) : Engagement(context) {
     private lateinit var qrEngagementBuilder: QrEngagementHelper.Builder
     private lateinit var qrEngagement: QrEngagementHelper
+
+    private fun createDeviceRetrievalHelper(transport: DataTransport): DeviceRetrievalHelperWrapper {
+        ProximityLogger.d(
+            this@QrEngagement.tag,
+            "OnDeviceConnected via QR: qrEngagement=$qrEngagement"
+        )
+        val deviceRetrievalHelperBuilt = DeviceRetrievalHelper.Builder(
+            context,
+            deviceRetrievalHelperListener,
+            context.mainExecutor(),
+            eDevicePrivateKey,
+        ).useForwardEngagement(
+            transport,
+            qrEngagement.deviceEngagement,
+            qrEngagement.handover
+        ).build()
+        return DeviceRetrievalHelperWrapper(deviceRetrievalHelperBuilt)
+    }
+
     override val qrEngagementListener = object : QrEngagementHelper.Listener {
         override fun onDeviceConnecting() {
             ProximityLogger.d(this@QrEngagement.tag, "QR Engagement: Device Connecting")
@@ -35,21 +56,7 @@ class QrEngagement private constructor(
                 )
                 return
             }
-            ProximityLogger.d(
-                this@QrEngagement.tag,
-                "OnDeviceConnected via QR: qrEngagement=$qrEngagement"
-            )
-            val deviceRetrievalHelperBuilt = DeviceRetrievalHelper.Builder(
-                context,
-                deviceRetrievalHelperListener,
-                context.mainExecutor(),
-                eDevicePrivateKey,
-            ).useForwardEngagement(
-                transport,
-                qrEngagement.deviceEngagement,
-                qrEngagement.handover
-            ).build()
-            deviceRetrievalHelper = DeviceRetrievalHelperWrapper(deviceRetrievalHelperBuilt)
+            deviceRetrievalHelper = createDeviceRetrievalHelper(transport)
             qrEngagement.close()
             listener?.onDeviceConnected(
                 requireNotNull(
@@ -101,6 +108,10 @@ class QrEngagement private constructor(
      * */
     override fun configure() = apply {
         qrEngagement = qrEngagementBuilder.build()
+    }
+
+    fun setupDeviceEngagementForNfc() {
+        NfcEngagementEventBus.setupDeviceEngagementFromQr(this.qrEngagement.deviceEngagement to this.eDevicePrivateKey)
     }
 
     companion object {

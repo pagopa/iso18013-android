@@ -42,6 +42,7 @@ fun NfcEngagementView(
     BackHandler(onBack = back)
     LaunchedEffect(viewModel) {
         viewModel.observeEvents()
+        viewModel.initializeListeners()
         this.launch {
             viewModel.shouldGoBack.collectLatest {
                 if (it)

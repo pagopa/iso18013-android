@@ -24,7 +24,7 @@ import androidx.navigation.compose.composable
 import it.pagopa.io.wallet.cbor.cose.COSEManager
 import it.pagopa.io.wallet.cbor.document_manager.DocManager
 import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
-import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEventBus
+import it.pagopa.io.wallet.proximity.nfc.NfcRetrievalMethod
 import it.pagopa.io.wallet.proximity.qr_code.QrEngagement
 import it.pagopa.iso_android.MainActivity
 import it.pagopa.iso_android.R
@@ -34,13 +34,11 @@ import it.pagopa.iso_android.ui.view.HomeView
 import it.pagopa.iso_android.ui.view.MasterView
 import it.pagopa.iso_android.ui.view.NfcEngagementView
 import it.pagopa.iso_android.ui.view.SignAndVerifyView
-import it.pagopa.iso_android.ui.view.SlaveView
 import it.pagopa.iso_android.ui.view_model.CborViewViewModel
 import it.pagopa.iso_android.ui.view_model.DocumentStorageViewViewModel
 import it.pagopa.iso_android.ui.view_model.MasterViewViewModel
 import it.pagopa.iso_android.ui.view_model.NfcEngagementViewModel
 import it.pagopa.iso_android.ui.view_model.SignAndVerifyViewViewModel
-import it.pagopa.iso_android.ui.view_model.SlaveViewViewModel
 import it.pagopa.iso_android.ui.view_model.dependenciesInjectedViewModel
 
 private const val AnimDurationMillis = 700
@@ -74,13 +72,22 @@ fun MainActivity?.IsoAndroidPocNavHost(
                 animationSpec = tween(AnimDurationMillis)
             )
         }) {
+            val context = LocalContext.current
             topBarImage.value = Icons.Default.Menu
-            HomeView(onBack = {
+            val docManager = DocManager.getInstance(
+                context = context,
+                storageDirectory = context.noBackupFilesDir,
+                prefix = "SECURE_STORAGE",
+                alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
+            )
+            HomeView(docManager = docManager, onBack = {
                 backLogic(showMenu) {
                     this@IsoAndroidPocNavHost?.finishAndRemoveTask()
                 }
             }, onNavigate = { destination ->
                 navController.navigateIfDifferent(destination)
+            }, onNavigateToDocStorage = {
+                navController.navigateIfDifferent(HomeDestination.DocumentStorage)
             })
         }
         customAnimatedComposable<HomeDestination.Master> {
@@ -105,10 +112,49 @@ fun MainActivity?.IsoAndroidPocNavHost(
                 }
             })
         }
+        customAnimatedComposable<HomeDestination.MasterQrNFC> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
+            val context = LocalContext.current
+            val viewModel = dependenciesInjectedViewModel<MasterViewViewModel>(
+                QrEngagement.build(
+                    context = context,
+                    retrievalMethods = listOf(
+                        NfcRetrievalMethod()
+                    )
+                ).withReaderTrustStore(listOf(listOf(R.raw.eudi_pid_issuer_ut))),
+                context.resources
+            )
+            MasterView(viewModel = viewModel, onBack = {
+                backLogic(showMenu) {
+                    navController.popBackStack()
+                }
+            })
+        }
+        customAnimatedComposable<HomeDestination.MasterQRNFCBLE> {
+            topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
+            val context = LocalContext.current
+            val viewModel = dependenciesInjectedViewModel<MasterViewViewModel>(
+                QrEngagement.build(
+                    context = context,
+                    retrievalMethods = listOf(
+                        BleRetrievalMethod(
+                            peripheralServerMode = true,
+                            centralClientMode = false,
+                            clearBleCache = true
+                        ), NfcRetrievalMethod()
+                    )
+                ).withReaderTrustStore(listOf(listOf(R.raw.eudi_pid_issuer_ut))),
+                context.resources
+            )
+            MasterView(viewModel = viewModel, onBack = {
+                backLogic(showMenu) {
+                    navController.popBackStack()
+                }
+            })
+        }
         customAnimatedComposable<HomeDestination.MasterNfc> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val context = LocalContext.current
-            NfcEngagementEventBus.bluetoothOn = true
             val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
                 DocManager.getInstance(
                     context = context,
@@ -130,14 +176,14 @@ fun MainActivity?.IsoAndroidPocNavHost(
         customAnimatedComposable<HomeDestination.MasterNfcExchange> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
             val context = LocalContext.current
-            NfcEngagementEventBus.bluetoothOn = false
+            val docManager = DocManager.getInstance(
+                context = context,
+                storageDirectory = context.noBackupFilesDir,
+                prefix = "SECURE_STORAGE",
+                alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
+            )
             val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
-                DocManager.getInstance(
-                    context = context,
-                    storageDirectory = context.noBackupFilesDir,
-                    prefix = "SECURE_STORAGE",
-                    alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
-                ),
+                docManager,
                 context.resources
             )
             NfcEngagementView(
@@ -148,25 +194,27 @@ fun MainActivity?.IsoAndroidPocNavHost(
                     }
                 })
         }
-        customAnimatedComposable<HomeDestination.Slave> {
-            val context = LocalContext.current
+
+        customAnimatedComposable<HomeDestination.MasterNfcBLE> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
-            val vm = dependenciesInjectedViewModel<SlaveViewViewModel>(
-                QrEngagement.build(
-                    context, listOf(
-                        BleRetrievalMethod(
-                            peripheralServerMode = true,
-                            centralClientMode = true,
-                            clearBleCache = true
-                        )
-                    )
-                ).configure()
+            val context = LocalContext.current
+            val docManager = DocManager.getInstance(
+                context = context,
+                storageDirectory = context.noBackupFilesDir,
+                prefix = "SECURE_STORAGE",
+                alias = "SECURE_STORAGE_KEY_${context.noBackupFilesDir}"
             )
-            SlaveView(vm = vm, onBack = {
-                backLogic(showMenu) {
-                    navController.popBackStack()
-                }
-            })
+            val viewModel = dependenciesInjectedViewModel<NfcEngagementViewModel>(
+                docManager,
+                context.resources
+            )
+            NfcEngagementView(
+                viewModel = viewModel,
+                onBack = {
+                    backLogic(showMenu) {
+                        navController.popBackStack()
+                    }
+                })
         }
         customAnimatedComposable<HomeDestination.ReadDocument> {
             topBarImage.value = Icons.AutoMirrored.Filled.ArrowBack
@@ -217,7 +265,7 @@ fun backLogic(showMenu: MutableState<Boolean>, action: () -> Unit) {
 }
 
 /**
- * Moves to an other destination if the current is not the same
+ * Moves to another destination if the current is not the same
  **/
 fun NavController.navigateIfDifferent(to: HomeDestination) {
     if (currentBackStackEntry?.destination?.route != to.javaClass.canonicalName)

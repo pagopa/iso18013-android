@@ -22,10 +22,10 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.compose.rememberNavController
 import it.pagopa.io.wallet.cbor.CborLogger
+import it.pagopa.io.wallet.proximity.KindOfLog
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.iso_android.navigation.IsoAndroidPocNavHost
 import it.pagopa.iso_android.navigation.menu.DrawerBody
@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MainActivity?.MainApp(showMenuPreview: MutableState<Boolean>? = null) {
     IsoAndroidPocTheme {
-        var topBarImage = remember { mutableStateOf<ImageVector>(Icons.Default.Menu) }
+        val topBarImage = remember { mutableStateOf(Icons.Default.Menu) }
         val showMenu = showMenuPreview?.let {
             remember { it }
         } ?: run {

@@ -96,6 +96,7 @@ class ResponseGenerator(
             }.map {
                 Triple(IssuerSigned.issuerSignedFromByteArray(it.issuerSignedContent), it.alias, it.docType)
             }.forEach { (doc, alias, docType) ->
+                ProximityLogger.i("ADDING DOC", "adding doc to response")
                 addDocToResponse(
                     responseGenerator = deviceResponse,
                     issuerSignedObj = doc,

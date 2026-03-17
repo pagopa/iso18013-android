@@ -30,25 +30,12 @@ internal val DeviceRetrievalMethod.connectionMethod: List<ConnectionMethod>
         }
 
         is NfcRetrievalMethod -> mutableListOf<ConnectionMethod>().apply {
-            if (this@connectionMethod.useBluetooth) {
-                // Solo peripheral server mode per NFC-based BLE handover
-                // Usa lo stesso UUID della sessione
-                add(
-                    ConnectionMethodBle(
-                        supportsPeripheralServerMode = true,
-                        supportsCentralClientMode = false,
-                        peripheralServerModeUuid = bleSessionUuid,
-                        centralClientModeUuid = null  // Deve essere null se non supporta central client
-                    )
+            add(
+                ConnectionMethodNfc(
+                    commandDataFieldMaxLength,
+                    responseDataFieldMaxLength
                 )
-            } else {
-                add(
-                    ConnectionMethodNfc(
-                        commandDataFieldMaxLength,
-                        responseDataFieldMaxLength
-                    )
-                )
-            }
+            )
         }
 
         else -> throw IllegalArgumentException("Unsupported connection method")
@@ -59,10 +46,6 @@ internal val List<DeviceRetrievalMethod>.transportOptions: DataTransportOptions
         for (m in this@transportOptions) {
             if (m is BleRetrievalMethod)
                 setBleClearCache(m.clearBleCache)
-            else if (m is NfcRetrievalMethod) {
-                if (m.useBluetooth)
-                    setBleClearCache(true)
-            }
         }
         setBleUseL2CAP(false)
     }.build()

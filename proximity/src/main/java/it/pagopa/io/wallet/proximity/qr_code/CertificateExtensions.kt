@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.annotation.CheckResult
 import androidx.annotation.VisibleForTesting
 import com.android.identity.crypto.javaX509Certificates
-import com.android.identity.mdoc.request.DeviceRequestParser
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.document.ReaderAuth
 import it.pagopa.io.wallet.proximity.document.reader_auth.ReaderTrustStore
+import it.pagopa.io.wallet.proximity.parser.DeviceRequestParserRefactor
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.security.cert.CertificateFactory
@@ -80,16 +80,16 @@ internal fun <T> List<List<T>>.toReaderTrustStore(context: Context): List<Reader
     }
 }
 
-/**It converts a [DeviceRequestParser.DocRequest] into a [ReaderAuth] class
+/**It converts a [DeviceRequestParserRefactor.DocRequest] into a [ReaderAuth] class
  * @param readerTrustStores: a [List<ReaderTrustStore?>] specified with one of [QrEngagement.withReaderTrustStore] method*/
-internal infix fun DeviceRequestParser.DocRequest.toReaderAuthWith(
+internal infix fun DeviceRequestParserRefactor.DocRequest.toReaderAuthWith(
     readerTrustStores: List<ReaderTrustStore?>?
 ): ReaderAuth? {
     if (readerTrustStores == null)
         return null
     val trustStore = readerTrustStores.firstOrNull { trustStore ->
         val readerCertificateChain = this.readerCertificateChain ?: return null
-        if (this.readerCertificateChain?.javaX509Certificates?.isEmpty() == true) return null
+        if (this.readerCertificateChain.javaX509Certificates.isEmpty()) return null
         trustStore?.validateCertificationTrustPath(readerCertificateChain.javaX509Certificates) == true
     }
     val readerCertificateChain = this.readerCertificateChain ?: return null
