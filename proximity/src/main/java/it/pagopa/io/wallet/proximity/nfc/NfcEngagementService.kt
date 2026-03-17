@@ -17,6 +17,7 @@ import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -320,8 +321,8 @@ abstract class NfcEngagementService : HostApduService() {
         }
     }
 
-    private val serviceJob = SupervisorJob()
-    private val serviceScope = CoroutineScope(Dispatchers.Default + serviceJob)
+    private val serviceJob = Job()
+    private val serviceScope = CoroutineScope(Dispatchers.Default + serviceJob + SupervisorJob())
 
     @Suppress("UNCHECKED_CAST")
     override fun onCreate() {
@@ -401,10 +402,11 @@ abstract class NfcEngagementService : HostApduService() {
     ): ByteArray? {
         serviceScope.launch {
             ProximityLogger.i("NfcEngagementService", "processCommandApdu: ${commandApdu.toHex()}")
-            if (nfcEngagement == null) {
+            if (nfcEngagement?.nfcEngagementHelper == null) {
                 NfcEngagementEvent.Error(
                     Throwable("NFC Engagement setup not DONE")
                 )
+                return@launch
             }
             val (back, theEnd) = nfcEngagement?.nfcEngagementHelper?.nfcProcessCommandApdu(
                 commandApdu

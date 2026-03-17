@@ -15,8 +15,8 @@ object NfcEngagementEventBus {
     )
     val events = _events.asSharedFlow()
     private val _internalEvent = MutableSharedFlow<ServiceEvents>(
-        replay = 0,
-        extraBufferCapacity = 1
+        replay = 1,
+        extraBufferCapacity = 0
     )
     internal val internalEvent = _internalEvent.asSharedFlow()
 

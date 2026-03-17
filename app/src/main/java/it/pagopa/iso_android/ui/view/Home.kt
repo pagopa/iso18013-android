@@ -64,10 +64,16 @@ fun HomeView(
         )
         val manufacturer = Build.MANUFACTURER
         val deviceModel = Build.MODEL
+        val nfcRetrievalMethod = NfcRetrievalMethod()
+        val maxApduSuggested = nfcRetrievalMethod.responseDataFieldMaxLength
+        val toAdd = if (destination is HomeDestination.MasterNfcBLE)
+            ""
+        else
+            "\n- maxResponseApdu: $maxApduSuggested"
         val description =
             "- Device manufacturer: \n$manufacturer\n- Device model: \n${deviceModel}\n- Nfc Status:\n${
                 HceCompatibilityChecker.getStatusMessage(hceStatus)
-            }\n- Should work:\n${hceStatus.canWork()}"
+            }\n- Should work:\n${hceStatus.canWork()}" + toAdd
         GenericDialog(
             AppDialog(
                 title = context.resources.getString(R.string.nfc_engagement_service_desc),
