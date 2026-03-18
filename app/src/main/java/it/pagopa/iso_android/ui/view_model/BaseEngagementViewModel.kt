@@ -113,8 +113,8 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                         this@BaseEngagementViewModel.loader.value = null
                         dialogFailure(message)
                         if (onlyNfc) {
-                            val ok =NfcEngagementEventBus.
-                                sendDocumentResponse(NfcEngagementService.RESPONSE_GENERATION_ERROR)
+                            val ok =
+                                NfcEngagementEventBus.sendDocumentResponse(NfcEngagementService.RESPONSE_GENERATION_ERROR)
                             ProximityLogger.i("RESPONSE SENT", ok.toString())
                             return
                         }
@@ -185,25 +185,29 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
             }
         }
         this.loader.value = null
-        this.dialogText = sb.toString()
-        dialog.value = AppDialog(
-            title = resources.getString(R.string.warning),
-            description = this.dialogText,
-            button = AppDialog.DialogButton(
-                resources.getString(R.string.ok),
-                onClick = {
-                    this.dialog.value = null
-                    shareInfo(sessionsTranscript, onlyNfc)
-                },
-            ),
-            secondButton = AppDialog.DialogButton(
-                resources.getString(R.string.no),
-                onClick = {
-                    this.dialog.value = null
-                    _shouldGoBack.value = true
-                },
+        if (onlyNfc)
+            shareInfo(sessionsTranscript, true)
+        else {
+            this.dialogText = sb.toString()
+            dialog.value = AppDialog(
+                title = resources.getString(R.string.warning),
+                description = this.dialogText,
+                button = AppDialog.DialogButton(
+                    resources.getString(R.string.ok),
+                    onClick = {
+                        this.dialog.value = null
+                        shareInfo(sessionsTranscript, onlyNfc)
+                    },
+                ),
+                secondButton = AppDialog.DialogButton(
+                    resources.getString(R.string.no),
+                    onClick = {
+                        this.dialog.value = null
+                        _shouldGoBack.value = true
+                    },
+                )
             )
-        )
+        }
     }
 
     private fun dialogFailure(message: String) {
