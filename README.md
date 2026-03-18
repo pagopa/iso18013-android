@@ -203,24 +203,8 @@ data class NfcRetrievalMethod(
 Extend `NfcEngagementService` in your application module:
 
 ```kotlin
-class MyNfcEngagementService : NfcEngagementService() {
-
-    /**
-     * Override this method to customize which fields are accepted from the verifier's request.
-     * The default implementation accepts all requested fields.
-     *
-     * @param jsonString the raw JSON request string
-     * @return a JSON string with the fields to disclose (value = true to share, omit to reject)
-     */
-    override fun nfcOnlyFieldAcceptation(jsonString: String): String {
-        // Default: accept all fields as requested.
-        // You can filter specific fields by not including them in the returned JSON.
-        return super.nfcOnlyFieldAcceptation(jsonString)
-    }
-}
+class MyNfcEngagementService : NfcEngagementService()
 ```
-
-The `nfcOnlyFieldAcceptation` method receives the verifier's device request as a JSON string and must return a JSON object mapping each requested document namespace and field to `true` (disclose) or omitting it (reject). This is the single customisation point for field-level disclosure policy.
 
 #### Step 2 — Declare the service in `AndroidManifest.xml`
 
@@ -257,16 +241,13 @@ NfcEngagementEventBus.setupNfcService(
             clearBleCache = true
         )
     ),
-    documents = docManager.getAllDocuments(),  // List<Document>
-    alias = "myKeyAlias",
-    readerTrustStore = listOf(listOf(R.raw.eudi_pid_issuer_ut))  // raw resource certificates
+    readerTrustStore = listOf(listOf(R.raw.eudi_pid_issuer_ut)),  // raw resource certificates
+    inactivityTimeoutSeconds = 15
 )
 
 // NFC-only (engagement + data transfer entirely over NFC)
 NfcEngagementEventBus.setupNfcService(
     retrievalMethods = listOf(NfcRetrievalMethod()),
-    documents = docManager.getAllDocuments(),
-    alias = "myKeyAlias",
     readerTrustStore = listOf(listOf(R.raw.eudi_pid_issuer_ut))
 )
 ```
@@ -332,9 +313,8 @@ viewModelScope.launch {
                 //   (in NFC-only mode the response must be sent automatically,
                 //    without waiting for user confirmation)
                 val request = event.request.orEmpty()
-                if (!event.onlyNfc)
-                    // Show a consent UI to the user before disclosing data
-                    manageRequestFromDeviceUi(event.sessionTranscript)
+                // Show a consent UI to the user before disclosing data
+                manageRequestFromDeviceUi(event.sessionTranscript, event.onlyNfc)
             }
 
             is NfcEngagementEvent.Disconnected -> {
@@ -363,7 +343,7 @@ viewModelScope.launch {
 
 #### Step 6 — Build and send the response
 
-Once the user has consented (or immediately in NFC-only mode), use `ResponseGenerator` to build the CBOR response and send it:
+Once the user has consented (or immediately in NFC-only mode), use `ResponseGenerator` to build the CBOR response and send it, onlyNfc means that request is from a fully NFC exchange:
 
 ```kotlin
 ResponseGenerator(sessionsTranscript = sessionTranscript)
@@ -373,6 +353,11 @@ ResponseGenerator(sessionsTranscript = sessionTranscript)
         response = object : ResponseGenerator.Response {
             override fun onResponseGenerated(response: ByteArray) {
                 // Send via DeviceRetrievalHelperWrapper (NFC+BLE or NFC-only)
+                if(onlyNfc){
+                   val ok = NfcEngagementEventBus.sendDocumentResponse(response)
+                   ProximityLogger.i("RESPONSE SENT", ok.toString())
+                   return
+                }
                 deviceConnected?.sendResponse(response, SessionDataStatus.SESSION_DATA.value)
             }
             override fun onError(message: String) {

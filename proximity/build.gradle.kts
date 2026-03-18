@@ -13,7 +13,7 @@ tasks.matching { it.name.contains("javaDocReleaseGeneration", ignoreCase = true)
 
 android {
     namespace = "it.pagopa.io.wallet.proximity"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26
@@ -40,7 +40,7 @@ android {
 }
 
 mavenPublishing {
-    coordinates("it.pagopa.io.wallet.proximity", "proximity", "2.4.0")
+    coordinates("it.pagopa.io.wallet.proximity", "proximity", "2.4.1")
 
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
     signAllPublications()

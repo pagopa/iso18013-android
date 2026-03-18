@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.compose.rememberNavController
 import it.pagopa.io.wallet.cbor.CborLogger
-import it.pagopa.io.wallet.proximity.KindOfLog
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.iso_android.navigation.IsoAndroidPocNavHost
 import it.pagopa.iso_android.navigation.menu.DrawerBody

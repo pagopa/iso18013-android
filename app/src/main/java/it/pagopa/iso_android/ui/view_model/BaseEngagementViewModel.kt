@@ -59,7 +59,7 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
         return jsonAccepted.toString()
     }
 
-    protected fun shareInfo(sessionsTranscript: ByteArray) {
+    protected fun shareInfo(sessionsTranscript: ByteArray, onlyNfc: Boolean) {
         if (!keyExists())
             generateKey()
         this.loader.value = resources.getString(R.string.sending_doc)
@@ -98,13 +98,14 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                             "RESPONSE TO SEND",
                             Base64.encodeToString(response, Base64.NO_WRAP)
                         )
+                        if (onlyNfc) {
+                            val ok = NfcEngagementEventBus.sendDocumentResponse(response)
+                            ProximityLogger.i("RESPONSE SENT", ok.toString())
+                            return
+                        }
                         this@BaseEngagementViewModel.engagement?.sendResponse(response) ?: run {
                             deviceConnected.sendSessionTermination(response)
                         }
-                        ProximityLogger.i(
-                            "RESPONSE TO SEND",
-                            Base64.encodeToString(response, Base64.NO_WRAP)
-                        )
                     }
 
                     override fun onError(message: String) {
@@ -125,7 +126,8 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
     }
 
     protected fun manageRequestFromDeviceUi(
-        sessionsTranscript: ByteArray
+        sessionsTranscript: ByteArray,
+        onlyNfc: Boolean = false
     ) {
         val sb = StringBuilder().apply {
             append("${resources.getString(R.string.share_info_title)}:\n")
@@ -184,7 +186,7 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                 resources.getString(R.string.ok),
                 onClick = {
                     this.dialog.value = null
-                    shareInfo(sessionsTranscript)
+                    shareInfo(sessionsTranscript, onlyNfc)
                 },
             ),
             secondButton = AppDialog.DialogButton(
@@ -239,11 +241,9 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
 
                     is NfcEngagementEvent.DocumentRequestReceived -> {
                         val request = event.request
-                        event.sessionTranscript
                         ProximityLogger.i("request", request.toString())
                         this@BaseEngagementViewModel.request = request.orEmpty()
-                        if (!event.onlyNfc)
-                            manageRequestFromDeviceUi(event.sessionTranscript)
+                        manageRequestFromDeviceUi(event.sessionTranscript, event.onlyNfc)
                     }
 
                     is NfcEngagementEvent.Disconnected -> {

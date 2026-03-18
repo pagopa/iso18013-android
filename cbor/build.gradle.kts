@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "it.pagopa.io.wallet.cbor"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         minSdk = 26

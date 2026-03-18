@@ -24,10 +24,6 @@ import com.android.identity.mdoc.sessionencryption.SessionEncryption
 import com.android.identity.util.Constants
 import com.android.identity.util.Logger
 import com.android.identity.util.toHex
-import it.pagopa.io.wallet.cbor.model.DocType
-import it.pagopa.io.wallet.cbor.model.Document
-import it.pagopa.io.wallet.cbor.model.EU_PID_DOCTYPE
-import it.pagopa.io.wallet.cbor.model.MDL_DOCTYPE
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.document.reader_auth.ReaderTrustStore
 import it.pagopa.io.wallet.proximity.nfc.apdu.CommandApdu
@@ -38,9 +34,7 @@ import it.pagopa.io.wallet.proximity.nfc.utils.NfcEngagementHelperUtils
 import it.pagopa.io.wallet.proximity.nfc.utils.OnlyNfcEvents
 import it.pagopa.io.wallet.proximity.parser.DeviceRequestParserRefactor
 import it.pagopa.io.wallet.proximity.qr_code.toReaderAuthWith
-import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.request.RequestWrapper
-import it.pagopa.io.wallet.proximity.response.ResponseGenerator
 import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.retrieval.transportOptions
 import it.pagopa.io.wallet.proximity.toRequest
@@ -76,11 +70,10 @@ import java.util.concurrent.Executor
 class NfcEngagementHelperRefactor private constructor(
     private val context: Context,
     private val eDeviceKey: EcPrivateKey,
-    private val retrievalMethods: List<DeviceRetrievalMethod>,
     private val listener: Listener,
-    private val executor: Executor,
-    private val whatToDoWithRequest: (String) -> String
+    private val executor: Executor
 ) {
+    internal var retrievalMethods: List<DeviceRetrievalMethod> = listOf()
     private var staticHandoverConnectionMethods: List<ConnectionMethod>? = null
     private var transports = mutableListOf<DataTransport>()
     private var envelopeBuffer = ByteArrayOutputStream()
@@ -88,8 +81,6 @@ class NfcEngagementHelperRefactor private constructor(
     private var responseOffset: Int = 0
     private var useExtendedLength: Boolean = false
     private var readerTrustStores: List<ReaderTrustStore>? = listOf()
-    private var docs: Array<Document> = arrayOf()
-    private var alias = ""
     private var sessionEncryption: SessionEncryption? = null
     private var deviceEngagementFromQr: ByteArray? = null
 
@@ -127,12 +118,8 @@ class NfcEngagementHelperRefactor private constructor(
     }
 
 
-    fun withDocs(docs: Array<Document>) = apply {
-        this.docs = docs
-    }
-
-    fun withAlias(alias: String) = apply {
-        this.alias = alias
+    private fun withRetrievalMethods(retrievalMethods: List<DeviceRetrievalMethod>) = apply {
+        this.retrievalMethods = retrievalMethods
     }
 
     private fun resetApduDataRetrievalState() {
@@ -314,7 +301,7 @@ class NfcEngagementHelperRefactor private constructor(
      * @param apdu The APDU that was received from the remote device.
      * @return a byte-array containing the response APDU a boolean which means if process is ended or not.
      */
-    fun nfcProcessCommandApdu(apdu: ByteArray): Pair<ByteArray, Boolean> {
+    fun nfcProcessCommandApdu(apdu: ByteArray): Pair<ByteArray?, Boolean> {
         if (ProximityLogger.enabled) {
             ProximityLogger.d(TAG, "nfcProcessCommandApdu: apdu: ${Utils.bytesToHex(apdu)}")
         }
@@ -849,9 +836,63 @@ class NfcEngagementHelperRefactor private constructor(
         }
     }
 
+    private var le = 0
+
+    fun processDocResponse(response: ByteArray): Pair<ByteArray, Boolean> {
+        ProximityLogger.d(
+            TAG,
+            "ENVELOPE: Response size=${response.size}"
+        )
+        val messageBack = sessionEncryption!!.encryptMessage(
+            response,
+            Constants.SESSION_DATA_STATUS_SESSION_TERMINATION
+        )
+        ProximityLogger.i(TAG, "ENVELOPE: apduCommand.le=$le, fileMaxLength=$fileMaxLength")
+        // Encapsulating in DO'53'
+        responseBuffer = ByteString(messageBack).encapsulateInDo53().toByteArray()
+        responseOffset = 0
+        ProximityLogger.i(
+            TAG,
+            "ENVELOPE: Response buffer size=${responseBuffer!!.size}, useExtendedLength=$useExtendedLength"
+        )
+        val unlimited = (le == 0 && useExtendedLength)
+        val chunkSize =
+            if (unlimited) responseBuffer!!.size else responseBuffer!!.size.coerceAtMost(
+                fileMaxLength.toInt()
+            )
+        val chunk = responseBuffer!!.copyOfRange(responseOffset, responseOffset + chunkSize)
+        responseOffset += chunkSize
+        // If oversize, responding with 61xx and waiting for GET RESPONSE
+        if (NfcEngagementHelperUtils.shouldUseGetResponse(
+                responseBuffer!!,
+                fileMaxLength.toInt()
+            )
+        ) {
+            val sw = if (useExtendedLength) byteArrayOf(0x61, 0x00) else byteArrayOf(
+                0x61,
+                0xFF.toByte()
+            )
+            ProximityLogger.d(
+                TAG,
+                "ENVELOPE: Response too large, sending SW=${Utils.bytesToHex(sw)}"
+            )
+            return (chunk + sw) to false
+        } else {
+            val response = responseBuffer!! + byteArrayOf(0x90.toByte(), 0x00.toByte())
+            ProximityLogger.i("SENDING", response.toHex())
+            ProximityLogger.d(
+                TAG,
+                "ENVELOPE: Response fits, sending ${response.size} bytes directly"
+            )
+            responseBuffer = null
+            NfcEngagementEventBus.tryEmit(NfcEngagementEvent.DocumentSent)
+            return response to true
+        }
+    }
+
     // ENVELOPE (INS=C3)
     @OptIn(ExperimentalStdlibApi::class)
-    private fun handleEnvelope(apdu: ByteArray): Pair<ByteArray, Boolean> {
+    private fun handleEnvelope(apdu: ByteArray): Pair<ByteArray?, Boolean> {
         ProximityLogger.i(TAG, "ENVELOPE - APDU size: ${apdu.size}")
         // INS = C3, P1P2=0000, datadata=DO'53' o part of; Nc=0 for "end of data string"
         if (apdu.size < 4 || (apdu[1].toInt() and 0xff) != 0xC3) {
@@ -867,7 +908,7 @@ class NfcEngagementHelperRefactor private constructor(
         ProximityLogger.i("useExtendedLength", useExtendedLength.toString())
         ProximityLogger.i("APDU[0]", apdu[0].toHexString())
         envelopeBuffer.write(apduCommand.payload.toByteArray())
-        return when (apduCommand.cla) {
+        when (apduCommand.cla) {
             0x00 -> {
                 NfcEngagementEventBus.tryEmit(
                     NfcEngagementEvent.NfcOnlyEventListener(
@@ -877,7 +918,7 @@ class NfcEngagementHelperRefactor private constructor(
                 val fullRequest = envelopeBuffer.toByteArray()
                 ProximityLogger.i(TAG, "ENVELOPE: Full request collected, size=${fullRequest.size}")
                 envelopeBuffer.reset()
-                ProximityLogger.i("REQ BEF DO 53", fullRequest.toHex())
+                le = apduCommand.le
                 val requestEncrypted: ByteArray = try {
                     ByteString(fullRequest).extractFromDo53().toByteArray()
                 } catch (e: Throwable) {
@@ -885,70 +926,22 @@ class NfcEngagementHelperRefactor private constructor(
                     return NfcUtil.STATUS_WORD_WRONG_PARAMETERS to true
                 }
                 ProximityLogger.d(TAG, "ENVELOPE: Encrypted request size=${requestEncrypted.size}")
-
-                val response: ByteArray = try {
+                val response: ByteArray? = try {
                     processReaderRequest(requestEncrypted)
                 } catch (e: Throwable) {
                     ProximityLogger.e(TAG, "ENVELOPE: Error processing request: ${e.message}")
                     return NfcUtil.STATUS_WORD_FILE_NOT_FOUND to true
                 }
-                ProximityLogger.d(
-                    TAG,
-                    "ENVELOPE: Response size=${response.size}"
-                )
-                val messageBack = sessionEncryption!!.encryptMessage(
-                    response,
-                    Constants.SESSION_DATA_STATUS_SESSION_TERMINATION
-                )
-                val le = apduCommand.le
-                ProximityLogger.i(TAG, "ENVELOPE: apduCommand.le=$le, fileMaxLength=$fileMaxLength")
-                // Encapsulating in DO'53'
-                responseBuffer = ByteString(messageBack).encapsulateInDo53().toByteArray()
-                responseOffset = 0
-                ProximityLogger.i(
-                    TAG,
-                    "ENVELOPE: Response buffer size=${responseBuffer!!.size}, useExtendedLength=$useExtendedLength"
-                )
-                val unlimited = (le == 0 && useExtendedLength)
-                val chunkSize =
-                    if (unlimited) responseBuffer!!.size else responseBuffer!!.size.coerceAtMost(fileMaxLength.toInt())
-                val chunk = responseBuffer!!.copyOfRange(responseOffset, responseOffset + chunkSize)
-                responseOffset += chunkSize
-                // If oversize, responding with 61xx and waiting for GET RESPONSE
-                if (NfcEngagementHelperUtils.shouldUseGetResponse(
-                        responseBuffer!!,
-                        fileMaxLength.toInt()
-                    )
-                ) {
-                    val sw = if (useExtendedLength) byteArrayOf(0x61, 0x00) else byteArrayOf(
-                        0x61,
-                        0xFF.toByte()
-                    )
-                    ProximityLogger.d(
-                        TAG,
-                        "ENVELOPE: Response too large, sending SW=${Utils.bytesToHex(sw)}"
-                    )
-                    (chunk + sw) to false
-                } else {
-                    val response = responseBuffer!! + byteArrayOf(0x90.toByte(), 0x00.toByte())
-                    ProximityLogger.i("SENDING", response.toHex())
-                    ProximityLogger.d(
-                        TAG,
-                        "ENVELOPE: Response fits, sending ${response.size} bytes directly"
-                    )
-                    responseBuffer = null
-                    NfcEngagementEventBus.tryEmit(NfcEngagementEvent.DocumentSent)
-                    response to true
-                }
+                return response to false
             }
 
             0x10 -> {
                 ProximityLogger.d(TAG, "ENVELOPE: Buffer now has ${envelopeBuffer.size()} bytes")
                 // Waiting for final Envelope with Nc=0
-                NfcUtil.STATUS_WORD_OK to false
+                return NfcUtil.STATUS_WORD_OK to false
             }
 
-            else -> NfcUtil.STATUS_WORD_WRONG_PARAMETERS to false
+            else -> return NfcUtil.STATUS_WORD_WRONG_PARAMETERS to false
         }
     }
 
@@ -987,7 +980,7 @@ class NfcEngagementHelperRefactor private constructor(
 
     private fun processReaderRequest(
         requestCborEncrypted: ByteArray
-    ): ByteArray {
+    ): ByteArray? {
         ProximityLogger.i("requestCborEncrypted", requestCborEncrypted.toHex())
         val eReaderKey = Cbor.decode(requestCborEncrypted)
         try {
@@ -1051,37 +1044,7 @@ class NfcEngagementHelperRefactor private constructor(
                 onlyNfc = true
             )
         )
-        val disclosedDocuments = ArrayList<Document>()
-        val req = this.whatToDoWithRequest.invoke(jsonToSend.toString())
-        JSONObject(req).keys().forEach {
-            when {
-                DocType(it) == DocType.MDL -> disclosedDocuments.add(docs.first { doc -> doc.docType == MDL_DOCTYPE })
-                DocType(it) == DocType.EU_PID -> disclosedDocuments.add(docs.first { doc -> doc.docType == EU_PID_DOCTYPE })
-            }
-        }
-        val docRequested = disclosedDocuments.mapNotNull {
-            it.issuerSigned?.rawValue?.let { doc ->
-                DocRequested(
-                    issuerSignedContent = doc,
-                    alias = alias,
-                    docType = it.docType!!
-                )
-            }
-        }
-        docRequested.forEachIndexed { i, each ->
-            ProximityLogger.i(
-                "docRequested $i",
-                "Doc type: ${each.docType};\nAlias: ${each.alias};"
-            )
-        }
-        ProximityLogger.i("originalJson", jsonToSend.toString(3).orEmpty())
-        val (resp, itsOk) = ResponseGenerator(
-            sessionsTranscript = sessionTranscript
-        ).createResponse(
-            documents = docRequested.toTypedArray(),
-            fieldRequestedAndAccepted = req
-        )
-        return if (itsOk == "created") resp!! else NfcUtil.STATUS_WORD_FILE_NOT_FOUND
+        return null
     }
 
 
@@ -1097,9 +1060,9 @@ class NfcEngagementHelperRefactor private constructor(
             return NfcUtil.STATUS_WORD_WRONG_PARAMETERS to false
         }
 
-        val le = try{
+        val le = try {
             CommandApdu.decode(apdu).le
-        }catch (ex: Exception){
+        } catch (ex: Exception) {
             ProximityLogger.e(TAG, "GET RESPONSE: Error parsing APDU: ${ex.message}")
             fileMaxLength.toInt()
         }
@@ -1215,8 +1178,8 @@ class NfcEngagementHelperRefactor private constructor(
          * Called when the Handover Select message has been sent to the NFC tag reader.
          *
          *
-         * This is a good point for an app to notify the user that an mdoc transaction
-         * is about to to take place and they can start removing the device from the field.
+         * This is a good point for an app to notify the user that a mdoc transaction
+         * is about to take place, and they can start removing the device from the field.
          */
         fun onHandoverSelectMessageSent()
 
@@ -1265,17 +1228,14 @@ class NfcEngagementHelperRefactor private constructor(
         eDeviceKey: EcPrivateKey,
         retrievalMethods: List<DeviceRetrievalMethod>,
         listener: Listener,
-        executor: Executor,
-        whatToDoWithRequest: (String) -> String
+        executor: Executor
     ) {
         var helper = NfcEngagementHelperRefactor(
             context,
             eDeviceKey,
-            retrievalMethods,
             listener,
-            executor,
-            whatToDoWithRequest
-        )
+            executor
+        ).withRetrievalMethods(retrievalMethods)
 
         /**
          * Configures the builder so NFC Static Handover is used.
@@ -1290,7 +1250,7 @@ class NfcEngagementHelperRefactor private constructor(
         /**
          * Builds the [NfcEngagementHelperRefactor] and starts listening for connections.
          *
-         *]
+         *
          * and deactivation events using [.nfcOnDeactivated].
          *
          * @return the helper, ready to be used.
