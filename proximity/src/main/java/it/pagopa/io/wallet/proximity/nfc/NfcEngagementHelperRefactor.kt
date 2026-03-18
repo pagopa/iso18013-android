@@ -839,6 +839,9 @@ class NfcEngagementHelperRefactor private constructor(
     private var le = 0
 
     fun processDocResponse(response: ByteArray): Pair<ByteArray, Boolean> {
+        if(response.contentEquals(NfcUtil.STATUS_WORD_FILE_NOT_FOUND)){
+            return response to true
+        }
         ProximityLogger.d(
             TAG,
             "ENVELOPE: Response size=${response.size}"

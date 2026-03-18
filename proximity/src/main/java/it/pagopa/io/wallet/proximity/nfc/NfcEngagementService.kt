@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import androidx.annotation.CheckResult
+import com.android.identity.android.util.NfcUtil
 import com.android.identity.util.toHex
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.bluetooth.BleRetrievalMethod
@@ -102,6 +103,8 @@ abstract class NfcEngagementService : HostApduService() {
         @SuppressLint("StaticFieldLeak")
         private var nfcEngagement: NfcEngagement? = null
         private var inactivityTimeout = 15
+
+        val RESPONSE_GENERATION_ERROR = NfcUtil.STATUS_WORD_FILE_NOT_FOUND
 
         /**
          * Enable NFC engagement
