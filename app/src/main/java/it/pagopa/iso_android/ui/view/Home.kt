@@ -91,15 +91,11 @@ fun HomeView(
                                         clearBleCache = true
                                     )
                                 ),
-                                docManager.gelAllDocuments(),
-                                "pagoPa",
                                 listOf(listOf(R.raw.eudi_pid_issuer_ut))
                             )
 
                             is HomeDestination.MasterNfcExchange -> NfcEngagementEventBus.setupNfcService(
                                 retrievalMethods = listOf(NfcRetrievalMethod()),
-                                docManager.gelAllDocuments(),
-                                "pagoPa",
                                 listOf(listOf(R.raw.eudi_pid_issuer_ut))
                             )
 
@@ -111,8 +107,6 @@ fun HomeView(
                                         clearBleCache = true
                                     )
                                 ),
-                                docManager.gelAllDocuments(),
-                                "pagoPa",
                                 listOf(listOf(R.raw.eudi_pid_issuer_ut))
                             )
 
@@ -120,8 +114,6 @@ fun HomeView(
                                 retrievalMethods = listOf(
                                     NfcRetrievalMethod()
                                 ),
-                                docManager.gelAllDocuments(),
-                                "pagoPa",
                                 listOf(listOf(R.raw.eudi_pid_issuer_ut))
                             )
                         }

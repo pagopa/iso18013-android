@@ -1,10 +1,11 @@
 package it.pagopa.io.wallet.proximity.nfc
 
 import com.android.identity.crypto.EcPrivateKey
-import it.pagopa.io.wallet.cbor.model.Document
 import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**Singleton event bus using SharedFlow for NFC notifications.  */
 object NfcEngagementEventBus {
@@ -14,39 +15,59 @@ object NfcEngagementEventBus {
         extraBufferCapacity = 1 // Optional: prevents lost fast events
     )
     val events = _events.asSharedFlow()
-    private val _internalEvent = MutableSharedFlow<ServiceEvents>(
-        replay = 1,
-        extraBufferCapacity = 0
+
+    private val _setupEvent = MutableStateFlow<ServiceEvents.SetupReady?>(null)
+    internal val setupEvent = _setupEvent.asStateFlow()
+
+
+    // QrCode: no replay, one-shot
+    private val _qrEvent = MutableSharedFlow<ServiceEvents.QrCodeDeviceEngagement>(
+        replay = 0,
+        extraBufferCapacity = 1
     )
-    internal val internalEvent = _internalEvent.asSharedFlow()
+    internal val qrEvent = _qrEvent.asSharedFlow()
+    private val _responseEvent = MutableSharedFlow<ByteArray>(
+        replay = 0,
+        extraBufferCapacity = 1
+    )
+    val responseEvent = _responseEvent.asSharedFlow()
 
     // Use outside coroutines (e.g., in listeners); non-suspending.
     internal fun tryEmit(event: NfcEngagementEvent) {
         _events.tryEmit(event)
     }
 
-    /**It emits the event for the [NfcEngagementService] to setup engagement
+    internal fun resetSetup() {
+        _setupEvent.tryEmit(null)
+    }
+
+    /**It emits the event for the [NfcEngagementService] to set up engagement
      * @return true-> if event is sent correctly*/
     fun setupNfcService(
         retrievalMethods: List<DeviceRetrievalMethod>,
-        documents: List<Document>?=null,
-        alias: String?=null,
-        readerTrustStore: List<List<Any>>?=null
+        readerTrustStore: List<List<Any>>? = null,
+        inactivityTimeoutSeconds: Int = 15
     ): Boolean {
-        return _internalEvent.tryEmit(
+        return _setupEvent.tryEmit(
             ServiceEvents.SetupReady(
                 retrievalMethods,
-                documents,
-                alias,
-                readerTrustStore
+                readerTrustStore,
+                inactivityTimeoutSeconds
             )
         )
     }
 
     /**
-     * It emits the event for the [NfcEngagementService] to setup engagement
+     * It emits the event for the [NfcEngagementService] to send a document response
+     * @return true-> if event is sent correctly*/
+    fun sendDocumentResponse(response: ByteArray): Boolean {
+        return _responseEvent.tryEmit(response)
+    }
+
+    /**
+     * It emits the event for the [NfcEngagementService] to set up engagement
      * @return true-> if event is sent correctly*/
     internal fun setupDeviceEngagementFromQr(deviceEngagementSetup: Pair<ByteArray, EcPrivateKey>) {
-        _internalEvent.tryEmit(ServiceEvents.QrCodeDeviceEngagement(deviceEngagementSetup))
+        _qrEvent.tryEmit(ServiceEvents.QrCodeDeviceEngagement(deviceEngagementSetup))
     }
 }

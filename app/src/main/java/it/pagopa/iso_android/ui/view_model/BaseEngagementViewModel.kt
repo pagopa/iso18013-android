@@ -11,6 +11,7 @@ import it.pagopa.io.wallet.proximity.engagement.Engagement
 import it.pagopa.io.wallet.proximity.engagement.EngagementListener
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEvent
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementEventBus
+import it.pagopa.io.wallet.proximity.nfc.NfcEngagementService
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator
 import it.pagopa.io.wallet.proximity.retrieval.sendErrorResponse
@@ -59,7 +60,7 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
         return jsonAccepted.toString()
     }
 
-    protected fun shareInfo(sessionsTranscript: ByteArray) {
+    protected fun shareInfo(sessionsTranscript: ByteArray, onlyNfc: Boolean) {
         if (!keyExists())
             generateKey()
         this.loader.value = resources.getString(R.string.sending_doc)
@@ -98,18 +99,25 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                             "RESPONSE TO SEND",
                             Base64.encodeToString(response, Base64.NO_WRAP)
                         )
+                        if (onlyNfc) {
+                            val ok = NfcEngagementEventBus.sendDocumentResponse(response)
+                            ProximityLogger.i("RESPONSE SENT", ok.toString())
+                            return
+                        }
                         this@BaseEngagementViewModel.engagement?.sendResponse(response) ?: run {
                             deviceConnected.sendSessionTermination(response)
                         }
-                        ProximityLogger.i(
-                            "RESPONSE TO SEND",
-                            Base64.encodeToString(response, Base64.NO_WRAP)
-                        )
                     }
 
                     override fun onError(message: String) {
                         this@BaseEngagementViewModel.loader.value = null
                         dialogFailure(message)
+                        if (onlyNfc) {
+                            val ok =
+                                NfcEngagementEventBus.sendDocumentResponse(NfcEngagementService.RESPONSE_GENERATION_ERROR)
+                            ProximityLogger.i("RESPONSE SENT", ok.toString())
+                            return
+                        }
                         val isNoDocFound = message == "no doc found"
                         val toSend = if (isNoDocFound)
                             SessionDataStatus.ERROR_SESSION_ENCRYPTION
@@ -125,7 +133,8 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
     }
 
     protected fun manageRequestFromDeviceUi(
-        sessionsTranscript: ByteArray
+        sessionsTranscript: ByteArray,
+        onlyNfc: Boolean = false
     ) {
         val sb = StringBuilder().apply {
             append("${resources.getString(R.string.share_info_title)}:\n")
@@ -176,25 +185,29 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
             }
         }
         this.loader.value = null
-        this.dialogText = sb.toString()
-        dialog.value = AppDialog(
-            title = resources.getString(R.string.warning),
-            description = this.dialogText,
-            button = AppDialog.DialogButton(
-                resources.getString(R.string.ok),
-                onClick = {
-                    this.dialog.value = null
-                    shareInfo(sessionsTranscript)
-                },
-            ),
-            secondButton = AppDialog.DialogButton(
-                resources.getString(R.string.no),
-                onClick = {
-                    this.dialog.value = null
-                    _shouldGoBack.value = true
-                },
+        if (onlyNfc)
+            shareInfo(sessionsTranscript, true)
+        else {
+            this.dialogText = sb.toString()
+            dialog.value = AppDialog(
+                title = resources.getString(R.string.warning),
+                description = this.dialogText,
+                button = AppDialog.DialogButton(
+                    resources.getString(R.string.ok),
+                    onClick = {
+                        this.dialog.value = null
+                        shareInfo(sessionsTranscript, onlyNfc)
+                    },
+                ),
+                secondButton = AppDialog.DialogButton(
+                    resources.getString(R.string.no),
+                    onClick = {
+                        this.dialog.value = null
+                        _shouldGoBack.value = true
+                    },
+                )
             )
-        )
+        }
     }
 
     private fun dialogFailure(message: String) {
@@ -239,11 +252,9 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
 
                     is NfcEngagementEvent.DocumentRequestReceived -> {
                         val request = event.request
-                        event.sessionTranscript
                         ProximityLogger.i("request", request.toString())
                         this@BaseEngagementViewModel.request = request.orEmpty()
-                        if (!event.onlyNfc)
-                            manageRequestFromDeviceUi(event.sessionTranscript)
+                        manageRequestFromDeviceUi(event.sessionTranscript, event.onlyNfc)
                     }
 
                     is NfcEngagementEvent.Disconnected -> {

@@ -68,6 +68,7 @@ internal class NfcEngagement(
     }
 
     override fun close() {
+        ProximityLogger.i(NfcEngagement::class.java.name, "CLOSING NFC CONNECTION")
         try {
             if (deviceRetrievalHelper != null)
                 deviceRetrievalHelper!!.disconnect()
@@ -97,8 +98,7 @@ internal class NfcEngagement(
          */
         fun build(
             context: Context,
-            retrievalMethods: List<DeviceRetrievalMethod>,
-            whatToDoWithRequest: (String)->String
+            retrievalMethods: List<DeviceRetrievalMethod>
         ) = NfcEngagement(context).apply {
             this@apply.retrievalMethods = retrievalMethods
             this@apply.nfcEngagementBuilder = NfcEngagementHelperRefactor.Builder(
@@ -106,8 +106,7 @@ internal class NfcEngagement(
                 this@apply.eDevicePrivateKey,
                 this@apply.retrievalMethods,
                 this@apply.nfcEngagementListener,
-                context.mainExecutor(),
-                whatToDoWithRequest
+                context.mainExecutor()
             ).staticHandoverWith(this@apply.retrievalMethods.connectionMethods)
         }
     }
