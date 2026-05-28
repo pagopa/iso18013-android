@@ -80,7 +80,7 @@ class NfcEngagementHelperRefactor private constructor(
     private var responseBuffer: ByteArray? = null   // DO'53' already TLV codified
     private var responseOffset: Int = 0
     private var useExtendedLength: Boolean = false
-    private var readerTrustStores: List<ReaderTrustStore>? = listOf()
+    var readerTrustStores: List<ReaderTrustStore>? = listOf()
     private var sessionEncryption: SessionEncryption? = null
     private var deviceEngagementFromQr: ByteArray? = null
 
@@ -1034,7 +1034,9 @@ class NfcEngagementHelperRefactor private constructor(
                 requestWrapperList.add(
                     RequestWrapper(
                         each.itemsRequest,
-                        it?.isSuccess() == true
+                        it?.isSuccess() == true,
+                        it?.certSerialNumber,
+                        it?.subjectRdnMap
                     ).prepare().toJson()
                 )
             }

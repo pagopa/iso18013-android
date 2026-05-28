@@ -8,11 +8,16 @@ import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.document.ReaderAuth
 import it.pagopa.io.wallet.proximity.document.reader_auth.ReaderTrustStore
 import it.pagopa.io.wallet.proximity.parser.DeviceRequestParserRefactor
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.asn1.x500.style.BCStyle
+import org.bouncycastle.asn1.x500.style.IETFUtils
+import org.bouncycastle.asn1.x500.style.RFC4519Style
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.util.Base64
+
 
 private fun InputStream.toX509Certificate(): X509Certificate? {
     return CertificateFactory.getInstance("X.509").generateCertificate(this) as? X509Certificate
@@ -93,26 +98,29 @@ internal infix fun DeviceRequestParserRefactor.DocRequest.toReaderAuthWith(
         trustStore?.validateCertificationTrustPath(readerCertificateChain.javaX509Certificates) == true
     }
     val readerCertificateChain = this.readerCertificateChain ?: return null
-    if (trustStore == null)
-        return null
     val certChain =
-        trustStore.createCertificationTrustPath(readerCertificateChain.javaX509Certificates)
+        trustStore?.createCertificationTrustPath(readerCertificateChain.javaX509Certificates)
             ?.takeIf { it.isNotEmpty() } ?: readerCertificateChain.javaX509Certificates
     val readerAuth = this.readerAuth ?: return null
-    val readerCommonName = certChain.firstOrNull()
-        ?.subjectX500Principal
-        ?.name
-        ?.split(",")
-        ?.map { it.split("=", limit = 2) }
-        ?.firstOrNull { it.size == 2 && it[0] == "CN" }
-        ?.get(1)
-        ?.trim()
-        ?: ""
+
+    val cert = certChain.firstOrNull()
+    val subjectPrincipal = cert?.subjectX500Principal
+    val subjectX500Name = X500Name(subjectPrincipal?.name)
+
+    val readerCommonName = IETFUtils.valueToString(subjectX500Name.getRDNs(BCStyle.CN).firstOrNull()?.getFirst()?.value)
+    val subjectRdnMap = subjectX500Name.rdNs.flatMap { it.typesAndValues.toList() }.associate {
+        val label = RFC4519Style.INSTANCE.oidToDisplayName(it.type).uppercase()
+        val value = it.value.toString()
+        label to value
+    }
+
     return ReaderAuth(
         readerAuth,
         this.readerAuthenticated,
         readerCertificateChain.javaX509Certificates,
-        trustStore.validateCertificationTrustPath(readerCertificateChain.javaX509Certificates),
-        readerCommonName
+        trustStore?.validateCertificationTrustPath(readerCertificateChain.javaX509Certificates) ?: false,
+        readerCommonName,
+        cert?.serialNumber,
+        subjectRdnMap
     )
 }

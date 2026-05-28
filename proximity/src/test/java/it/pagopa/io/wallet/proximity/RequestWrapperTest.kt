@@ -4,6 +4,7 @@ import it.pagopa.io.wallet.cbor.model.DocType
 import it.pagopa.io.wallet.proximity.request.RequestWrapper
 import org.json.JSONObject
 import org.junit.Test
+import java.math.BigInteger
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -19,8 +20,8 @@ class RequestWrapperTest {
     @Test
     fun `test request from device JSON`() {
         val requestWrapperList = arrayListOf<JSONObject?>()
-        val req = RequestWrapper(Base64.decode(mockEuPidRequest), false).prepare().toJson()
-        val req1 = RequestWrapper(Base64.decode(mockMdlRequest), false).prepare().toJson()
+        val req = RequestWrapper(Base64.decode(mockEuPidRequest), false, BigInteger("1111"), null).prepare().toJson()
+        val req1 = RequestWrapper(Base64.decode(mockMdlRequest), false, BigInteger("2222"), null).prepare().toJson()
         requestWrapperList.addAll(listOf(req, req1))
         val jsonToSend = requestWrapperList.toTypedArray().toRequest()
         println(jsonToSend)

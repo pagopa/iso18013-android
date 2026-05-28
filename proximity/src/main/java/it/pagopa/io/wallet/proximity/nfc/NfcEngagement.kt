@@ -5,6 +5,7 @@ import com.android.identity.android.mdoc.deviceretrieval.DeviceRetrievalHelper
 import com.android.identity.android.mdoc.engagement.NfcEngagementHelper
 import com.android.identity.android.mdoc.transport.DataTransport
 import it.pagopa.io.wallet.proximity.ProximityLogger
+import it.pagopa.io.wallet.proximity.document.reader_auth.ReaderTrustStore
 import it.pagopa.io.wallet.proximity.engagement.Engagement
 import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.retrieval.connectionMethods
@@ -65,6 +66,10 @@ internal class NfcEngagement(
         override fun onHandoverSelectMessageSent() {
             ProximityLogger.i(this@NfcEngagement.tag, "Handover select message sent")
         }
+    }
+
+    override fun postReaderTrustStoresSetup(readerTrustStores: List<ReaderTrustStore>) {
+        nfcEngagementHelper.readerTrustStores = readerTrustStores
     }
 
     override fun close() {
