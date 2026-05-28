@@ -20,8 +20,8 @@ class RequestWrapperTest {
     @Test
     fun `test request from device JSON`() {
         val requestWrapperList = arrayListOf<JSONObject?>()
-        val req = RequestWrapper(Base64.decode(mockEuPidRequest), false, BigInteger("1111"), null).prepare().toJson()
-        val req1 = RequestWrapper(Base64.decode(mockMdlRequest), false, BigInteger("2222"), null).prepare().toJson()
+        val req = RequestWrapper(Base64.decode(mockEuPidRequest), false, BigInteger("1111"), mapOf("C" to "UT","O" to "EUDI Wallet Reference Implementation","SERIALNUMBER" to "001","CN" to "EUDI Proximity Verifier")).prepare().toJson()
+        val req1 = RequestWrapper(Base64.decode(mockMdlRequest), false, BigInteger("2222"), mapOf("C" to "UT","O" to "EUDI Wallet Reference Implementation","SERIALNUMBER" to "001","CN" to "EUDI Proximity Verifier")).prepare().toJson()
         requestWrapperList.addAll(listOf(req, req1))
         val jsonToSend = requestWrapperList.toTypedArray().toRequest()
         println(jsonToSend)
