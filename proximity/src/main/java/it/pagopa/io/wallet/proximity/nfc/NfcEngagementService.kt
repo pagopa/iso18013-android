@@ -102,6 +102,8 @@ abstract class NfcEngagementService : HostApduService() {
     companion object {
         @SuppressLint("StaticFieldLeak")
         private var nfcEngagement: NfcEngagement? = null
+        @SuppressLint("StaticFieldLeak")
+        private var activeService: NfcEngagementService? = null
         private var inactivityTimeout = 15
 
         val RESPONSE_GENERATION_ERROR = NfcUtil.STATUS_WORD_FILE_NOT_FOUND
@@ -131,6 +133,7 @@ abstract class NfcEngagementService : HostApduService() {
         @JvmStatic
         fun disable(activity: Activity) {
             ProximityLogger.i("NfcEngagementService", "disable")
+            activeService?.cancelInactivityTimeout()
             nfcEngagement?.nfcEngagementHelper?.close()
             nfcEngagement = null
             NfcEngagementEventBus.resetSetup()
@@ -303,9 +306,14 @@ abstract class NfcEngagementService : HostApduService() {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
+    private fun cancelInactivityTimeout() {
+        handler.removeCallbacks(runnable)
+    }
+
     @Suppress("UNCHECKED_CAST")
     override fun onCreate() {
         super.onCreate()
+        activeService = this
         ProximityLogger.i("NfcEngagementService", "On Create")
         serviceScope.launch {
             NfcEngagementEventBus.setupEvent.filterNotNull().collectLatest { event ->
@@ -362,10 +370,15 @@ abstract class NfcEngagementService : HostApduService() {
     override fun onDestroy() {
         super.onDestroy()
         ProximityLogger.i("NfcEngagementService", "On Destroy")
+        cancelInactivityTimeout()
+        if (activeService === this) {
+            activeService = null
+        }
         serviceJob.cancel()
     }
 
     override fun onDeactivated(reason: Int) {
+        cancelInactivityTimeout()
         if (nfcEngagement != null) {
             nfcEngagement?.nfcEngagementHelper?.nfcOnDeactivated(reason)
             val ble =
