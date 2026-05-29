@@ -308,6 +308,7 @@ abstract class NfcEngagementService : HostApduService() {
 
     private fun cancelInactivityTimeout() {
         handler.removeCallbacks(runnable)
+        ProximityLogger.i("NfcEngagementService", "Inactivity timeout canceled")
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -416,13 +417,15 @@ abstract class NfcEngagementService : HostApduService() {
             }
             val ble =
                 nfcEngagement?.nfcEngagementHelper?.retrievalMethods?.any { it is BleRetrievalMethod } == true
-            handler.removeCallbacks(runnable)
+            cancelInactivityTimeout()
+
             if (theEnd) {
                 this@NfcEngagementService.onDeactivated(0)
             } else {
                 if (!ble) {
                     val timeoutSeconds = inactivityTimeout.toLong()
                     handler.postDelayed(runnable, timeoutSeconds * 1000L)
+                    ProximityLogger.i("NfcEngagementService", "Inactivity timeout registered")
                 }
             }
             sendResponseApdu(back)
