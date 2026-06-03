@@ -105,6 +105,7 @@ abstract class NfcEngagementService : HostApduService() {
         @SuppressLint("StaticFieldLeak")
         private var activeService: NfcEngagementService? = null
         private var inactivityTimeout = 15
+        private var serviceClass: Class<out NfcEngagementService>? = null
 
         val RESPONSE_GENERATION_ERROR = NfcUtil.STATUS_WORD_FILE_NOT_FOUND
 
@@ -119,6 +120,15 @@ abstract class NfcEngagementService : HostApduService() {
             activity: Activity,
             preferredNfcEngSerCls: Class<out NfcEngagementService>? = null,
         ): HceServiceStatus {
+            serviceClass = preferredNfcEngSerCls
+            // Enable the service component programmatically
+            preferredNfcEngSerCls?.let {
+                activity.packageManager.setComponentEnabledSetting(
+                    ComponentName(activity, it),
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    android.content.pm.PackageManager.DONT_KILL_APP
+                )
+            }
             // set preferred Nfc Engagement Service
             return preferredNfcEngSerCls?.let {
                 setAsPreferredNfcEngagementService(activity, it)
@@ -138,6 +148,15 @@ abstract class NfcEngagementService : HostApduService() {
             nfcEngagement = null
             NfcEngagementEventBus.resetSetup()
             unsetAsPreferredNfcEngagementService(activity)
+            // Disable the service component programmatically
+            serviceClass?.let {
+                activity.packageManager.setComponentEnabledSetting(
+                    ComponentName(activity, it),
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    android.content.pm.PackageManager.DONT_KILL_APP
+                )
+            }
+            serviceClass = null
         }
 
         private fun Int.cardEmulationClearLog() = when (this) {

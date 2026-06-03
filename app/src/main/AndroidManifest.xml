@@ -48,6 +48,7 @@
         <service
             android:name=".nfc.AppNfcEngagementService"
             android:exported="true"
+            android:enabled="false"
             android:label="@string/nfc_engagement_service_desc"
             android:permission="android.permission.BIND_NFC_SERVICE">
             <intent-filter>
