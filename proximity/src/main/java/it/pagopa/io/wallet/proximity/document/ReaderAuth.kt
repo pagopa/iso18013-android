@@ -13,7 +13,7 @@ import java.security.cert.X509Certificate
  * @property readerCertificateChain reader auth certificate chain as [List] of [X509Certificate]
  * @property readerCertificatedIsTrusted result of reader auth certificate path validation
  * @property readerCommonName the Common Name (CN) field of the reader authentication certificate
- * @property subjectRdnMap the complete map of the reader authentication certificate subject fields.
+ * @property issuerRdnMap the complete map of the reader authentication certificate subject fields.
  * @constructor Create empty Reader auth
  */
 @Parcelize
@@ -24,7 +24,7 @@ class ReaderAuth(
     val readerCertificatedIsTrusted: Boolean,
     val readerCommonName: String,
     val certSerialNumber: BigInteger?,
-    val subjectRdnMap: Map<String, String>
+    val issuerRdnMap: Map<String, String>
 ) : Parcelable {
     /**
      * Whether the reader authentication is success (including that the signature of reader authentication is valid and reader auth

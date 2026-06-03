@@ -138,7 +138,7 @@ abstract class Engagement(val context: Context) {
                             each.itemsRequest,
                             it?.isSuccess() == true,
                             it?.certSerialNumber,
-                            it?.subjectRdnMap
+                            it?.issuerRdnMap
                         ).prepare().toJson()
                     )
                 }

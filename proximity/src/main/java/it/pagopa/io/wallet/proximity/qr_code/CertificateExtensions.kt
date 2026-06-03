@@ -90,6 +90,12 @@ internal fun <T> List<List<T>>.toReaderTrustStore(context: Context): List<Reader
 internal infix fun DeviceRequestParserRefactor.DocRequest.toReaderAuthWith(
     readerTrustStores: List<ReaderTrustStore?>?
 ): ReaderAuth? {
+    fun mailOidToMailString(type: String?): String {
+        if (type == null) {
+            return "EMAIL"
+        }
+        return type.uppercase()
+    }
     if (readerTrustStores == null)
         return null
     val trustStore = readerTrustStores.firstOrNull { trustStore ->
@@ -104,12 +110,13 @@ internal infix fun DeviceRequestParserRefactor.DocRequest.toReaderAuthWith(
     val readerAuth = this.readerAuth ?: return null
 
     val cert = certChain.firstOrNull()
-    val subjectPrincipal = cert?.subjectX500Principal
-    val subjectX500Name = X500Name(subjectPrincipal?.name)
+    val subjectPrincipal = cert?.issuerX500Principal
+    val issuerX500Name = X500Name(subjectPrincipal?.name)
 
-    val readerCommonName = IETFUtils.valueToString(subjectX500Name.getRDNs(BCStyle.CN).firstOrNull()?.getFirst()?.value)
-    val subjectRdnMap = subjectX500Name.rdNs.flatMap { it.typesAndValues.toList() }.associate {
-        val label = RFC4519Style.INSTANCE.oidToDisplayName(it.type).uppercase()
+    val readerCommonName =
+        IETFUtils.valueToString(issuerX500Name.getRDNs(BCStyle.CN).firstOrNull()?.getFirst()?.value)
+    val issuerRdnMap = issuerX500Name.rdNs.flatMap { it.typesAndValues.toList() }.associate {
+        val label = mailOidToMailString(RFC4519Style.INSTANCE.oidToDisplayName(it.type))
         val value = it.value.toString()
         label to value
     }
@@ -118,9 +125,10 @@ internal infix fun DeviceRequestParserRefactor.DocRequest.toReaderAuthWith(
         readerAuth,
         this.readerAuthenticated,
         readerCertificateChain.javaX509Certificates,
-        trustStore?.validateCertificationTrustPath(readerCertificateChain.javaX509Certificates) ?: false,
+        trustStore?.validateCertificationTrustPath(readerCertificateChain.javaX509Certificates)
+            ?: false,
         readerCommonName,
         cert?.serialNumber,
-        subjectRdnMap
+        issuerRdnMap
     )
 }

@@ -1036,7 +1036,7 @@ class NfcEngagementHelperRefactor private constructor(
                         each.itemsRequest,
                         it?.isSuccess() == true,
                         it?.certSerialNumber,
-                        it?.subjectRdnMap
+                        it?.issuerRdnMap
                     ).prepare().toJson()
                 )
             }
@@ -1224,7 +1224,6 @@ class NfcEngagementHelperRefactor private constructor(
      * @param context application context.
      * @param eDeviceKey the public part of `EDeviceKey` for *mdoc session
      * encryption* according to ISO/IEC 18013-5:2021 section 9.1.1.4.
-     * @param options set of options for creating [DataTransport] instances.
      * @param listener the listener.
      * @param executor a [Executor] to use with the listener.
      */
