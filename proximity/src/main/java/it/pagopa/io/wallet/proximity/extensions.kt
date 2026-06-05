@@ -16,6 +16,10 @@ internal fun Array<JSONObject?>.toRequest(): JSONObject {
                     .getJSONObject("request")
                     .getJSONObject(docType)
                     .put("isAuthenticated", it.getBoolean("isAuthenticated"))
+                jsonToSend
+                    .getJSONObject("request")
+                    .getJSONObject(docType)
+                    .put("certificateData", it.optJSONObject("issuerRdnMap"))
             } else {
                 jsonToSend
                     .getJSONObject("request")
@@ -23,6 +27,10 @@ internal fun Array<JSONObject?>.toRequest(): JSONObject {
                 jsonToSend.getJSONObject("request")
                     .getJSONObject(docType)
                     .put("isAuthenticated", it.getBoolean("isAuthenticated"))
+                jsonToSend
+                    .getJSONObject("request")
+                    .getJSONObject(docType)
+                    .put("certificateData", it.optJSONObject("issuerRdnMap"))
             }
         }
     }

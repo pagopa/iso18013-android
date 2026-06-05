@@ -144,6 +144,8 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
             req.optJSONObject(DocType.MDL.value)?.let { mdlJson ->
                 sb.append("\n${resources.getString(R.string.driving_license)}:\n\n")
                 mdlJson.keys().forEach { key ->
+                    if (key == "certificateData")
+                        return@forEach
                     if (key == "isAuthenticated")
                         ProximityLogger.i("CERT is valid:", "${mdlJson.optBoolean(key)}")
                     mdlJson.optJSONObject(key)?.let { internalJson ->
@@ -157,6 +159,8 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
             req.optJSONObject(DocType.EU_PID.value)?.let { euPidJson ->
                 sb.append("\n${resources.getString(R.string.eu_pid)}:\n\n")
                 euPidJson.keys().forEach { key ->
+                    if (key == "certificateData")
+                        return@forEach
                     if (key == "isAuthenticated")
                         ProximityLogger.i("CERT is valid:", "${euPidJson.optBoolean(key)}")
                     euPidJson.optJSONObject(key)?.let { internalJson ->
@@ -172,6 +176,8 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                 sb.append("\n${it}:\n\n")
                 req.optJSONObject(it)?.let { json ->
                     json.keys().forEach { key ->
+                        if (key == "certificateData")
+                            return@forEach
                         if (key == "isAuthenticated")
                             ProximityLogger.i("CERT is valid:", "${json.optBoolean(key)}")
                         json.optJSONObject(key)?.let { internalJson ->

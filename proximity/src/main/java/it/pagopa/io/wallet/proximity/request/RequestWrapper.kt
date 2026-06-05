@@ -4,16 +4,18 @@ package it.pagopa.io.wallet.proximity.request
 
 import android.os.Parcelable
 import com.upokecenter.cbor.CBORObject
-import it.pagopa.io.wallet.cbor.model.DocType
 import it.pagopa.io.wallet.cbor.parser.CBorParser
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import org.json.JSONObject
+import java.math.BigInteger
 
 @Parcelize
 internal data class RequestWrapper(
     private val cborByte: ByteArray,
-    val isAuthenticated: Boolean = false
+    val isAuthenticated: Boolean = false,
+    val certSerialNumber: BigInteger?,
+    val issuerRdnMap: Map<String, String>?,
 ) : Parcelable {
     @IgnoredOnParcel
     var requiredFields: CBORObject? = null
@@ -34,6 +36,12 @@ internal data class RequestWrapper(
                 put("docType", docTypeCbor)
                 put("values", JSONObject(it))
                 put("isAuthenticated", isAuthenticated)
+                certSerialNumber?.let { serial ->
+                    put("certificateSerial", serial.toString())
+                }
+                issuerRdnMap?.let { map ->
+                    put("issuerRdnMap", JSONObject(map))
+                }
             }
         }
     }

@@ -80,7 +80,7 @@ class NfcEngagementHelperRefactor private constructor(
     private var responseBuffer: ByteArray? = null   // DO'53' already TLV codified
     private var responseOffset: Int = 0
     private var useExtendedLength: Boolean = false
-    private var readerTrustStores: List<ReaderTrustStore>? = listOf()
+    var readerTrustStores: List<ReaderTrustStore>? = listOf()
     private var sessionEncryption: SessionEncryption? = null
     private var deviceEngagementFromQr: ByteArray? = null
 
@@ -1034,7 +1034,9 @@ class NfcEngagementHelperRefactor private constructor(
                 requestWrapperList.add(
                     RequestWrapper(
                         each.itemsRequest,
-                        it?.isSuccess() == true
+                        it?.isSuccess() == true,
+                        it?.certSerialNumber,
+                        it?.issuerRdnMap
                     ).prepare().toJson()
                 )
             }
@@ -1222,7 +1224,6 @@ class NfcEngagementHelperRefactor private constructor(
      * @param context application context.
      * @param eDeviceKey the public part of `EDeviceKey` for *mdoc session
      * encryption* according to ISO/IEC 18013-5:2021 section 9.1.1.4.
-     * @param options set of options for creating [DataTransport] instances.
      * @param listener the listener.
      * @param executor a [Executor] to use with the listener.
      */

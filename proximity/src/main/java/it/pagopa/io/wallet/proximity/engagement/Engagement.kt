@@ -59,8 +59,15 @@ abstract class Engagement(val context: Context) {
 
     @JvmName("setReaderTrustStorePrivate")
     private fun <T> List<List<T>>.setReaderTrustStore() {
-        readerTrustStores = this.toReaderTrustStore(context)
+        val readerTrustStores = this.toReaderTrustStore(context)
+        this@Engagement.readerTrustStores = readerTrustStores
+        postReaderTrustStoresSetup(readerTrustStores)
     }
+
+    /**
+     * Override this for cleanup after setting the [readerTrustStores]
+     */
+    protected open fun postReaderTrustStoresSetup(readerTrustStores: List<ReaderTrustStore>) {}
 
     /**
      * Use this if you have certificates into your **Raw Resource** folder.
@@ -129,7 +136,9 @@ abstract class Engagement(val context: Context) {
                     requestWrapperList.add(
                         RequestWrapper(
                             each.itemsRequest,
-                            it?.isSuccess() == true
+                            it?.isSuccess() == true,
+                            it?.certSerialNumber,
+                            it?.issuerRdnMap
                         ).prepare().toJson()
                     )
                 }

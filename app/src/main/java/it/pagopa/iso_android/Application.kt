@@ -13,8 +13,8 @@ class Application : Application() {
             val sslContext: SSLContext = SSLContext.getInstance("TLSv1.2")
             sslContext.init(null, null, null)
             sslContext.createSSLEngine()
-        }catch (e: Exception){
-            ProximityLogger.e("App","Unable to create provider cause: ${e.message}")
+        } catch (e: Exception) {
+            ProximityLogger.e("App", "Unable to create provider cause: ${e.message}")
         }
     }
 }
