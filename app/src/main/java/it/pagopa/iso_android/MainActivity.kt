@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.compose.rememberNavController
 import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.proximity.ProximityLogger
+import it.pagopa.io.wallet.proximity.nfc.NfcEngagementService
 import it.pagopa.iso_android.navigation.IsoAndroidPocNavHost
 import it.pagopa.iso_android.navigation.menu.DrawerBody
 import it.pagopa.iso_android.navigation.menu.TopBar
@@ -37,12 +38,18 @@ import it.pagopa.iso_android.ui.theme.IsoAndroidPocTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        NfcEngagementService.disable(this)
         enableEdgeToEdge()
         ProximityLogger.enabled = BuildConfig.DEBUG
         CborLogger.enabled = BuildConfig.DEBUG
         setContent {
             this.MainApp()
         }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        NfcEngagementService.disable(this)
     }
 }
 
