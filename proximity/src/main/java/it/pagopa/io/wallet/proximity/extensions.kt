@@ -19,7 +19,7 @@ internal fun Array<JSONObject?>.toRequest(): JSONObject {
                 jsonToSend
                     .getJSONObject("request")
                     .getJSONObject(docType)
-                    .put("certificateData", it.getJSONObject("issuerRdnMap"))
+                    .put("certificateData", it.optJSONObject("issuerRdnMap"))
             } else {
                 jsonToSend
                     .getJSONObject("request")
@@ -30,7 +30,7 @@ internal fun Array<JSONObject?>.toRequest(): JSONObject {
                 jsonToSend
                     .getJSONObject("request")
                     .getJSONObject(docType)
-                    .put("certificateData", it.getJSONObject("issuerRdnMap"))
+                    .put("certificateData", it.optJSONObject("issuerRdnMap"))
             }
         }
     }
