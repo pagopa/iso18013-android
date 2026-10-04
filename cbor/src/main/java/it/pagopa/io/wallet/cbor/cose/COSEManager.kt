@@ -8,9 +8,9 @@ import com.upokecenter.cbor.CBORObject
 import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.cbor.extensions.isDer
 import it.pagopa.io.wallet.cbor.helper.addBcIfNeeded
+import it.pagopa.io.wallet.cbor.helper.bcProvider
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.jce.ECNamedCurveTable
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec
 import org.bouncycastle.jce.spec.ECPublicKeySpec
 import org.json.JSONObject
@@ -111,7 +111,7 @@ class COSEManager {
         val keySpec = ECPublicKeySpec(ecPoint, ecSpec)
         // Use the Java KeyFactory to generate the public key from the key specification.
         // The provider "BC" refers to the Bouncy Castle library, which must be properly configured.
-        val keyFactory = KeyFactory.getInstance(kty, BouncyCastleProvider.PROVIDER_NAME)
+        val keyFactory = KeyFactory.getInstance(kty, bcProvider)
         // Generate and return the public key.
         return keyFactory.generatePublic(keySpec)
     }
@@ -125,14 +125,14 @@ class COSEManager {
         return try {
             val subjectPublicKeyInfo = SubjectPublicKeyInfo.getInstance(publicKey)
             val publicKeySpec = X509EncodedKeySpec(subjectPublicKeyInfo.getEncoded())
-            val keyFactory = KeyFactory.getInstance("ECDSA", BouncyCastleProvider.PROVIDER_NAME)
+            val keyFactory = KeyFactory.getInstance("ECDSA", bcProvider)
             val pubKey = keyFactory.generatePublic(publicKeySpec)
             val derSignature = if (EcSignature.isDer(signature))
                 signature
             else
                 EcSignature.fromCoseEncoded(signature).toDer()
             val alg = algorithmFromProtectedHeader(protectedHeader)
-            Signature.getInstance(alg, BouncyCastleProvider.PROVIDER_NAME).apply {
+            Signature.getInstance(alg, bcProvider).apply {
                 initVerify(pubKey)
                 update(data)
             }.verify(derSignature)

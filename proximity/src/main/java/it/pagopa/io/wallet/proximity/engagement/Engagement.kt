@@ -33,14 +33,8 @@ abstract class Engagement(val context: Context) {
     protected val tag: String = "Engagement"
 
     init {
-        val isBcAlreadyIntoProviders = Security.getProviders().any {
-            it.name == BouncyCastleProvider.PROVIDER_NAME
-        }
-        if (!isBcAlreadyIntoProviders) {
-            Security.insertProviderAt(BouncyCastleProvider(), 1)
-        } else {
-            Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
-            Security.insertProviderAt(BouncyCastleProvider(), 1)
+        if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
+            Security.addProvider(BouncyCastleProvider())
         }
         Logger.isDebugEnabled = ProximityLogger.enabled
     }

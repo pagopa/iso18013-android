@@ -38,7 +38,11 @@ import it.pagopa.iso_android.ui.theme.IsoAndroidPocTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        NfcEngagementService.disable(this)
+        try {
+            NfcEngagementService.disable(this)
+        } catch (e: Exception) {
+            ProximityLogger.e("MainActivity", "Error disabling NFC engagement: ${e.message}")
+        }
         enableEdgeToEdge()
         ProximityLogger.enabled = BuildConfig.DEBUG
         CborLogger.enabled = BuildConfig.DEBUG
