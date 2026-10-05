@@ -8,9 +8,6 @@ internal fun addBcIfNeeded(){
         it.name == BouncyCastleProvider.PROVIDER_NAME
     }
     if (!isBcAlreadyIntoProviders) {
-        Security.insertProviderAt(BouncyCastleProvider(), 1)
-    } else {
-        Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
-        Security.insertProviderAt(BouncyCastleProvider(), 1)
+        Security.addProvider(BouncyCastleProvider())
     }
 }
