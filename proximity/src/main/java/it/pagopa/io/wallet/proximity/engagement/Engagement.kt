@@ -10,6 +10,7 @@ import com.android.identity.crypto.EcCurve
 import com.android.identity.crypto.EcPublicKey
 import com.android.identity.util.Constants
 import com.android.identity.util.Logger
+import it.pagopa.io.wallet.cbor.helper.addBcIfNeeded
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.document.reader_auth.ReaderTrustStore
 import it.pagopa.io.wallet.proximity.nfc.NfcEngagementHelperRefactor
@@ -21,9 +22,7 @@ import it.pagopa.io.wallet.proximity.retrieval.DeviceRetrievalMethod
 import it.pagopa.io.wallet.proximity.session_data.SessionDataStatus
 import it.pagopa.io.wallet.proximity.toRequest
 import it.pagopa.io.wallet.proximity.wrapper.DeviceRetrievalHelperWrapper
-import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.json.JSONObject
-import java.security.Security
 import java.util.concurrent.Executor
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -33,15 +32,7 @@ abstract class Engagement(val context: Context) {
     protected val tag: String = "Engagement"
 
     init {
-        val isBcAlreadyIntoProviders = Security.getProviders().any {
-            it.name == BouncyCastleProvider.PROVIDER_NAME
-        }
-        if (!isBcAlreadyIntoProviders) {
-            Security.insertProviderAt(BouncyCastleProvider(), 1)
-        } else {
-            Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
-            Security.insertProviderAt(BouncyCastleProvider(), 1)
-        }
+        addBcIfNeeded()
         Logger.isDebugEnabled = ProximityLogger.enabled
     }
 
