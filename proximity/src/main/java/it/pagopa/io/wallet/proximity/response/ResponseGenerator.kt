@@ -11,7 +11,6 @@ import com.android.identity.cbor.Tagged
 import com.android.identity.document.DocumentRequest
 import com.android.identity.document.NameSpacedData
 import com.android.identity.mdoc.mso.StaticAuthDataParser
-import com.android.identity.mdoc.response.DeviceResponseGenerator
 import com.android.identity.mdoc.util.MdocUtil
 import com.android.identity.util.Constants
 import it.pagopa.io.wallet.cbor.CborLogger
@@ -21,6 +20,9 @@ import it.pagopa.io.wallet.cbor.model.IssuerSigned
 import it.pagopa.io.wallet.proximity.ProximityLogger
 import it.pagopa.io.wallet.proximity.request.DocRequested
 import org.json.JSONObject
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.iterator
 
 class ResponseGenerator(
     private val sessionsTranscript: ByteArray
@@ -96,6 +98,26 @@ class ResponseGenerator(
             }.map {
                 Triple(IssuerSigned.issuerSignedFromByteArray(it.issuerSignedContent), it.alias, it.docType)
             }.forEach { (doc, alias, docType) ->
+
+                val namespacesRequested = (fieldsRequested[docType] as JSONObject)
+
+                val errors = namespacesRequested.keys().asSequence().mapNotNull { namespace ->
+                    val elementsRequested = (namespacesRequested[namespace] as JSONObject)
+                    val elementsDenied =
+                        elementsRequested.keys().asSequence().mapNotNull { element ->
+                            if (elementsRequested[element] == false) {
+                                element to 0L
+                            } else {
+                                null
+                            }
+                        }
+                    elementsDenied.toList().ifEmpty {
+                        null
+                    }?.let {
+                        namespace to it.toMap()
+                    }
+                }.toMap()
+
                 ProximityLogger.i("ADDING DOC", "adding doc to response")
                 addDocToResponse(
                     responseGenerator = deviceResponse,
@@ -103,7 +125,8 @@ class ResponseGenerator(
                     fieldsRequested = fieldsRequested,
                     transcript = sessionsTranscript,
                     alias = alias,
-                    docType = docType
+                    docType = docType,
+                    errors
                 )
             }
             return deviceResponse.generate() to "created"
@@ -204,9 +227,13 @@ class ResponseGenerator(
         fieldsRequested: JSONObject,
         transcript: ByteArray,
         alias: String,
-        docType: String
+        docType: String,
+        errors: Map<String?, Map<String?, Long?>>?,
     ) {
-        if (issuerSignedObj == null) return
+        if (issuerSignedObj == null) {
+            responseGenerator.addDocumentError(docType, 0L)
+            return
+        }
         val dataElements = this.createDataElements(issuerSignedObj, fieldsRequested, docType)
         CborLogger.i("dataElements", dataElements.toString())
         val deviceSigned = setDeviceNamespaces(
@@ -238,6 +265,16 @@ class ResponseGenerator(
             put("docType", docType)
             put("issuerSigned", issuerSigned)
             put("deviceSigned", deviceSigned)
+            if (errors != null) {
+                val errorsOuterMapBuilder = CborMap.builder()
+                for ((namespaceName, innerMap) in errors) {
+                    val errorsInnerMapBuilder = errorsOuterMapBuilder.putMap(namespaceName!!)
+                    for ((dataElementName, value) in innerMap) {
+                        errorsInnerMapBuilder.put(dataElementName!!, value!!)
+                    }
+                }
+                put("errors", errorsOuterMapBuilder.end().build())
+            }
         }
         responseGenerator.addDocument(Cbor.encode(mapBuilder.end().build()))
     }
