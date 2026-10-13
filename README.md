@@ -475,14 +475,14 @@ ResponseGenerator(sessionsTranscript = sessionsTranscript)
 
 ## ISO 18013-7
 
-The `OpenID4VP` class can be used to generate a `sessionTranscript` compatible with ISO 18013-7 (OpenID4VP). Parameters are typically obtained from a backend or authorization request:
+The `OpenID4VP` class can be used to generate a `sessionTranscript` with the `OpenID4VPHandover` defined in [OpenID4VP 1.0 Appendix B.2.6.1](https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#appendix-B.2.6.1), for requests not received through the Digital Credentials API. Parameters are obtained from the authorization request; `jwkThumbprint` is the JWK SHA-256 Thumbprint of the Verifier's key used to encrypt the response (`direct_post.jwt`), or `null` when the response is not encrypted:
 
 ```kotlin
 val sessionTranscript = OpenID4VP(
     clientId = clientId,
     responseUri = responseUri,
     authorizationRequestNonce = authorizationRequestNonce,
-    mdocGeneratedNonce = mdocGeneratedNonce
+    jwkThumbprint = jwkThumbprint
 ).createSessionTranscript()
 
 ResponseGenerator(sessionTranscript).createResponse(

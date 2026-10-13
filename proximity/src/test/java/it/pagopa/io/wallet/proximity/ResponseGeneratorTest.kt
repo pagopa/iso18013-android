@@ -9,6 +9,7 @@ import it.pagopa.io.wallet.proximity.request.DocRequested
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator
 import it.pagopa.io.wallet.proximity.response.ResponseGenerator.Response
 import org.json.JSONObject
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
@@ -22,14 +23,20 @@ class ResponseGeneratorTest {
     }
     private val mockSessionsTranscript = ByteArray(10)
 
+    /** Example of OpenID4VP 1.0 Appendix B.2.6.1 */
+    @OptIn(ExperimentalStdlibApi::class)
     @Test
     fun createOpenIdV4SessionTranscript() {
         val sessionTranscript = OpenID4VP(
-            "clientId",
-            "responseUri",
-            "authorizationRequestNonce",
-            "mdocGeneratedNonce"
+            "x509_san_dns:example.com",
+            "https://example.com/response",
+            "exc7gBkxjx1rdc9udRrveKvSsJIq80avlXeLHhGwqtA",
+            "4283ec927ae0f208daaa2d026a814f2b22dca52cf85ffa8f3f8626c6bd669047".hexToByteArray()
         ).createSessionTranscript()
+        assertEquals(
+            "83f6f682714f70656e494434565048616e646f7665725820048bc053c00442af9b8eed494cefdd9d95240d254b046b11b68013722aad38ac",
+            sessionTranscript.toHexString()
+        )
         val parser = CBorParser(sessionTranscript).toJson()
         println(parser)
     }
