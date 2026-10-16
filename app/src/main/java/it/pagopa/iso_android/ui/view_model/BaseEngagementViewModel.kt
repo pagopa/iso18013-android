@@ -48,8 +48,11 @@ abstract class BaseEngagementViewModel(private val resources: Resources) : BaseV
                     json.optJSONObject(key)?.let { internalJson ->
                         val internalNewJson = JSONObject()
                         internalJson.keys().forEach { dataKey ->
-                            if (!notAccepted.contains(dataKey))
+                            if (!notAccepted.contains(dataKey)) {
                                 internalNewJson.put(dataKey, true)
+                            } else {
+                                internalNewJson.put(dataKey, false)
+                            }
                         }
                         keyJson.put(key, internalNewJson)
                     }
