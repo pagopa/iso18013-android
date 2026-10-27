@@ -129,7 +129,10 @@ abstract class Engagement(val context: Context) {
                             each.itemsRequest,
                             it?.isSuccess() == true,
                             it?.certSerialNumber,
-                            it?.issuerRdnMap
+                            it?.issuerRdnMap,
+                            each.readerAuth,
+                            each.readerCertificateChain?.certificates?.map { cert -> cert.encodedCertificate },
+                            each.readerAuthenticated
                         ).prepare().toJson()
                     )
                 }
