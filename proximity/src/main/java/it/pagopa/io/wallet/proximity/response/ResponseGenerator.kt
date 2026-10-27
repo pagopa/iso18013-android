@@ -14,6 +14,7 @@ import com.android.identity.mdoc.mso.StaticAuthDataParser
 import com.android.identity.mdoc.response.DeviceResponseGenerator
 import com.android.identity.mdoc.util.MdocUtil
 import com.android.identity.util.Constants
+import com.upokecenter.cbor.CBORObject
 import it.pagopa.io.wallet.cbor.CborLogger
 import it.pagopa.io.wallet.cbor.cose.COSEManager
 import it.pagopa.io.wallet.cbor.cose.SignWithCOSEResult
@@ -55,15 +56,17 @@ class ResponseGenerator(
      * @return[Response.onResponseGenerated] if ByteArray is created without Exceptions, else
      * [Response.onError] if disclosedDocumentsArray is Empty with "no doc found" message or if an
      * [Exception] was reached with [Throwable.message].
+     * @param otherDocuments the documents in formats other than mdoc, already presented, e.g. SD-JWT VC
      */
     @JvmName("createResponseWithCallback")
     fun createResponse(
         documents: Array<DocRequested>,
         fieldRequestedAndAccepted: String,
-        response: Response
+        response: Response,
+        otherDocuments: List<OtherDocument> = emptyList()
     ) {
         val (responseToSend, message) = this.createResponse(
-            documents, fieldRequestedAndAccepted
+            documents, fieldRequestedAndAccepted, otherDocuments
         )
         responseToSend?.let {
             response.onResponseGenerated(it)
@@ -81,11 +84,13 @@ class ResponseGenerator(
      * @return[Pair]-> out <[ByteArray],[String]> with first element nullable,
      * if ByteArray is created without Exceptions message back will be "created" else
      * [Throwable.message] reached or empty string if this is null
+     * @param otherDocuments the documents in formats other than mdoc, already presented, e.g. SD-JWT VC
      */
     @JvmName("createResponseWithBase64")
     fun createResponse(
         documents: Array<DocRequested>,
-        fieldRequestedAndAccepted: String
+        fieldRequestedAndAccepted: String,
+        otherDocuments: List<OtherDocument> = emptyList()
     ): Pair<ByteArray?, String> {
         try {
             val deviceResponse = DeviceResponseGenerator(Constants.DEVICE_RESPONSE_STATUS_OK)
@@ -106,10 +111,27 @@ class ResponseGenerator(
                     docType = docType
                 )
             }
-            return deviceResponse.generate() to "created"
+            return deviceResponse.generate().withOtherDocuments(otherDocuments) to "created"
         } catch (e: Exception) {
             return null to e.message.orEmpty()
         }
+    }
+
+    /**
+     * Adds the documents in other formats to the `DeviceResponse`, as defined by the
+     * ISO/IEC 18013-5 second edition, which requires the version 1.1 of the response.
+     */
+    private fun ByteArray.withOtherDocuments(otherDocuments: List<OtherDocument>): ByteArray {
+        if (otherDocuments.isEmpty()) return this
+        val otherDocumentsArray = CBORObject.NewArray().apply {
+            otherDocuments.forEach {
+                Add(CBORObject.NewMap().Add("docFormat", it.docFormat).Add("data", it.data))
+            }
+        }
+        return CBORObject.DecodeFromBytes(this)
+            .Set("version", "1.1")
+            .Set("otherDocuments", otherDocumentsArray)
+            .EncodeToBytes()
     }
 
     private fun setDeviceNamespaces(

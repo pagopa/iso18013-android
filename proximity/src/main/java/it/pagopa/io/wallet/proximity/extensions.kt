@@ -2,37 +2,19 @@ package it.pagopa.io.wallet.proximity
 
 import org.json.JSONObject
 
+/** Keys of the document request metadata copied as they are next to the requested namespaces */
+private val REQUEST_METADATA_KEYS =
+    listOf("isSignatureValid", "readerAuth", "readerCertificateChain", "requestInfo")
+
 internal fun Array<JSONObject?>.toRequest(): JSONObject {
-    val jsonToSend = JSONObject()
-    this.forEach {
-        if (it != null) {
-            val start = it.getJSONObject("values")
-            val docType = it.getString("docType")
-            if (!jsonToSend.has("request")) {
-                jsonToSend.put("request", JSONObject().apply {
-                    put(docType, start)
-                })
-                jsonToSend
-                    .getJSONObject("request")
-                    .getJSONObject(docType)
-                    .put("isAuthenticated", it.getBoolean("isAuthenticated"))
-                jsonToSend
-                    .getJSONObject("request")
-                    .getJSONObject(docType)
-                    .put("certificateData", it.optJSONObject("issuerRdnMap"))
-            } else {
-                jsonToSend
-                    .getJSONObject("request")
-                    .put(docType, start)
-                jsonToSend.getJSONObject("request")
-                    .getJSONObject(docType)
-                    .put("isAuthenticated", it.getBoolean("isAuthenticated"))
-                jsonToSend
-                    .getJSONObject("request")
-                    .getJSONObject(docType)
-                    .put("certificateData", it.optJSONObject("issuerRdnMap"))
-            }
+    val request = JSONObject()
+    this.filterNotNull().forEach {
+        val document = it.getJSONObject("values").apply {
+            put("isAuthenticated", it.getBoolean("isAuthenticated"))
+            put("certificateData", it.optJSONObject("issuerRdnMap"))
+            REQUEST_METADATA_KEYS.forEach { key -> it.opt(key)?.let { value -> put(key, value) } }
         }
+        request.put(it.getString("docType"), document)
     }
-    return jsonToSend
+    return if (request.length() == 0) JSONObject() else JSONObject().put("request", request)
 }

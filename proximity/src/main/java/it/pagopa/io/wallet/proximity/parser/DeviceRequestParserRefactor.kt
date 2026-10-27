@@ -197,20 +197,23 @@ class DeviceRequestParserRefactor(
             val request = Cbor.decode(encodedDeviceRequest)
             version = request["version"].asTstr
             require(version.compareTo("1.0") >= 0) { "Given version '$version' not >= '1.0'" }
-            var readerCertChain: X509CertChain? = null
             request.getOrNull("docRequests")?.let { docRequests ->
                 val docRequestsDataItems = docRequests.asArray
                 for (docRequestDataItem in docRequestsDataItems) {
                     val itemsRequestBytesDataItem = docRequestDataItem["itemsRequest"]
                     val itemsRequest = itemsRequestBytesDataItem.asTaggedEncodedCbor
                     val readerAuth = docRequestDataItem.getOrNull("readerAuth")
+                    // Each document request is signed on its own, so the chain must not leak to the next ones
+                    var readerCertChain: X509CertChain? = null
                     var encodedReaderAuth: ByteArray? = null
                     var readerAuthenticated = false
                     if (!skipReaderAuthParseAndCheck && readerAuth != null) {
                         encodedReaderAuth = Cbor.encode(readerAuth)
                         val readerAuthCoseSign1 = readerAuth.asCoseSign1
+                        // RFC 9360 allows the x5chain in both the protected and the unprotected headers
                         val readerCertChainDataItem =
                             readerAuthCoseSign1.unprotectedHeaders[CoseNumberLabel(Cose.COSE_LABEL_X5CHAIN)]
+                                ?: readerAuthCoseSign1.protectedHeaders[CoseNumberLabel(Cose.COSE_LABEL_X5CHAIN)]
                         val signatureAlgorithm = AlgorithmRefactor.fromInt(
                             readerAuthCoseSign1.protectedHeaders[
                                 CoseNumberLabel(Cose.COSE_LABEL_ALG)
